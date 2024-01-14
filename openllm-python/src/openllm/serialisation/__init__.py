@@ -56,8 +56,10 @@ def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], Ty
       serde = 'ggml'
     elif llm.__llm_backend__ == 'ctranslate':
       serde = 'ctranslate'
-    elif llm.__llm_backend__ in {'pt', 'vllm'}:
+    elif llm.__llm_backend__  == 'pt':
       serde = 'transformers'
+    elif llm.__llm_backend__  == 'vllm':
+      serde = 'vllm'
     else:
       raise OpenLLMException(f'Not supported backend {llm.__llm_backend__}')
     return getattr(importlib.import_module(f'.{serde}', 'openllm.serialisation'), fn)(llm, *args, **kwargs)
@@ -66,7 +68,7 @@ def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], Ty
 
 
 _extras = ['get', 'import_model', 'load_model']
-_import_structure = {'ggml', 'transformers', 'ctranslate', 'constants'}
+_import_structure = {'ggml', 'transformers', 'ctranslate', 'vllm', 'constants'}
 __all__ = ['load_tokenizer', *_extras, *_import_structure]
 
 

@@ -1,28 +1,18 @@
-import importlib
-import logging
-import shutil
-
-import transformers
-
-import bentoml
+import importlib, logging, shutil, transformers, bentoml
+from packaging.version import Version
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import is_ctranslate_available
 
 from .._helpers import patch_correct_tag, save_model
 from ..transformers._helpers import get_tokenizer, process_config
 
-if not is_ctranslate_available():
-  raise RuntimeError("'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'")
-
+if not is_ctranslate_available(): raise RuntimeError("'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'")
 import ctranslate2
 from ctranslate2.converters.transformers import TransformersConverter
 
 logger = logging.getLogger(__name__)
 
-
-def _get_class(llm):
-  return ctranslate2.Translator if llm.config['model_type'] == 'seq2seq_lm' else ctranslate2.Generator
-
+def _get_class(llm): return ctranslate2.Translator if llm.config['model_type'] == 'seq2seq_lm' else ctranslate2.Generator
 
 def import_model(llm, *decls, trust_remote_code, **attrs):
   (_base_decls, _base_attrs), tokenizer_attrs = llm.llm_parameters
@@ -42,8 +32,7 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   patch_correct_tag(llm, config)
   tokenizer = get_tokenizer(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
-  with save_model(llm, config, False, trust_remote_code, 'ctranslate', [importlib.import_module(tokenizer.__module__)]) as save_metadata:
-    bentomodel, _ = save_metadata
+  with save_model(llm, config, False, trust_remote_code, 'ctranslate', [importlib.import_module(tokenizer.__module__)]) as bentomodel:
     if llm._local:
       shutil.copytree(
         llm.model_id, bentomodel.path, symlinks=False, ignore=shutil.ignore_patterns('.git', 'venv', '__pycache__', '.venv'), dirs_exist_ok=True
@@ -60,11 +49,13 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
     tokenizer.save_pretrained(bentomodel.path)
     return bentomodel
 
-
 def get(llm):
   try:
     model = bentoml.models.get(llm.tag)
-    backend = model.info.labels['backend']
+    if Version(model.info.api_version) < Version('3'):
+      backend = model.info.labels['backend']
+    else:
+      backend = model.info.metadata['_framework']
     if backend != llm.__llm_backend__:
       raise OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
     patch_correct_tag(
@@ -75,7 +66,6 @@ def get(llm):
     return model
   except Exception as err:
     raise OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
-
 
 def load_model(llm, *decls, **attrs):
   device = 'cuda' if llm._has_gpus else 'cpu'

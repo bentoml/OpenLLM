@@ -5,11 +5,8 @@ __all__ = ['generate_labels', 'available_devices', 'device_count']
 
 def generate_labels(llm):
   return {
-    'backend': llm.__llm_backend__,
     'framework': 'openllm',
-    'model_name': llm.config['model_name'],  #
-    'architecture': llm.config['architecture'],
-    'serialisation': llm._serialisation,  #
+    'serialisation': llm._serialisation,
     **{package: importlib.metadata.version(package) for package in {'openllm', 'openllm-core', 'openllm-client'}},
   }
 

@@ -1,10 +1,8 @@
-from __future__ import annotations
-import importlib, logging
-import orjson, torch, transformers, bentoml, openllm
-
+import importlib, logging, orjson, torch, transformers, bentoml, openllm
 from huggingface_hub import snapshot_download
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import first_not_none, is_autogptq_available, is_flash_attn_2_available
+from packaging.version import Version
 
 from ._helpers import get_tokenizer, infer_autoclass_from_llm, process_config
 from .weights import HfIgnore
@@ -14,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['import_model', 'get', 'load_model']
 _object_setattr = object.__setattr__
-
 
 def import_model(llm, *decls, trust_remote_code, **attrs):
   (_base_decls, _base_attrs), tokenizer_attrs = llm.llm_parameters
@@ -31,9 +28,8 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
   model = None
   tokenizer = get_tokenizer(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
   with save_model(
-    llm, config, safe_serialisation, trust_remote_code, 'transformers', [importlib.import_module(tokenizer.__module__)]
-  ) as save_metadata:
-    bentomodel, imported_modules = save_metadata
+    llm, config, safe_serialisation, trust_remote_code, 'transformers', [importlib.import_module(tokenizer.__module__)],
+  ) as bentomodel:
     tokenizer.save_pretrained(bentomodel.path)
     if llm._quantization_config or (llm.quantise and llm.quantise not in {'squeezellm', 'awq'}):
       attrs['quantization_config'] = llm.quantization_config
@@ -47,7 +43,7 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
         llm.model_id, *decls, local_files_only=True, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
       )
       # for trust_remote_code to work
-      bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
+      bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], bentomodel.imported_modules)
       model.save_pretrained(bentomodel.path, max_shard_size='2GB', safe_serialization=safe_serialisation)
       del model
       if torch.cuda.is_available():
@@ -62,13 +58,15 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
       )
     return bentomodel
 
-
 def get(llm):
   try:
     model = bentoml.models.get(llm.tag)
-    backend = model.info.labels['backend']
-    if backend != llm.__llm_backend__:
-      raise OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
+    if Version(model.info.api_version) < Version('3'):
+      backend = model.info.labels['backend']
+    else:
+      backend = model.info.metadata['_framework']
+    if backend not in {'pt', 'vllm'}:
+      raise OpenLLMException(f"'{model.tag!s}' was saved for backend '{backend}', while loading with '{llm.__llm_backend__}'.")
     patch_correct_tag(
       llm,
       transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code),
@@ -78,12 +76,10 @@ def get(llm):
   except Exception as err:
     raise OpenLLMException(f'Failed while getting stored artefact (lookup for traceback):\n{err}') from err
 
-
 def check_unintialised_params(model):
   unintialized = [n for n, param in model.named_parameters() if param.data.device == torch.device('meta')]
   if len(unintialized) > 0:
     raise RuntimeError(f'Found the following unintialized parameters in {model}: {unintialized}')
-
 
 def load_model(llm, *decls, **attrs):
   if llm.quantise in {'awq', 'squeezellm'}:
@@ -143,19 +139,18 @@ def load_model(llm, *decls, **attrs):
       )
   check_unintialised_params(model)
 
-  if llm.__llm_backend__ == 'pt':
-    # If OOM, then it is probably you don't have enough VRAM to run this model.
-    loaded_in_kbit = (
-      getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
-    )
-    if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
-      try:
-        model = model.to('cuda')
-      except Exception as err:
-        raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
-    if llm.has_adapters:
-      logger.debug('Applying the following adapters: %s', llm.adapter_map)
-      for adapter_dict in llm.adapter_map.values():
-        for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
-          model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
+  # If OOM, then it is probably you don't have enough VRAM to run this model.
+  loaded_in_kbit = (
+    getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
+  )
+  if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
+    try:
+      model = model.to('cuda')
+    except Exception as err:
+      raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
+  if llm.has_adapters:
+    logger.debug('Applying the following adapters: %s', llm.adapter_map)
+    for adapter_dict in llm.adapter_map.values():
+      for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
+        model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
   return model

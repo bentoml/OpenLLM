@@ -2,7 +2,8 @@ from __future__ import annotations
 from typing import Callable, Dict, Tuple, List, Literal, Any, TypeVar
 import sys, attr
 
-M, T = TypeVar('M'), TypeVar('T')
+M = TypeVar('M')
+T = TypeVar('T')
 
 def get_literal_args(typ: Any) -> Tuple[str, ...]: return getattr(typ, '__args__', tuple())
 
@@ -16,7 +17,6 @@ LiteralQuantise = Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
 LiteralBackend = Literal['pt', 'vllm', 'ctranslate', 'triton']  # TODO: ggml
 AdapterType = Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr']
 LiteralVersionStrategy = Literal['release', 'nightly', 'latest', 'custom']
-RunnerImplType = Literal['deprecated', 'new_impl']
 
 class AdapterTuple(Tuple[Any, ...]):
   adapter_id: str

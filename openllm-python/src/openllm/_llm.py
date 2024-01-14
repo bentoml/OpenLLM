@@ -10,6 +10,8 @@ from openllm_core._typing_compat import (
   LiteralDtype,
   LiteralQuantise,
   LiteralSerialisation,
+  ParamSpec,
+  Concatenate,
   M,
   T,
 )
@@ -38,12 +40,12 @@ if t.TYPE_CHECKING:
   import torch, transformers
   from peft.config import PeftConfig
   from openllm_core._configuration import LLMConfig
-  from ._runners import Runner
-  from _bentoml_sdk.service.dependency import Dependency
+  from ._runners import Runner, DeprecatedRunner
 
 logger = logging.getLogger(__name__)
 _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
 ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
+P = ParamSpec('P')
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
@@ -67,8 +69,7 @@ class LLM(t.Generic[M, T]):
 
   async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
     if adapter_name is not None and self.__llm_backend__ != 'pt': raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
-
-    proxy, config = self.runner.get(), self.config.model_construct_env(**attrs)
+    config = self.config.model_construct_env(**attrs)
 
     stop_token_ids = stop_token_ids or []
     eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
@@ -95,15 +96,16 @@ class LLM(t.Generic[M, T]):
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
-      generator = proxy.generate_iterator(
-        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
-      )
+      generator = self.proxy(prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True))
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
     try:
       async for out in generator:
-        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+        if not self._eager:
+          generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+        else:
+          generated = out.with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:
           i = output.index
@@ -113,6 +115,12 @@ class LLM(t.Generic[M, T]):
         yield generated.with_options(outputs=delta_outputs)
     except Exception as err:
       raise RuntimeError(f'Exception caught during generation: {err}') from err
+
+  @classmethod
+  def from_model(cls, model, backend=None, llm_config=None, max_model_len=None, gpu_memory_utilization=0.9, **attrs):
+    if not isinstance(model, bentoml.Model): raise TypeError(f'Expected `bentoml.Model`, got {type(model)}')
+    model_id = model.metadata['model_id']
+    return cls(model_id, llm_config=llm_config, backend=backend, max_model_len=max_model_len, gpu_memory_utilization=gpu_memory_utilization, _eager=True, _call_from_model=True, **attrs)
 
   # NOTE: If you are here to see how generate_iterator and generate works, see above.
   # The below are mainly for internal implementation that you don't have to worry about.
@@ -129,18 +137,20 @@ class LLM(t.Generic[M, T]):
   _local: bool
   _max_model_len: t.Optional[int]  #
   _gpu_memory_utilization: float
+  _eager: bool = False # whether to load the model eagerly
 
   __llm_dtype__: t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']] = 'auto'
   __llm_torch_dtype__: 'torch.dtype' = None
   __llm_config__: t.Optional[LLMConfig] = None
   __llm_backend__: LiteralBackend = None
   __llm_quantization_config__: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]] = None
-  __llm_runner__: t.Optional[Dependency[Runner[M, T]]] = None
+  __llm_inference_bases__: t.Optional[Runner[M, T]] = None
+  __llm_runner__: t.Optional[DeprecatedRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
   __llm_trust_remote_code__: bool = False
-  __llm_services_config__: t.Optional[t.Dict[str, t.Any]] = None
+  __llm_proxy_caller__: t.Callable[Concatenate[t.List[int], str, t.Optional[t.Union[t.Iterable[str], str]], t.Optional[str], t.Optional[str], P], t.AsyncGenerator[t.Union[str, GenerationOutput], None]] = None
 
   def __init__(
     self,
@@ -155,15 +165,16 @@ class LLM(t.Generic[M, T]):
     adapter_map=None,
     serialisation='safetensors',
     trust_remote_code=False,
-    embedded=False,
     dtype='auto',
     low_cpu_mem_usage=True,
     max_model_len=None,
     gpu_memory_utilization=0.9,
-    services_config=None,
-    _eager=True,
+    embedded=False,
+    _eager=False,
+    _call_from_model=False,
     **attrs,
   ):
+    if not _call_from_model: logger.warning('This is an internal API. Please use `openllm.LLM.from_model` instead.')
     torch_dtype = attrs.pop('torch_dtype', None)  # backward compatible
     if torch_dtype is not None:
       warnings.warn('The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.', DeprecationWarning, stacklevel=3)
@@ -199,25 +210,25 @@ class LLM(t.Generic[M, T]):
       local=_local,
       max_model_len=max_model_len,
       gpu_memory_utilization=gpu_memory_utilization,
+      eager=_eager,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
       llm_dtype__=dtype.lower(),
       llm_backend__=backend,
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
-      llm_services_config__=services_config
     )
+    try:
+      model = bentoml.models.get(self.tag)
+    except bentoml.exceptions.NotFound:
+      model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
+    self._tag = model.tag  # resolve the tag
+    if _eager and embedded: raise RuntimeError("Embedded mode is not supported when eager loading.")
     if _eager:
-      try:
-        model = bentoml.models.get(self.tag)
-      except bentoml.exceptions.NotFound:
-        model = openllm.serialisation.import_model(self, trust_remote_code=self.trust_remote_code)
-      self._tag = model.tag  # resolve the tag
-    if not _eager and embedded:
-      raise RuntimeError("Embedded mode is not supported when '_eager' is False.")
-    if embedded:
+      self.bases()
+    elif embedded:
       logger.warning('NOT RECOMMENDED in production and SHOULD ONLY used for development.')
-      self.runner.get()
+      self.runner.init_local(quiet=True)
 
   class _Quantise:
     @staticmethod
@@ -239,7 +250,7 @@ class LLM(t.Generic[M, T]):
       model_version = maybe_revision[0]
     if validate_is_path(model_id):
       model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
-    return f'{backend}-{normalise_model_name(model_id)}', model_version
+    return normalise_model_name(model_id), model_version
 
   @functools.cached_property
   def _has_gpus(self):
@@ -280,16 +291,20 @@ class LLM(t.Generic[M, T]):
     return self.__llm_torch_dtype__
 
   @property
-  def _model_attrs(self):
-    return {**self.import_kwargs[0], **self.__model_attrs}
+  def proxy(self):
+    if self.__llm_proxy_caller__ is None:
+      if self._eager:
+        self.__llm_proxy_caller__ = self.bases().generate_iterator
+      else:
+        from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 
-  @_model_attrs.setter
-  def _model_attrs(self, model_attrs):
-    self.__model_attrs = model_attrs
-
-  @property
-  def _tokenizer_attrs(self):
-    return {**self.import_kwargs[1], **self.__tokenizer_attrs}
+        if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+          if os.getenv('BENTO_PATH') is not None:
+            raise RuntimeError('Runner client failed to set up correctly.')
+          else:
+            self.runner.init_local(quiet=True)
+        self.__llm_proxy_caller__ = self.runner.generate_iterator.async_stream
+    return self.__llm_proxy_caller__
 
   def _cascade_backend(self) -> LiteralBackend:
     logger.warning('It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.')
@@ -325,30 +340,37 @@ class LLM(t.Generic[M, T]):
     return f'{self.__class__.__name__} {orjson.dumps({k: v for k, v in self.__repr_args__()}, option=orjson.OPT_INDENT_2).decode()}'
 
   @property
-  def import_kwargs(self):
-    return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {'padding_side': 'left', 'truncation_side': 'left'}
+  def model_id(self): return self._model_id
+  @property
+  def revision(self): return self._revision
+  @property
+  def tag(self): return self._tag
+  @property
+  def bentomodel(self): return openllm.serialisation.get(self)
+  @property
+  def has_adapters(self): return self._adapter_map is not None
+  @property
+  def local(self): return self._local
+  @property
+  def quantise(self): return self._quantise
+  @property
+  def llm_type(self): return normalise_model_name(self._model_id)
+  @property
+  def llm_parameters(self): return (self._model_decls, self._model_attrs), self._tokenizer_attrs
+  @property
+  def _model_attrs(self): return {**self.import_kwargs[0], **self.__model_attrs}
+  @_model_attrs.setter
+  def _model_attrs(self, model_attrs): self.__model_attrs = model_attrs
+  @property
+  def _tokenizer_attrs(self): return {**self.import_kwargs[1], **self.__tokenizer_attrs}
+  @property
+  def import_kwargs(self): return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {'padding_side': 'left', 'truncation_side': 'left'}
 
   @property
   def trust_remote_code(self):
     env = os.getenv('TRUST_REMOTE_CODE')
     if env is not None: return check_bool_env('TRUST_REMOTE_CODE', env)
     return self.__llm_trust_remote_code__
-
-  @property
-  def model_id(self):
-    return self._model_id
-
-  @property
-  def revision(self):
-    return self._revision
-
-  @property
-  def tag(self):
-    return self._tag
-
-  @property
-  def bentomodel(self):
-    return openllm.serialisation.get(self)
 
   @property
   def quantization_config(self):
@@ -364,26 +386,6 @@ class LLM(t.Generic[M, T]):
     return self.__llm_quantization_config__
 
   @property
-  def has_adapters(self):
-    return self._adapter_map is not None
-
-  @property
-  def local(self):
-    return self._local
-
-  @property
-  def quantise(self):
-    return self._quantise
-
-  @property
-  def llm_type(self):
-    return normalise_model_name(self._model_id)
-
-  @property
-  def llm_parameters(self):
-    return (self._model_decls, self._model_attrs), self._tokenizer_attrs
-
-  @property
   def identifying_params(self):
     return {
       'configuration': self.config.model_dump_json().decode(),
@@ -397,21 +399,18 @@ class LLM(t.Generic[M, T]):
       self.__llm_tokenizer__ = openllm.serialisation.load_tokenizer(self, **self.llm_parameters[-1])
     return self.__llm_tokenizer__
 
-  class services_config:
-    @staticmethod
-    def runner(llm):
-      if llm.__llm_services_config__ is None: return {}
-      if 'runner' in llm.__llm_services_config__: return llm.__llm_services_config__['runner']
-      elif (full:=f"llm-{llm.config['start_name']}-runner") in llm.__llm_services_config__: return llm.__llm_services_config__[full]
-      else: return {}
-
   @property
   def runner(self):
+    warnings.warn('Using "llm.runner" only works in OpenLLM 0.4.x. Make sure to upgrade to newer syntax for 0.5 onwards.', DeprecationWarning, stacklevel=3)
     from ._runners import runner
-    from _bentoml_sdk.service.dependency import Dependency
-    if self.__llm_runner__ is None:
-      self.__llm_runner__ = Dependency(runner(self, **self.services_config.runner(self)))
+
+    if self.__llm_runner__ is None: self.__llm_runner__ = runner(self)
     return self.__llm_runner__
+
+  def bases(self) -> Runner[M, T]:
+    from ._runners import bases
+    if self.__llm_inference_bases__ is None: self.__llm_inference_bases__ = bases(self)()
+    return self.__llm_inference_bases__
 
   def prepare(self, adapter_type='lora', use_gradient_checking=True, **attrs):
     if self.__llm_backend__ != 'pt':
@@ -428,7 +427,7 @@ class LLM(t.Generic[M, T]):
     return model, self.tokenizer
 
   def prepare_for_training(self, *args, **attrs):
-    logger.warning('`prepare_for_training` is deprecated and will be removed in the future. Use `prepare` instead.')
+    warnings.warn('`prepare_for_training` is deprecated and will be removed in the future. Use `prepare` instead.', DeprecationWarning, stacklevel=3)
     return self.prepare(*args, **attrs)
 
   @property

@@ -1,23 +1,20 @@
-from typing import Any, TypeVar, Protocol, AsyncGenerator, List, Optional, Iterable, Dict, Union, Tuple, Generic, Type
+from typing import Any, TypeVar, Protocol, AsyncGenerator, List, Optional, Iterable, Dict, Union, Tuple, Generic, Type, Literal
 import bentoml
 from bentoml._internal.runner.runner_handle import RunnerHandle
-from _bentoml_sdk import Service
-from _bentoml_sdk.service.config import ServiceConfig
 
-from openllm_core import LLMConfig
-from openllm_core._typing_compat import M, T, LiteralBackend, Unpack, overload, Literal
+from openllm_core import GenerationOutput, LLMConfig
+from openllm_core.utils import api
+from openllm_core._typing_compat import M, T, LiteralBackend
 
 from ._llm import LLM
 
 Mo = TypeVar('Mo')
 To = TypeVar('To')
 
-__all_ = ['Runner', 'runner', 'DeprecatedRunner']
+__all_ = ['Runner', 'runner', 'DeprecatedRunner', 'bases']
 
-@overload
-def runner(llm: LLM[M, T], /, *, implementation: Literal['new_impl'] = ..., **attrs: Unpack[ServiceConfig]) -> Service[Runner[M, T]]: ...
-@overload
-def runner(llm: LLM[M, T], /, *, implementation: Literal['deprecated'] = ...) -> DeprecatedRunner[M, T]: ...
+def runner(llm: LLM[M, T]) -> DeprecatedRunner[M, T]: ...
+def bases(llm: LLM[M, T]) -> Runner[M, T]: ...
 
 class Runner(Protocol[Mo, To]):
   __doc__: str = ...
@@ -35,10 +32,10 @@ class Runner(Protocol[Mo, To]):
   template: str = ...
   system_message: str = ...
 
-  @bentoml.api
+  @api
   async def generate_iterator(
     self, prompt_token_ids: List[int], request_id: str, stop: Optional[Iterable[str]] = ..., adapter_name: Optional[str] = ..., **attrs: Any
-  ) -> AsyncGenerator[str, None]: ...
+  ) -> AsyncGenerator[GenerationOutput, None]: ...
 
 class _Runnable(Protocol[Mo, To]):
   SUPPORTED_RESOURCES: Tuple[Literal['nvidia.com/gpu', 'amd.com/gpu', 'cpu'], ...] = ...

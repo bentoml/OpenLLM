@@ -1,8 +1,7 @@
-import contextlib, attr
+import contextlib, attr, bentoml, openllm, types, typing as t
 from simple_di import Provide, inject
-import bentoml, openllm
 from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml._internal.models.model import ModelOptions, ModelSignature
+from bentoml._internal.models.model import ModelSignature
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import is_autogptq_available
 
@@ -56,8 +55,26 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
       raise RuntimeError(
         'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
       )
-  metadata.update({'_pretrained_class': architectures[0], '_revision': get_hash(config) if not llm.local else llm.revision})
+  metadata.update({
+    '_pretrained_class': architectures[0],
+    '_revision': get_hash(config) if not llm.local else llm.revision,
+    'serialisation': llm._serialisation,
+    'model_name': llm.config['model_name'],  #
+    'architecture': llm.config['architecture'],
+  })
   return metadata
+
+@attr.define(init=False)
+class _Model(bentoml.Model):
+  _imported_modules: t.List[types.ModuleType] = None
+
+  @property
+  def imported_modules(self):
+    if self._imported_modules is None:
+      self._imported_modules = []
+    return self._imported_modules
+  @imported_modules.setter
+  def imported_modules(self, value): self._imported_modules = value
 
 
 def _create_signatures(llm, signatures=None):
@@ -114,14 +131,13 @@ def save_model(
   module,
   external_modules,  #
   _model_store=Provide[BentoMLContainer.model_store],
-  _api_version='v2.1.0',  #
-):
+  _api_version='v3.0.0',  #
+) -> bentoml.Model:
   imported_modules = []
-  bentomodel = bentoml.Model.create(
+  bentomodel = _Model.create(
     llm.tag,
     module=f'openllm.serialisation.{module}',  #
     api_version=_api_version,
-    options=ModelOptions(),  #
     context=openllm.utils.generate_context('openllm'),
     labels=openllm.utils.generate_labels(llm),
     metadata=_create_metadata(llm, config, safe_serialisation, trust_remote_code),
@@ -130,7 +146,8 @@ def save_model(
   with openllm.utils.analytics.set_bentoml_tracking():
     try:
       bentomodel.enter_cloudpickle_context(external_modules, imported_modules)
-      yield bentomodel, imported_modules
+      bentomodel.imported_modules = imported_modules
+      yield bentomodel
     except Exception:
       raise
     else:
@@ -140,5 +157,5 @@ def save_model(
         openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024)
       )
     finally:
-      bentomodel.exit_cloudpickle_context(imported_modules)
+      bentomodel.exit_cloudpickle_context(bentomodel.imported_modules)
     return bentomodel

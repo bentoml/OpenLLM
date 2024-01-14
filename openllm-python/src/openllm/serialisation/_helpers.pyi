@@ -1,6 +1,6 @@
 import types
 from contextlib import contextmanager
-from typing import Iterator, Optional, Sequence, Tuple
+from typing import Iterator, Optional, Sequence
 
 import transformers
 
@@ -19,4 +19,4 @@ def save_model(
   trust_remote_code: bool,
   module: str,
   external_modules: Sequence[types.ModuleType],
-) -> Iterator[Tuple[Model, Sequence[types.ModuleType]]]: ...
+) -> Iterator[Model]: ...
