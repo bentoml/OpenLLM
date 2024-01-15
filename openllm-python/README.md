@@ -1790,7 +1790,7 @@ OpenLLM collects usage data to enhance user experience and improve the product.
 We only report OpenLLM's internal API calls and ensure maximum privacy by
 excluding sensitive information. We will never collect user code, model data, or
 stack traces. For usage tracking, check out the
-[code](https://github.com/bentoml/OpenLLM/blob/main/openllm-python/src/openllm/utils/analytics.py).
+[code](https://github.com/bentoml/OpenLLM/blob/main/openllm-core/src/openllm_core/utils/analytics.py).
 
 You can opt out of usage tracking by using the `--do-not-track` CLI option:
 
