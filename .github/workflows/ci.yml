@@ -55,7 +55,7 @@ jobs:
       - name: Disambiguate coverage filename
         run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
       - name: Upload coverage data
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # ratchet:actions/upload-artifact@v3
         with:
           name: coverage-data
           path: .coverage.*
@@ -84,7 +84,7 @@ jobs:
           hatch run coverage:report-xml openllm-python
           hatch run coverage:report-uncovered-html openllm-python
       - name: Upload uncovered HTML report
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # ratchet:actions/upload-artifact@v3
         with:
           name: uncovered-html-report
           path: htmlcov
