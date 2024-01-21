@@ -1,53 +1,20 @@
 from __future__ import annotations
-import copy
-import importlib.util
-import inspect
-import logging
-import os
-import sys
-import types
-import typing as t
-import warnings
-
-import attr
-import click_option_group as cog
-import inflection
-import orjson
+import copy, importlib.util, inspect, logging, os, sys, types, warnings, typing as t
+import attr, inflection, orjson, click_option_group as cog
 from attr._make import _CountingAttr, _make_init, _transform_attrs
 from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from deepmerge.merger import Merger
 
-import openllm_core
-
-from ._typing_compat import (
-  AdapterType,
-  AnyCallable,
-  At,
-  DictStrAny,
-  ListStr,
-  LiteralBackend,
-  LiteralSerialisation,
-  LiteralString,
-  M,
-  NotRequired,
-  Required,
-  Self,
-  TypedDict,
-  T,
-  overload,
-)
+from ._typing_compat import AdapterType, AnyCallable, At, DictStrAny, ListStr, LiteralBackend, LiteralSerialisation, LiteralString, NotRequired, Required, Self, TypedDict, overload
 from .exceptions import ForbiddenAttributeError, MissingDependencyError, MissingAnnotationAttributeError, ValidationError
 from .utils import LazyLoader, ReprMixin, codegen, converter, dantic, field_env_key, first_not_none, lenient_issubclass, correct_closure
 from .utils.dantic import attach_pydantic_model
 from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
 if t.TYPE_CHECKING:
-  import click
-  import transformers
-  import vllm
-  from attrs import AttrsInstance
+  import click, openllm_core, transformers, vllm, openllm
 
-  import openllm
+  from attrs import AttrsInstance
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 
@@ -1154,7 +1121,7 @@ class LLMConfig(_ConfigAttr[GenerationConfig, SamplingParams]):
   def make_fine_tune_config(self, adapter_type: AdapterType, **attrs: t.Any) -> FineTuneConfig:
     return FineTuneConfig(adapter_type=adapter_type, llm_config_class=self.__class__).with_config(**attrs)
 
-  def inference_options(self, llm: openllm.LLM[M, T], backend: str | None = None) -> tuple[Self, t.Any]:
+  def inference_options(self, llm: openllm.LLM, backend: str | None = None) -> tuple[Self, t.Any]:
     backend = backend if backend is not None else llm.__llm_backend__
     framework = getattr(self, backend, None)
     if framework is None:

@@ -1,8 +1,8 @@
 import openllm, traceback
 from openllm_core.utils import is_vllm_available
-from ..transformers import import_model, get
+from ..transformers import import_model
 
-__all__ = ['import_model', 'get', 'load_model']
+__all__ = ['import_model', 'load_model']
 
 def load_model(llm, *decls, **attrs):
   if not is_vllm_available(): raise RuntimeError("'vllm' is required to use with backend 'vllm'. Install it with 'pip install \"openllm[vllm]\"'")

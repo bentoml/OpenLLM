@@ -10,7 +10,8 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import M, T
   from ._runners import Runner
 
-P, R = ParamSpec('P'), t.TypeVar('R')
+P = ParamSpec('P')
+R = t.TypeVar('R')
 
 _registry = {}
 __all__ = ['runner']
@@ -154,7 +155,7 @@ class vLLMRunnable:
   ) -> t.AsyncGenerator[GenerationOutput, None]:
     _, sampling_params = self.llm.config.model_construct_env(stop=list(stop) if stop else None, **attrs).inference_options(self.llm)
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield GenerationOutput.from_vllm(request_output).model_dump_json()
+      yield GenerationOutput.from_vllm(request_output)
 
 
 @registry(alias='pt')
@@ -309,7 +310,7 @@ class PyTorchRunnable:
           prompt_token_ids=prompt_token_ids,
           prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
           request_id=request_id,
-        ).model_dump_json()
+        )
         if stopped:
           break
       else:
@@ -332,7 +333,7 @@ class PyTorchRunnable:
         prompt_token_ids=prompt_token_ids,
         prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
         request_id=request_id,
-      ).model_dump_json()
+      )
 
     # Clean
     del past_key_values, out
@@ -385,4 +386,4 @@ class CTranslateRunnable:
             # TODO: logprobs, but seems like we don't have access to the raw logits
           )
         ],
-      ).model_dump_json()
+      )

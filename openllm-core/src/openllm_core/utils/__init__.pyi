@@ -49,26 +49,37 @@ _T = TypeVar('_T')
 R = TypeVar('R')
 P = ParamSpec('P')
 
+def normalise_model_name(name: str) -> str: ...
 def correct_closure(cls: Type[_T], ref: Type[R]) -> Type[_T]: ...
 @overload
-def api(func: Callable[Concatenate[Any, P], R]) -> APIMethod[P, R]: ...
+def api(func: Callable[Concatenate[_T, P], R]) -> APIMethod[P, R]: ...
 @overload
 def api(
   *,
   route: Optional[str] = ...,
+  name: Optional[str] = ...,
   media_type: Optional[str] = ...,
   input: Optional[Union[AttrsInstance, Any]] = ...,
   output: Optional[Union[AttrsInstance, Any]] = ...,
-) -> Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]: ...
+  batchable: bool = ...,
+  batch_dim: Union[int, Tuple[int, int]] = ...,
+  max_batch_size: int = ...,
+  max_latency_ms: int = ...,
+) -> Callable[[Callable[Concatenate[_T, P], R]], APIMethod[P, R]]: ...
 @overload
 def api(
-  func: Optional[Callable[Concatenate[Any, P], R]] = ...,
+  func: Optional[Callable[Concatenate[_T, P], R]] = ...,
   *,
+  name: Optional[str] = ...,
   route: Optional[str] = ...,
   media_type: Optional[str] = ...,
   input: Optional[Union[AttrsInstance, Any]] = ...,
   output: Optional[Union[AttrsInstance, Any]] = ...,
-) -> Callable[[Callable[Concatenate[Any, P], R]], Union[APIMethod[P, R], Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]]]: ...
+  batchable: bool = ...,
+  batch_dim: Union[int, Tuple[int, int]] = ...,
+  max_batch_size: int = ...,
+  max_latency_ms: int = ...,
+) -> Callable[[Callable[Concatenate[_T, P], R]], Union[APIMethod[P, R], Callable[[Callable[Concatenate[_T, P], R]], APIMethod[P, R]]]]: ...
 def lenient_issubclass(cls: Type[Any], class_or_tuple: Optional[Union[Type[Any], Tuple[Type[Any], ...]]]) -> bool: ...
 def resolve_user_filepath(filepath: str, ctx: Optional[str]) -> str: ...
 def resolve_filepath(path: str, ctx: Optional[str] = ...) -> str: ...

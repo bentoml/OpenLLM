@@ -6,7 +6,6 @@ from openllm_core.utils import resolve_filepath, validate_is_path
 
 if t.TYPE_CHECKING:
   from huggingface_hub.hf_api import ModelInfo as HfModelInfo
-  import openllm
 
 __global_inst__ = None
 __cached_id__: dict[str, HfModelInfo] = dict()
@@ -49,16 +48,16 @@ class HfIgnore:
   gguf = '*.gguf'
 
   @classmethod
-  def ignore_patterns(cls, llm: openllm.LLM[t.Any, t.Any]) -> list[str]:
-    if llm.__llm_backend__ in {'vllm', 'pt'}:
+  def ignore_patterns(cls, backend, model_id) -> list[str]:
+    if backend in {'vllm', 'pt'}:
       base = [cls.tf, cls.flax, cls.gguf]
-      if has_safetensors_weights(llm.model_id):
+      if has_safetensors_weights(model_id):
         base.extend([cls.pt, '*.pt'])
-      elif has_pt_weights(llm.model_id):
+      elif has_pt_weights(model_id):
         base.extend([cls.safetensors, cls.pt])
       else:
         base.append(cls.safetensors)
-    elif llm.__llm_backend__ == 'ggml':
+    elif backend == 'ggml':
       base = [cls.tf, cls.flax, cls.pt, cls.safetensors]
     else:
       raise ValueError('Unknown backend (should never happen at all.)')

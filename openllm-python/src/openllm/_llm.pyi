@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Tuple, TypedDict, Union
+from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Tuple, TypedDict, Union, Callable, TypeVar
 from _bentoml_sdk.service.factory import Service
 
 import attr
@@ -9,12 +9,24 @@ from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2Seq
 from bentoml import Model, Tag
 from openllm_core import LLMConfig
 from openllm_core._schemas import GenerationOutput
-from openllm_core._typing_compat import AdapterMap, AdapterType, LiteralBackend, LiteralDtype, LiteralQuantise, LiteralSerialisation, M, T
+from openllm_core._typing_compat import (
+  AdapterMap,
+  AdapterType,
+  LiteralBackend,
+  LiteralDtype,
+  LiteralQuantise,
+  LiteralSerialisation,
+  ParamSpec,
+  Concatenate,
+)
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner, DeprecatedRunner
 
 InjectedModel = Union[PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM]
+P = ParamSpec('P')
+M = TypeVar('M')
+T = TypeVar('T')
 
 class IdentifyingParams(TypedDict):
   configuration: str
@@ -46,14 +58,37 @@ class LLM(Generic[M, T]):
   __llm_config__: Optional[LLMConfig] = ...
   __llm_backend__: LiteralBackend = ...
   __llm_quantization_config__: Optional[QuantizationConfig] = ...
-  __llm_inference_bases__: Optional[Runner[M, T]] =  ...
+  __llm_inference_bases__: Optional[Runner[M, T]] = ...
   __llm_runner__: Optional[DeprecatedRunner[M, T]] = ...
   __llm_model__: Optional[M] = ...
   __llm_tokenizer__: Optional[T] = ...
   __llm_adapter_map__: Optional[ResolvedAdapterMap] = ...
   __llm_trust_remote_code__: bool = ...
+  __llm_proxy_caller__: Callable[
+    Concatenate[List[int], str, Optional[Union[Iterable[str], str]], Optional[str], Optional[str], P],
+    AsyncGenerator[Union[str, GenerationOutput], None],
+  ] = ...
 
-  def __repr__(self) -> str: ...
+  async def generate(
+    self,
+    prompt: Optional[str],
+    prompt_token_ids: Optional[List[int]] = ...,
+    stop: Optional[Union[str, Iterable[str]]] = ...,
+    stop_token_ids: Optional[List[int]] = ...,
+    request_id: Optional[str] = ...,
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
+  ) -> GenerationOutput: ...
+  async def generate_iterator(
+    self,
+    prompt: Optional[str],
+    prompt_token_ids: Optional[List[int]] = ...,
+    stop: Optional[Union[str, Iterable[str]]] = ...,
+    stop_token_ids: Optional[List[int]] = ...,
+    request_id: Optional[str] = ...,
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
+  ) -> AsyncGenerator[GenerationOutput, None]: ...
   def __init__(
     self,
     model_id: str,
@@ -122,23 +157,3 @@ class LLM(Generic[M, T]):
   @property
   def adapter_map(self) -> ResolvedAdapterMap: ...
   def prepare(self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any) -> Tuple[InjectedModel, T]: ...
-  async def generate(
-    self,
-    prompt: Optional[str],
-    prompt_token_ids: Optional[List[int]] = ...,
-    stop: Optional[Union[str, Iterable[str]]] = ...,
-    stop_token_ids: Optional[List[int]] = ...,
-    request_id: Optional[str] = ...,
-    adapter_name: Optional[str] = ...,
-    **attrs: Any,
-  ) -> GenerationOutput: ...
-  async def generate_iterator(
-    self,
-    prompt: Optional[str],
-    prompt_token_ids: Optional[List[int]] = ...,
-    stop: Optional[Union[str, Iterable[str]]] = ...,
-    stop_token_ids: Optional[List[int]] = ...,
-    request_id: Optional[str] = ...,
-    adapter_name: Optional[str] = ...,
-    **attrs: Any,
-  ) -> AsyncGenerator[GenerationOutput, None]: ...

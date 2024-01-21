@@ -1,7 +1,6 @@
 from __future__ import annotations
-import itertools, logging, os, re, subprocess, sys, typing as t
+import itertools, logging, os, re, subprocess, sys, typing as t, bentoml, openllm_core, orjson
 from simple_di import Provide, inject
-import bentoml, openllm_core, orjson
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core.exceptions import OpenLLMException

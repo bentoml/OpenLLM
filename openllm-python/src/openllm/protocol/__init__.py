@@ -1,10 +1,7 @@
-from __future__ import annotations
-import os
-import typing as t
-
+import os, typing as t
 from openllm_core.utils import LazyModule
 
-_import_structure: dict[str, list[str]] = {'openai': [], 'cohere': [], 'hf': []}
+_import_structure = {'openai': [], 'cohere': [], 'hf': []}
 if t.TYPE_CHECKING:
   from . import cohere as cohere, hf as hf, openai as openai
 __lazy = LazyModule(__name__, os.path.abspath('__file__'), _import_structure)

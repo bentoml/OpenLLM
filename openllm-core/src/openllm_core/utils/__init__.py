@@ -1,5 +1,5 @@
 from __future__ import annotations
-import functools, hashlib, logging, logging.config, os, sys, types, uuid, typing as t
+import functools, hashlib, logging, logging.config, inflection, os, sys, types, uuid, typing as t
 from pathlib import Path as _Path
 from . import import_utils as iutils, pkg
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
@@ -8,6 +8,9 @@ from ._constants import DEBUG_ENV_VAR as DEBUG_ENV_VAR, QUIET_ENV_VAR as QUIET_E
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
+
+
+def normalise_model_name(name): return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else inflection.dasherize(name.replace('/', '--'))
 
 
 def correct_closure(cls, ref):
@@ -60,7 +63,7 @@ def lenient_issubclass(cls, class_or_tuple):
     raise
 
 
-def api(func=None, *, input=None, output=None, route=None, media_type=None):
+def api(func=None, *, name=None, input=None, output=None, route=None, media_type=None, batchable=False, batch_dim=0, max_batch_size=100, max_latency_ms=60000):
   try:
     import bentoml
   except ImportError:
@@ -69,9 +72,14 @@ def api(func=None, *, input=None, output=None, route=None, media_type=None):
     wrapped = bentoml.api(
     func,
     route=route,
+    name=name,
     media_type=media_type,
-    input_spec=input.pydantic_model() if hasattr(input, 'pydantic_model') else input,
-    output_spec=output.pydantic_model() if hasattr(output, 'pydantic_model') else output,
+    input_spec=input.pydantic_model() if getattr(input, '__openllm_attach_pydantic_model__', False) else input,
+    output_spec=output.pydantic_model() if getattr(input, '__openllm_attach_pydantic_model__', False) else output,
+    batchable=batchable,
+    batch_dim=batch_dim,
+    max_batch_size=max_batch_size,
+    max_latency_ms=max_latency_ms,
     )
     object.__setattr__(func, '__openllm_api_func__', True)
     return wrapped

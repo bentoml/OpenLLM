@@ -86,6 +86,7 @@ def attach_pydantic_model(klass: t.Optional[t.Type[T]] = None, /, **config: Unpa
         )
       ),
     )
+    setattr(_cls, '__openllm_attach_pydantic_model__', True)
     return _cls
 
   return _decorator if klass is None else _decorator(klass)

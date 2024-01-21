@@ -1,17 +1,19 @@
-import contextlib, attr, bentoml, openllm, types, typing as t
+from __future__ import annotations
+import contextlib, attr, bentoml, openllm, types, logging, typing as t
 from simple_di import Provide, inject
 from bentoml._internal.configuration.containers import BentoMLContainer
-from bentoml._internal.models.model import ModelSignature
-from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import is_autogptq_available
+from openllm_core._typing_compat import LiteralSerialisation, LiteralQuantise, LiteralBackend
+
+if t.TYPE_CHECKING:
+  import transformers
+  from bentoml._internal.models import ModelStore
 
 _object_setattr = object.__setattr__
+logger = logging.getLogger(__name__)
 
-
-def get_hash(config) -> str:
+def get_hash(config: transformers.PretrainedConfig) -> str:
   _commit_hash = getattr(config, '_commit_hash', None)
-  if _commit_hash is None:
-    raise ValueError(f'Cannot find commit hash in {config}')
+  if _commit_hash is None: logger.warning('Cannot find commit hash in %r', config)
   return _commit_hash
 
 
@@ -36,7 +38,7 @@ def patch_correct_tag(llm, config, _revision=None) -> None:
 def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadata=None):
   if metadata is None:
     metadata = {}
-  metadata.update({'safe_serialisation': safe_serialisation, '_framework': llm.__llm_backend__})
+  metadata.update({'_framework': llm.__llm_backend__})
   if llm.quantise:
     metadata['_quantize'] = llm.quantise
   architectures = getattr(config, 'architectures', [])
@@ -58,9 +60,11 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
   metadata.update({
     '_pretrained_class': architectures[0],
     '_revision': get_hash(config) if not llm.local else llm.revision,
+    '_local': llm.local,
     'serialisation': llm._serialisation,
-    'model_name': llm.config['model_name'],  #
+    'model_name': llm.config['model_name'],
     'architecture': llm.config['architecture'],
+    'model_id': llm.model_id,
   })
   return metadata
 
@@ -73,75 +77,42 @@ class _Model(bentoml.Model):
     if self._imported_modules is None:
       self._imported_modules = []
     return self._imported_modules
+
   @imported_modules.setter
-  def imported_modules(self, value): self._imported_modules = value
+  def imported_modules(self, value):
+    self._imported_modules = value
 
-
-def _create_signatures(llm, signatures=None):
-  if signatures is None:
-    signatures = {}
-  if llm.__llm_backend__ == 'pt':
-    if llm.quantise == 'gptq':
-      if not is_autogptq_available():
-        raise OpenLLMException("Requires 'auto-gptq' and 'optimum'. Install it with 'pip install \"openllm[gptq]\"'")
-      signatures['generate'] = {'batchable': False}
-    else:
-      signatures.update({
-        k: ModelSignature(batchable=False)
-        for k in (
-          '__call__',
-          'forward',
-          'generate',  #
-          'contrastive_search',
-          'greedy_search',  #
-          'sample',
-          'beam_search',
-          'beam_sample',  #
-          'group_beam_search',
-          'constrained_beam_search',  #
-        )
-      })
-  elif llm.__llm_backend__ == 'ctranslate':
-    if llm.config['model_type'] == 'seq2seq_lm':
-      non_batch_keys = {'score_file', 'translate_file'}
-      batch_keys = {'generate_tokens', 'score_batch', 'translate_batch', 'translate_iterable', 'score_iterable'}
-    else:
-      non_batch_keys = set()
-      batch_keys = {
-        'async_generate_tokens',
-        'forward_batch',
-        'generate_batch',  #
-        'generate_iterable',
-        'generate_tokens',
-        'score_batch',
-        'score_iterable',  #
-      }
-    signatures.update({k: ModelSignature(batchable=False) for k in non_batch_keys})
-    signatures.update({k: ModelSignature(batchable=True) for k in batch_keys})
-  return signatures
+  @classmethod
+  def create(cls, tag, *, module, api_version, labels=None, metadata=None):
+    return super().create(
+      tag, module=module, api_version=api_version, signatures={}, labels=labels, metadata=metadata, context=openllm.utils.generate_context('openllm')
+    )
 
 
 @inject
 @contextlib.contextmanager
 def save_model(
-  llm,
-  config,
-  safe_serialisation,  #
-  trust_remote_code,
-  module,
-  external_modules,  #
-  _model_store=Provide[BentoMLContainer.model_store],
-  _api_version='v3.0.0',  #
+  tag: bentoml.Tag,
+  config: transformers.PretrainedConfig,
+  serialisation: LiteralSerialisation,  #
+  trust_remote_code: bool,
+  module: str,
+  external_modules: list[types.ModuleType],  #
+  model_id: str,
+  quantise: LiteralQuantise,
+  backend: LiteralBackend,
+  _local: bool,
+  _dtype: str,
+  _model_store: ModelStore = Provide[BentoMLContainer.model_store],
+  _api_version: str ='v3.0.0',  #
 ) -> bentoml.Model:
   imported_modules = []
+  architectures = getattr(config, 'architectures', [])
+  _metadata = {'model_id': model_id, 'backend': backend, 'dtype': _dtype, 'architectures': architectures, '_revision': get_hash(config) or tag.version, '_local': _local, 'serialisation': serialisation}
+  if quantise:
+    _metadata['_quantize'] = quantise
   bentomodel = _Model.create(
-    llm.tag,
-    module=f'openllm.serialisation.{module}',  #
-    api_version=_api_version,
-    context=openllm.utils.generate_context('openllm'),
-    labels=openllm.utils.generate_labels(llm),
-    metadata=_create_metadata(llm, config, safe_serialisation, trust_remote_code),
-    signatures=_create_signatures(llm),
+    tag, module=f'openllm.serialisation.{module}', api_version=_api_version, labels=openllm.utils.generate_labels(serialisation), metadata=_metadata
   )
   with openllm.utils.analytics.set_bentoml_tracking():
     try:

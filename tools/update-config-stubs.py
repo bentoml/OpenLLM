@@ -215,8 +215,17 @@ def main() -> int:
   with _TARGET_INIT_FILE.open('r') as f: processed = f.readlines()
 
   start_import_stubs_idx, end_import_stubs_idx = processed.index(START_IMPORT_STUBS_COMMENT), processed.index(END_IMPORT_STUBS_COMMENT)
-  lines = f'from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig, {", ".join([a+" as "+a for a in CONFIG_MAPPING_NAMES.values()])}\n'
-  processed = processed[:start_import_stubs_idx] + [START_IMPORT_STUBS_COMMENT, lines, END_IMPORT_STUBS_COMMENT] + processed[end_import_stubs_idx + 1 :]
+  mm = {
+    '_configuration': ("GenerationConfig", "LLMConfig", "SamplingParams",),
+    '_schemas': ('GenerationInput', 'GenerationOutput', 'MetadataOutput',),
+    'utils': ('api',),
+  }
+  lines = [
+    'from openllm_client import AsyncHTTPClient as AsyncHTTPClient, HTTPClient as HTTPClient',
+    f'from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig, {", ".join([a+" as "+a for a in CONFIG_MAPPING_NAMES.values()])}',
+  ]
+  lines.extend([f'from openllm_core.{module} import {", ".join([a+" as "+a for a in attr])}' for module, attr in mm.items()])
+  processed = processed[:start_import_stubs_idx] + [START_IMPORT_STUBS_COMMENT, '\n'.join(lines) + '\n', END_IMPORT_STUBS_COMMENT] + processed[end_import_stubs_idx + 1 :]
   with _TARGET_INIT_FILE.open('w') as f: f.writelines(processed)
 
   lines = [
