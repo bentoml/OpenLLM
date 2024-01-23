@@ -8,7 +8,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.1.13'
+    rev: 'v0.1.14'
     hooks:
       - id: ruff
         alias: r
