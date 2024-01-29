@@ -119,7 +119,7 @@ jobs:
           bentoml-version: 'main'
           python-version: '3.8'
       - name: Build wheels via cibuildwheel
-        uses: pypa/cibuildwheel@fff9ec32ed25a9c576750c91e06b410ed0c15db7 # ratchet:pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@0b04ab1040366101259658b355777e4ff2d16f83 # ratchet:pypa/cibuildwheel@v2.16.4
         with:
           package-dir: ${{ matrix.directory }}
           config-file: pyproject.toml
