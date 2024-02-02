@@ -286,7 +286,7 @@ class PyTorchRunnable(bentoml.Runnable):
         if config['logprobs']:
           sample_logprobs.append({token: token_logprobs})
 
-        yield GenerationOutput(
+        out = GenerationOutput(
           prompt='',
           finished=False,
           outputs=[
@@ -303,6 +303,7 @@ class PyTorchRunnable(bentoml.Runnable):
           prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
           request_id=request_id,
         ).model_dump_json()
+        yield bentoml.io.SSE(out).marshal()
         if stopped:
           break
       else:
