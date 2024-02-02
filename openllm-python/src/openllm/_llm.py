@@ -108,11 +108,13 @@ class LLM(t.Generic[M, T]):
       generator = self.runner.generate_iterator.async_stream(
         prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
       )
+      generator = bentoml.io.SSE.from_iterator(generator)
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
     try:
       async for out in generator:
+        out = out.data
         generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:

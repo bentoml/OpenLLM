@@ -151,7 +151,9 @@ class vLLMRunnable(bentoml.Runnable):
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     _, sampling_params = self.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)
     async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield GenerationOutput.from_vllm(request_output).model_dump_json()
+      out = GenerationOutput.from_vllm(request_output).model_dump_json()
+      out = bentoml.io.SSE(out).marshal()
+      yield out
 
 
 @registry(alias='pt')
