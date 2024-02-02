@@ -40,8 +40,8 @@ classifiers = [
 dependencies = [
     "bentoml[io]>=1.1.10",
     "transformers[torch,tokenizers]>=4.36.0",
-    "openllm-client>=0.4.41",
-    "openllm-core>=0.4.41",
+    "openllm-client>=0.4.42",
+    "openllm-core>=0.4.42",
     "safetensors",
     "optimum>=1.12.0",
     "accelerate",
@@ -91,7 +91,7 @@ openllm-playground = "openllm_cli.extension.playground:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
-Chat = "https://l.bentoml.com/join-openllm-discord"
+Chat = "https://discord.gg/openllm"
 Documentation = "https://github.com/bentoml/openllm#readme"
 GitHub = "https://github.com/bentoml/OpenLLM"
 History = "https://github.com/bentoml/OpenLLM/blob/main/CHANGELOG.md"
