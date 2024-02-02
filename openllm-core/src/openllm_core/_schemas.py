@@ -86,7 +86,7 @@ class GenerationInput(_SchemaMixin):
     )
 
     def examples(_: type[GenerationInput]) -> dict[str, t.Any]:
-      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=['\n']).model_dump()
+      return klass(prompt='What is the meaning of life?', llm_config=llm_config, stop=[]).model_dump()
 
     klass.examples = classmethod(examples)
 
