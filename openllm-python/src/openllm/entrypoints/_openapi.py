@@ -89,7 +89,6 @@ requestBody:
             n: 1
             stream: true
             stop:
-              - "\\n"
               - "<|endoftext|>"
             chat_template: __chat_template__
             add_generation_prompt: __add_generation_prompt__
@@ -227,7 +226,6 @@ requestBody:
             n: 1
             stream: true
             stop:
-              - "\\n"
               - "<|endoftext|>"
 responses:
   200:
@@ -356,7 +354,7 @@ requestBody:
         inputs: "Is the following `text` positive or negative?"
         parameters:
           text: "This is a positive text."
-          stop: ["\n"]
+          stop: []
   required: true
 responses:
   200:
@@ -453,7 +451,6 @@ requestBody:
             num_generations: 2
             stream: true
             stop_sequences:
-              - "\\n"
               - "<|endoftext|>"
 """
 COHERE_CHAT_SCHEMA = """\
