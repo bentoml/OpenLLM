@@ -81,7 +81,7 @@ Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
 full = ["openllm-core[vllm,fine-tune,bentoml]"]
 vllm = ["vllm"]
-bentoml = ["bentoml>=1.1.2"]
+bentoml = ["bentoml>=1.1.10,<1.2"]
 fine-tune = [
     "transformers[torch,tokenizers,accelerate]>=4.34.0",
     "peft>=0.4.0",
