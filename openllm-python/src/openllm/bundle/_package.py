@@ -38,7 +38,7 @@ def build_editable(path, package='openllm'):
 def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=None):
   from . import RefResolver
 
-  packages = ['scipy', 'bentoml[tracing]>=1.1.10,<1.2', f'openllm[vllm]>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
+  packages = ['scipy', 'bentoml[tracing]>=1.1.11,<1.2', f'openllm[vllm]>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
   if adapter_map is not None:
     packages += ['openllm[fine-tune]']
   if extra_dependencies is not None:
