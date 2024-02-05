@@ -67,7 +67,7 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
 full = ["openllm-client[grpc,agents,auth]"]
-grpc = ["bentoml[grpc]>=1.1.11,<1.2"]
+grpc = ["bentoml[grpc]>=1.1.11,<1.3"]
 auth = ['httpx_auth']
 agents = ["transformers[agents]>=4.30", "diffusers", "soundfile"]
 
