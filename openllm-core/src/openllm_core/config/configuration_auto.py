@@ -236,7 +236,9 @@ class AutoConfig:
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
         if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-          return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]).model_construct_env()
+          return cls.infer_class_from_name(
+            cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
+          ).model_construct_env()
     raise ValueError(
       f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )
