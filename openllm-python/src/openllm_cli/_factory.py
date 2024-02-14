@@ -135,9 +135,47 @@ def optimization_decorator(fn: FC, *, factory=click, _eager=True) -> FC | list[A
   return compose(*shared)(fn)
 
 
+# NOTE: A list of bentoml option that is not needed for parsing.
+# NOTE: User shouldn't set '--working-dir', as OpenLLM will setup this.
+# NOTE: production is also deprecated
+_IGNORED_OPTIONS = {'working_dir', 'production', 'protocol_version'}
+
+
+def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[FC], FC]]:
+  from bentoml_cli.cli import cli
+
+  group = cog.optgroup.group(
+    'Start a HTTP server options', help='Related to serving the model [synonymous to `bentoml serve-http`]'
+  )
+
+  def decorator(f: t.Callable[Concatenate[int, t.Optional[str], P], LLMConfig]) -> t.Callable[[FC], FC]:
+    serve_command = cli.commands['serve']
+    # The first variable is the argument bento
+    # The last five is from BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS
+    serve_options = [
+      p
+      for p in serve_command.params[1 : -BentoMLCommandGroup.NUMBER_OF_COMMON_PARAMS]
+      if p.name not in _IGNORED_OPTIONS
+    ]
+    for options in reversed(serve_options):
+      attrs = options.to_info_dict()
+      # we don't need param_type_name, since it should all be options
+      attrs.pop('param_type_name')
+      # name is not a valid args
+      attrs.pop('name')
+      # type can be determine from default value
+      attrs.pop('type')
+      param_decls = (*attrs.pop('opts'), *attrs.pop('secondary_opts'))
+      f = cog.optgroup.option(*param_decls, **attrs)(f)
+    return group(f)
+
+  return decorator
+
+
 def start_decorator(fn: FC) -> FC:
   composed = compose(
     _OpenLLM_GenericInternalConfig.parse,
+    parse_serve_args(),
     cog.optgroup.group(
       'LLM Options',
       help="""The following options are related to running LLM Server as well as optimization options.

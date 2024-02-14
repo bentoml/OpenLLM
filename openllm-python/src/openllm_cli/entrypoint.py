@@ -448,43 +448,23 @@ def start_command(
 
   config, _ = llm_config.model_validate_click(**attrs)
 
-  start_env = process_environ(
-    config,
-    server_timeout,
-    # process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
-    device,
-    model_id,
-    adapter_map,
-    quantize,
-    backend,
-    dtype,
-    serialisation,
-    trust_remote_code,
-    max_model_len,
-    gpu_memory_utilization,
-  )
+  # process_environ(
+  #   config,
+  #   server_timeout,
+  #   # process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
+  #   device,
+  #   model_id,
+  #   adapter_map,
+  #   quantize,
+  #   backend,
+  #   dtype,
+  #   serialisation,
+  #   trust_remote_code,
+  #   max_model_len,
+  #   gpu_memory_utilization,
+  # )
 
-  server = bentoml.HTTPServer('_service.py:LLMService')
-  openllm.utils.analytics.track_start_init(config)
-
-  try:
-    # build_bento_instruction(llm, model_id, serialisation, adapter_map)
-    it = run_server(server.args, start_env, return_process=return_process)
-    if return_process:
-      return it
-  except KeyboardInterrupt:
-    pass
-
-  # NOTE: Return the configuration for telemetry purposes.
-  return config
-
-
-def process_environ(
-  config, server_timeout, device, model_id, adapter_map, quantize, backend, dtype, serialisation, trust_remote_code, max_model_len, gpu_memory_utilization, use_current_env=True
-):
-  environ = os.environ.copy() if use_current_env else {}
-
-  environ.update({
+  os.environ.update({
     'OPENLLM_MODEL_ID': model_id,
     'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
     'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
@@ -497,8 +477,24 @@ def process_environ(
     'MAX_MODEL_LEN': orjson.dumps(max_model_len).decode(),
     'GPU_MEMORY_UTILIZATION': orjson.dumps(gpu_memory_utilization).decode(),
   })
-  if quantize: environ['QUANTIZE'] = str(quantize)
-  return environ
+  if quantize:
+    os.environ['QUANTIZE'] = str(quantize)
+
+  from openllm._service import LLMService
+
+  openllm.utils.analytics.track_start_init(config)
+
+  try:
+    # build_bento_instruction(llm, model_id, serialisation, adapter_map)
+    # it = run_server(server.args, start_env, return_process=return_process)
+    # if return_process:
+    #   return it
+    LLMService.serve_http()
+  except KeyboardInterrupt:
+    pass
+
+  # NOTE: Return the configuration for telemetry purposes.
+  return config
 
 
 def process_workers_per_resource(wpr: str | float | int, device: tuple[str, ...]) -> TypeGuard[float]:

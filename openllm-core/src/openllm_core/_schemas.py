@@ -26,7 +26,7 @@ class _SchemaMixin:
   def model_dump(self) -> dict[str, t.Any]:
     return converter.unstructure(self)
 
-  def model_dump_json(self) -> str:
+  def model_dump_json(self, **attrs) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
 
   def with_options(self, **options: t.Any) -> Self:
@@ -187,7 +187,7 @@ class CompletionChunk(_SchemaMixin):
   logprobs: t.Optional[SampleLogprobs] = None
   finish_reason: t.Optional[FinishReason] = None
 
-  def model_dump_json(self) -> str:
+  def model_dump_json(self, **attrs) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
@@ -288,7 +288,7 @@ class GenerationOutput(_SchemaMixin):
       ],
     )
 
-  def model_dump_json(self) -> str:
+  def model_dump_json(self, **attrs) -> str:
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 

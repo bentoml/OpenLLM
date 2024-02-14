@@ -1,9 +1,16 @@
 from __future__ import annotations
-import openllm, bentoml, _service_vars as svars, typing as t
-from openllm_core._schemas import MessageParam, GenerationInput, GenerationInputDict, GenerationOutput, MessagesConverterInput
+import openllm, bentoml, openllm._service_vars as svars, typing as t
+from openllm_core._schemas import (
+  MessageParam,
+  GenerationInput,
+  GenerationInputDict,
+  GenerationOutput,
+  MessagesConverterInput,
+)
+from openllm_core._typing_compat import Unpack
 
 bentomodel = openllm.prepare_model(
-  model_id=svars.model_id,
+  svars.model_id,
   bentomodel_tag=svars.model_tag,
   serialisation=svars.serialization,
   trust_remote_code=svars.trust_remote_code,
@@ -11,10 +18,11 @@ bentomodel = openllm.prepare_model(
 config = openllm.AutoConfig.from_bentomodel(bentomodel)
 generations = GenerationInput.from_llm_config(config)
 
-llm_ref = None
 
 @bentoml.service(name=f"llm-{config['start_name']}-service", **svars.services_config)
 class LLMService:
+  bentomodel = bentomodel
+
   def __init__(self):
     self.llm = openllm.LLM.from_model(
       self.bentomodel,
@@ -25,9 +33,11 @@ class LLMService:
     )
     llm_ref = self.llm
 
-  @openllm.utils.api(route='/v1/generate', output=GenerationOutput, input=generations, media_type='application/json')
-  async def generate_v1(self, parameters: GenerationInputDict = generations.examples) -> GenerationOutput:
-    structured = generations.from_dict(**parameters)
+  @openllm.utils.api(route='/v1/generate', output=GenerationOutput, input=generations)
+  async def generate_v1(self, **parameters: Unpack[GenerationInputDict]) -> GenerationOutput:
+    # XXX FIX ME THIS IS BROKEN
+    parameters.pop('llm_config')
+    structured = generations(**parameters)
     return await self.llm.generate(
       structured.prompt,
       structured.prompt_token_ids,  #
@@ -39,10 +49,10 @@ class LLMService:
     )
 
   @openllm.utils.api(route='/v1/generate_stream', input=generations)
-  async def generate_stream_v1(
-    self, parameters: GenerationInputDict = generations.examples
-  ) -> t.AsyncGenerator[str, None]:
-    structured = GenerationInput(**parameters)
+  async def generate_stream_v1(self, **parameters: Unpack[GenerationInputDict]) -> t.AsyncGenerator[str, None]:
+    # XXX FIX ME THIS IS BROKEN
+    parameters.pop('llm_config')
+    structured = generations(**parameters)
     async for generated in self.llm.generate_iterator(
       structured.prompt,
       structured.prompt_token_ids,  #
@@ -55,7 +65,7 @@ class LLMService:
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 
-  @openllm.utils.api(output=openllm.MetadataOutput, route='/v1/metadata', media_type='application/json')
+  @openllm.utils.api(output=openllm.MetadataOutput, route='/v1/metadata')
   def metadata_v1(self) -> openllm.MetadataOutput:
     return openllm.MetadataOutput(
       timeout=self.llm.config['timeout'],
@@ -65,7 +75,7 @@ class LLMService:
       configuration=self.llm.config.model_dump_json().decode(),
     )
 
-  @openllm.utils.api(route='/v1/helpers/messages', media_type='text/plain')
+  @openllm.utils.api(route='/v1/helpers/messages')
   def helpers_messages_v1(
     self,
     message: MessagesConverterInput = MessagesConverterInput(
@@ -78,10 +88,12 @@ class LLMService:
     ),
   ) -> str:
     add_generation_prompt, messages = message['add_generation_prompt'], message['messages']
-    return self.llm.tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=False)
+    return self.llm.tokenizer.apply_chat_template(
+      messages, add_generation_prompt=add_generation_prompt, tokenize=False
+    )
 
 
-openllm.mount_entrypoints(LLMService, llm_ref)
+# openllm.mount_entrypoints(LLMService, llm_ref)
 
 if __name__ == '__main__':
   LLMService.serve_http(

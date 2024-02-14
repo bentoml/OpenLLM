@@ -2,7 +2,13 @@ from __future__ import annotations
 import functools, logging, os, warnings, types, typing as t
 from copy import deepcopy
 import attr, orjson, bentoml, openllm
-from openllm_core._schemas import MessageParam, GenerationInput, GenerationInputDict, GenerationOutput, MessagesConverterInput
+from openllm_core._schemas import (
+  MessageParam,
+  GenerationInput,
+  GenerationInputDict,
+  GenerationOutput,
+  MessagesConverterInput,
+)
 from openllm_core._typing_compat import (
   AdapterMap,
   AdapterTuple,
@@ -12,6 +18,7 @@ from openllm_core._typing_compat import (
   LiteralQuantise,
   LiteralSerialisation,
   ParamSpec,
+  Unpack,
   Concatenate,
   M,
   T,
@@ -117,9 +124,9 @@ class LLM(t.Generic[M, T]):
     try:
       async for out in generator:
         if not self._eager:
-          generated = GenerationOutput.from_runner(out.data).with_options(prompt=prompt)
+          generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
         else:
-          generated = out.data.with_options(prompt=prompt)
+          generated = out.with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:
           i = output.index
@@ -664,7 +671,7 @@ def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
 
 def apis(llm, generations):
   @openllm.utils.api(route='/v1/generate', output=GenerationOutput, input=generations)
-  async def generate_v1(self, parameters: GenerationInputDict = generations.examples) -> GenerationOutput:
+  async def generate_v1(self, **parameters: Unpack[GenerationInputDict]) -> GenerationOutput:
     structured = generations.from_dict(**parameters)
     return await self.llm.generate(
       structured.prompt,
@@ -677,9 +684,7 @@ def apis(llm, generations):
     )
 
   @openllm.utils.api(route='/v1/generate_stream', input=generations)
-  async def generate_stream_v1(
-    self, parameters: GenerationInputDict = generations.examples
-  ) -> t.AsyncGenerator[str, None]:
+  async def generate_stream_v1(self, **parameters: Unpack[GenerationInputDict]) -> t.AsyncGenerator[str, None]:
     structured = GenerationInput(**parameters)
     async for generated in self.llm.generate_iterator(
       structured.prompt,
