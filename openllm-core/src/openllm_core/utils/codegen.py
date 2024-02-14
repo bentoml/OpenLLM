@@ -20,23 +20,31 @@ logger = logging.getLogger(__name__)
 # sentinel object for unequivocal object() getattr
 _sentinel = object()
 
+
 def has_own_attribute(cls: type[t.Any], attrib_name: t.Any) -> bool:
   attr = getattr(cls, attrib_name, _sentinel)
-  if attr is _sentinel: return False
+  if attr is _sentinel:
+    return False
   for base_cls in cls.__mro__[1:]:
     a = getattr(base_cls, attrib_name, None)
-    if attr is a: return False
+    if attr is a:
+      return False
   return True
 
+
 def get_annotations(cls: type[t.Any]) -> DictStrAny:
-  if has_own_attribute(cls, '__annotations__'): return cls.__annotations__
+  if has_own_attribute(cls, '__annotations__'):
+    return cls.__annotations__
   return {}
+
 
 def is_class_var(annot: str | t.Any) -> bool:
   annot = str(annot)
   # Annotation can be quoted.
-  if annot.startswith(("'", '"')) and annot.endswith(("'", '"')): annot = annot[1:-1]
+  if annot.startswith(("'", '"')) and annot.endswith(("'", '"')):
+    annot = annot[1:-1]
   return annot.startswith(('typing.ClassVar', 't.ClassVar', 'ClassVar', 'typing_extensions.ClassVar'))
+
 
 def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str | None = None) -> _T:
   try:
@@ -53,7 +61,10 @@ def add_method_dunders(cls: type[t.Any], method_or_cls: _T, _overwrite_doc: str 
     pass
   return method_or_cls
 
-def _compile_and_eval(script, globs, locs = None, filename = ''): eval(compile(script, filename, 'exec'), globs, locs)
+
+def _compile_and_eval(script, globs, locs=None, filename=''):
+  eval(compile(script, filename, 'exec'), globs, locs)
+
 
 def _make_method(name, script, filename, globs):
   locs: dict[str, t.Any | AnyCallable] = {}
@@ -70,6 +81,7 @@ def _make_method(name, script, filename, globs):
       count += 1
   _compile_and_eval(script, globs, locs, filename)
   return locs[name]
+
 
 def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.Any]:
   """Create a tuple subclass to hold class attributes.
@@ -90,11 +102,15 @@ def make_attr_tuple_class(cls_name: str, attr_names: t.Sequence[str]) -> type[t.
   else:
     attr_class_template.append('  pass')
   globs = {'_attrs_itemgetter': itemgetter, '_attrs_property': property}
-  if SHOW_CODEGEN: print(f'Generated class for {attr_class_name}:\n\n', '\n'.join(attr_class_template))
+  if SHOW_CODEGEN:
+    print(f'Generated class for {attr_class_name}:\n\n', '\n'.join(attr_class_template))
   _compile_and_eval('\n'.join(attr_class_template), globs)
   return globs[attr_class_name]
 
-def generate_unique_filename(cls, func_name) -> str: return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
+
+def generate_unique_filename(cls, func_name) -> str:
+  return f"<{cls.__name__} generated {func_name} {cls.__module__}.{getattr(cls, '__qualname__', cls.__name__)}>"
+
 
 def generate_function(
   typ: type[t.Any],
@@ -104,7 +120,11 @@ def generate_function(
   globs: dict[str, t.Any],
   annotations: dict[str, t.Any] | None = None,
 ) -> AnyCallable:
-  script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
+  script = 'def %s(%s):\n    %s\n' % (
+    func_name,
+    ', '.join(args) if args is not None else '',
+    '\n    '.join(lines) if lines else 'pass',
+  )
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations:
     meth.__annotations__ = annotations

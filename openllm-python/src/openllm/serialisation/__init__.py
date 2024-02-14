@@ -1,7 +1,16 @@
+from __future__ import annotations
 import importlib, logging, inspect, openllm, typing as t
 from openllm_core._typing_compat import ParamSpec, Concatenate, TypeGuard
 from openllm_core.exceptions import OpenLLMException
-from openllm_core.utils import apply, first_not_none, generate_hash_from_file, getenv, resolve_filepath, validate_is_path, normalise_model_name
+from openllm_core.utils import (
+  apply,
+  first_not_none,
+  generate_hash_from_file,
+  getenv,
+  resolve_filepath,
+  validate_is_path,
+  normalise_model_name,
+)
 
 if t.TYPE_CHECKING:
   from bentoml import Model
@@ -19,7 +28,9 @@ def _make_tag_components(model_id: str, model_version: t.Optional[str]) -> t.Tup
   model_id, *maybe_revision = model_id.rsplit(':')
   if len(maybe_revision) > 0:
     if model_version is not None:
-      logger.warning("revision is specified (%s). 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
+      logger.warning(
+        "revision is specified (%s). 'model_version=%s' will be ignored.", maybe_revision[0], model_version
+      )
     model_version = maybe_revision[0]
   if validate_is_path(model_id):
     model_id = resolve_filepath(model_id)
@@ -64,6 +75,8 @@ def prepare_model(
     if bentomodel_version:
       model_version = bentomodel_version
     bentomodel_tag = bentoml.Tag.from_taglike(f'{model_tag}:{model_version}' if model_version else model_tag)
+  else:
+    bentomodel_tag = bentoml.Tag.from_taglike(bentomodel_tag)
 
   try:
     return bentoml.models.get(bentomodel_tag)
@@ -103,7 +116,9 @@ def load_tokenizer(llm, **tokenizer_attrs):
           'For example: "bentoml.transformers.save_model(..., custom_objects={\'tokenizer\': tokenizer})"'
         ) from None
   else:
-    tokenizer = transformers.AutoTokenizer.from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+      bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs
+    )
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None:

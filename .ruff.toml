@@ -1,6 +1,21 @@
 exclude = ["tools", "examples", "openllm-python/src/openllm_cli/playground/"]
 extend-include = ["*.ipynb"]
 preview = true
+line-length = 119
+indent-width = 2
+
+[format]
+preview = true
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = true
+
+[lint]
+typing-modules = [
+    "openllm_core._typing_compat",
+    "openllm_client._typing_compat",
+]
+ignore = ["RUF012"]
 select = [
     "F",
     "G",    # flake8-logging-format
@@ -26,19 +41,6 @@ select = [
     "W293",
     "UP039", # unnecessary-class-parentheses
 ]
-ignore = ["RUF012"]
-line-length = 150
-indent-width = 2
-typing-modules = [
-    "openllm_core._typing_compat",
-    "openllm_client._typing_compat",
-]
-
-[format]
-preview = true
-quote-style = "single"
-indent-style = "space"
-skip-magic-trailing-comma = true
 
 [lint.pydocstyle]
 convention = "google"

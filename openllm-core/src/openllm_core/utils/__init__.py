@@ -3,14 +3,30 @@ import functools, hashlib, logging, logging.config, inflection, os, sys, types, 
 from pathlib import Path as _Path
 from . import import_utils as iutils, pkg
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
-from ._constants import DEBUG_ENV_VAR as DEBUG_ENV_VAR, QUIET_ENV_VAR as QUIET_ENV_VAR, GRPC_DEBUG_ENV_VAR as GRPC_DEBUG_ENV_VAR, WARNING_ENV_VAR as WARNING_ENV_VAR, DEV_DEBUG_VAR as DEV_DEBUG_VAR, ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES, check_bool_env as check_bool_env, DEBUG as DEBUG, SHOW_CODEGEN as SHOW_CODEGEN, MYPY as MYPY
+from ._constants import (
+  DEBUG_ENV_VAR as DEBUG_ENV_VAR,
+  QUIET_ENV_VAR as QUIET_ENV_VAR,
+  GRPC_DEBUG_ENV_VAR as GRPC_DEBUG_ENV_VAR,
+  WARNING_ENV_VAR as WARNING_ENV_VAR,
+  DEV_DEBUG_VAR as DEV_DEBUG_VAR,
+  ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
+  check_bool_env as check_bool_env,
+  DEBUG as DEBUG,
+  SHOW_CODEGEN as SHOW_CODEGEN,
+  MYPY as MYPY,
+)
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
 
 
-def normalise_model_name(name): return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else inflection.dasherize(name.replace('/', '--'))
+def normalise_model_name(name):
+  return (
+    os.path.basename(resolve_filepath(name))
+    if validate_is_path(name)
+    else inflection.dasherize(name.replace('/', '--'))
+  )
 
 
 def correct_closure(cls, ref):
@@ -40,7 +56,8 @@ def correct_closure(cls, ref):
       except ValueError:  # noqa: PERF203
         pass  # ValueError: Cell is empty
       else:
-        if match: cell.cell_contents = cls
+        if match:
+          cell.cell_contents = cls
   return cls
 
 
@@ -51,7 +68,9 @@ def _WithArgsTypes() -> tuple[type[t.Any], ...]:
   except ImportError:
     _TypingGenericAlias = ()  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   #  _GenericAlias is the actual GenericAlias implementation
-  return (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
+  return (
+    (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
+  )
 
 
 def lenient_issubclass(cls, class_or_tuple):
@@ -63,26 +82,38 @@ def lenient_issubclass(cls, class_or_tuple):
     raise
 
 
-def api(func=None, *, name=None, input=None, output=None, route=None, media_type=None, batchable=False, batch_dim=0, max_batch_size=100, max_latency_ms=60000):
+def api(
+  func=None,
+  *,
+  name=None,
+  input=None,
+  output=None,
+  route=None,
+  batchable=False,
+  batch_dim=0,
+  max_batch_size=100,
+  max_latency_ms=60000,
+):
   try:
     import bentoml
   except ImportError:
     raise RuntimeError('Requires "bentoml" to use `openllm_core.utils.api`') from None
+
   def caller(func):
     wrapped = bentoml.api(
-    func,
-    route=route,
-    name=name,
-    media_type=media_type,
-    input_spec=input.pydantic_model() if getattr(input, '__openllm_attach_pydantic_model__', False) else input,
-    output_spec=output.pydantic_model() if getattr(input, '__openllm_attach_pydantic_model__', False) else output,
-    batchable=batchable,
-    batch_dim=batch_dim,
-    max_batch_size=max_batch_size,
-    max_latency_ms=max_latency_ms,
+      func,
+      route=route,
+      name=name,
+      input_spec=input.pydantic_model() if getattr(input, '__openllm_attach_pydantic_model__', False) else input,
+      output_spec=output.pydantic_model() if getattr(output, '__openllm_attach_pydantic_model__', False) else output,
+      batchable=batchable,
+      batch_dim=batch_dim,
+      max_batch_size=max_batch_size,
+      max_latency_ms=max_latency_ms,
     )
     object.__setattr__(func, '__openllm_api_func__', True)
     return wrapped
+
   return caller(func) if func is not None else caller
 
 
@@ -292,7 +323,11 @@ _LOGGING_CONFIG = {
     'warningfilter': {'()': 'openllm_core.utils.WarningFilter'},
   },
   'handlers': {
-    'bentomlhandler': {'class': 'logging.StreamHandler', 'filters': ['excfilter', 'warningfilter', 'infofilter'], 'stream': 'ext://sys.stdout'},
+    'bentomlhandler': {
+      'class': 'logging.StreamHandler',
+      'filters': ['excfilter', 'warningfilter', 'infofilter'],
+      'stream': 'ext://sys.stdout',
+    },
     'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
   },
   'loggers': {
@@ -328,7 +363,9 @@ def configure_logging():
 # since _extras will be the locals() import from this file.
 _extras = {
   **{
-    k: v for k, v in locals().items() if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
+    k: v
+    for k, v in locals().items()
+    if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
   },
   '__openllm_migration__': {'bentoml_cattr': 'converter'},
 }

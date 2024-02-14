@@ -11,4 +11,4 @@ max_model_len, gpu_memory_utilization = (
   orjson.loads(os.getenv('MAX_MODEL_LEN', orjson.dumps(None).decode())),
   orjson.loads(os.getenv('GPU_MEMORY_UTILIZATION', orjson.dumps(0.9).decode())),
 )
-services_config = orjson.loads(os.getenv('SERVICES_CONFIG', orjson.dumps(None)))
+services_config = orjson.loads(os.getenv('SERVICES_CONFIG', orjson.dumps({})))

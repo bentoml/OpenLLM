@@ -6,7 +6,9 @@ from ..transformers._helpers import get_tokenizer, process_config
 from ..transformers import _torch_dtype, TOKENIZER_ATTRS, _has_gpus
 
 if not is_ctranslate_available():
-  raise RuntimeError("'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'")
+  raise RuntimeError(
+    "'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'"
+  )
 import ctranslate2
 from ctranslate2.converters.transformers import TransformersConverter
 
@@ -63,11 +65,18 @@ def import_model(
   ) as bentomodel:
     if _local:
       shutil.copytree(
-        _model_id, bentomodel.path, symlinks=False, ignore=shutil.ignore_patterns('.git', 'venv', '__pycache__', '.venv'), dirs_exist_ok=True
+        _model_id,
+        bentomodel.path,
+        symlinks=False,
+        ignore=shutil.ignore_patterns('.git', 'venv', '__pycache__', '.venv'),
+        dirs_exist_ok=True,
       )
     else:
       TransformersConverter(
-        _model_id, load_as_float16=_quantize in ('float16', 'int8_float16'), low_cpu_mem_usage=low_cpu_mem_usage, trust_remote_code=trust_remote_code
+        _model_id,
+        load_as_float16=_quantize in ('float16', 'int8_float16'),
+        low_cpu_mem_usage=low_cpu_mem_usage,
+        trust_remote_code=trust_remote_code,
       ).convert(bentomodel.path, quantization=_quantize, force=True)
     # Save the original HF configuration to hf
     config.save_pretrained(bentomodel.path_of('/hf/'))

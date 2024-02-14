@@ -2,7 +2,18 @@ import importlib, importlib.metadata, importlib.util, os, inspect, typing as t
 from .codegen import _make_method
 from ._constants import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 
-OPTIONAL_DEPENDENCIES = {'vllm', 'fine-tune', 'ggml', 'ctranslate', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
+OPTIONAL_DEPENDENCIES = {
+  'vllm',
+  'fine-tune',
+  'ggml',
+  'ctranslate',
+  'agents',
+  'openai',
+  'playground',
+  'gptq',
+  'grpc',
+  'awq',
+}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_VLLM = os.getenv('USE_VLLM', 'AUTO').upper()
 
@@ -31,13 +42,19 @@ _jupytext_available = _has_package('jupytext')
 _notebook_available = _has_package('notebook')
 _autogptq_available = _has_package('auto_gptq')
 
-_availables = {k[1:]: v for k, v in locals().items() if k.startswith('_') and not inspect.isfunction(v) and k.endswith('_available')}
+_availables = {
+  k[1:]: v for k, v in locals().items() if k.startswith('_') and not inspect.isfunction(v) and k.endswith('_available')
+}
 caller = {
-  f'is_{k}': _make_method(f'is_{k}', f'def is_{k}() -> bool:\n  global _{k}\n  return _{k}\n', f'generated_file_{k}', {f'_{k}': v})
+  f'is_{k}': _make_method(
+    f'is_{k}', f'def is_{k}() -> bool:\n  global _{k}\n  return _{k}\n', f'generated_file_{k}', {f'_{k}': v}
+  )
   for k, v in _availables.items()
 }
 
 _autoawq_available = importlib.util.find_spec('awq') is not None
+
+
 def is_autoawq_available() -> bool:
   global _autoawq_available
   try:
@@ -48,6 +65,8 @@ def is_autoawq_available() -> bool:
 
 
 _vllm_available = importlib.util.find_spec('vllm') is not None
+
+
 def is_vllm_available() -> bool:
   global _vllm_available
   if USE_VLLM in ENV_VARS_TRUE_AND_AUTO_VALUES or _vllm_available:
@@ -58,7 +77,11 @@ def is_vllm_available() -> bool:
   return _vllm_available
 
 
-def __dir__() -> list[str]: return [*list(caller.keys()),'is_autoawq_available', 'is_vllm_available', 'USE_VLLM', 'ENV_VARS_TRUE_VALUES']
+def __dir__() -> list[str]:
+  return [*list(caller.keys()), 'is_autoawq_available', 'is_vllm_available', 'USE_VLLM', 'ENV_VARS_TRUE_VALUES']
+
+
 def __getattr__(it: t.Any) -> t.Any:
-  if it in caller: return caller[it]
+  if it in caller:
+    return caller[it]
   raise AttributeError(f'module {__name__!r} has no attribute {it!r}')

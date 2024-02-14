@@ -80,8 +80,12 @@ def import_model(
   attrs = {**_base_attrs, **attrs}
   config, hub_attrs, attrs = process_config(_model_id, trust_remote_code, **attrs)
   _revision = get_hash(config) if not _local else None
-  if _revision: _bentomodel_tag = attr.evolve(_bentomodel_tag, version=_revision)
-  model, tokenizer = None, get_tokenizer(_model_id, trust_remote_code=trust_remote_code, **hub_attrs, **TOKENIZER_ATTRS)
+  if _revision:
+    _bentomodel_tag = attr.evolve(_bentomodel_tag, version=_revision)
+  model, tokenizer = (
+    None,
+    get_tokenizer(_model_id, trust_remote_code=trust_remote_code, **hub_attrs, **TOKENIZER_ATTRS),
+  )
   with save_model(
     _bentomodel_tag,
     config,
@@ -106,12 +110,24 @@ def import_model(
     if _local:
       try:
         model = transformers.AutoModelForCausalLM.from_pretrained(
-          _model_id, *decls, local_files_only=True, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+          _model_id,
+          *decls,
+          local_files_only=True,
+          config=config,
+          trust_remote_code=trust_remote_code,
+          **hub_attrs,
+          **attrs,
         )
       except Exception:
         try:
           model = transformers.AutoModelForSeq2SeqLM.from_pretrained(
-            _model_id, *decls, local_files_only=True, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+            _model_id,
+            *decls,
+            local_files_only=True,
+            config=config,
+            trust_remote_code=trust_remote_code,
+            **hub_attrs,
+            **attrs,
           )
         except Exception as err:
           raise OpenLLMException(f'Failed to load model from {_model_id}') from err
@@ -124,7 +140,10 @@ def import_model(
     else:
       # we will clone the all tings into the bentomodel path without loading model into memory
       snapshot_download(
-        _model_id, local_dir=bentomodel.path, local_dir_use_symlinks=False, ignore_patterns=HfIgnore.ignore_patterns(_backend, _model_id)
+        _model_id,
+        local_dir=bentomodel.path,
+        local_dir_use_symlinks=False,
+        ignore_patterns=HfIgnore.ignore_patterns(_backend, _model_id),
       )
     return bentomodel
 
@@ -174,7 +193,9 @@ def load_model(llm, *decls, **attrs):
       )
     except Exception as err:
       logger.debug("Failed to load model with 'use_flash_attention_2' (lookup for traceback):\n%s", err)
-      model = auto_class.from_pretrained(llm.bentomodel.path, device_map=device_map, trust_remote_code=llm.trust_remote_code, **attrs)
+      model = auto_class.from_pretrained(
+        llm.bentomodel.path, device_map=device_map, trust_remote_code=llm.trust_remote_code, **attrs
+      )
   else:
     try:
       model = auto_class.from_pretrained(
@@ -189,12 +210,21 @@ def load_model(llm, *decls, **attrs):
     except Exception as err:
       logger.debug("Failed to load model with 'use_flash_attention_2' (lookup for traceback):\n%s", err)
       model = auto_class.from_pretrained(
-        llm.bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **attrs
+        llm.bentomodel.path,
+        *decls,
+        config=config,
+        trust_remote_code=llm.trust_remote_code,
+        device_map=device_map,
+        **attrs,
       )
   check_unintialised_params(model)
 
   # If OOM, then it is probably you don't have enough VRAM to run this model.
-  loaded_in_kbit = getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
+  loaded_in_kbit = (
+    getattr(model, 'is_loaded_in_8bit', False)
+    or getattr(model, 'is_loaded_in_4bit', False)
+    or getattr(model, 'is_quantized', False)
+  )
   if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
     try:
       model = model.to('cuda')

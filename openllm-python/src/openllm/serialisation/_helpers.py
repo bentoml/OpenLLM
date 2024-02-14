@@ -11,9 +11,11 @@ if t.TYPE_CHECKING:
 _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
 
+
 def get_hash(config: transformers.PretrainedConfig) -> str:
   _commit_hash = getattr(config, '_commit_hash', None)
-  if _commit_hash is None: logger.warning('Cannot find commit hash in %r', config)
+  if _commit_hash is None:
+    logger.warning('Cannot find commit hash in %r', config)
   return _commit_hash
 
 
@@ -30,7 +32,9 @@ def patch_correct_tag(llm, config, _revision=None) -> None:
     if _revision is None and llm.tag.version is not None:
       _revision = llm.tag.version
     if llm.tag.version is None:
-      _object_setattr(llm, '_tag', attr.evolve(llm.tag, version=_revision))  # HACK: This copies the correct revision into llm.tag
+      _object_setattr(
+        llm, '_tag', attr.evolve(llm.tag, version=_revision)
+      )  # HACK: This copies the correct revision into llm.tag
     if llm._revision is None:
       _object_setattr(llm, '_revision', _revision)  # HACK: This copies the correct revision into llm._model_version
 
@@ -46,7 +50,9 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
     if trust_remote_code:
       auto_map = getattr(config, 'auto_map', {})
       if not auto_map:
-        raise RuntimeError(f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}')
+        raise RuntimeError(
+          f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}'
+        )
       autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
       if autoclass not in auto_map:
         raise RuntimeError(
@@ -68,6 +74,7 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
   })
   return metadata
 
+
 @attr.define(init=False)
 class _Model(bentoml.Model):
   _imported_modules: t.List[types.ModuleType] = None
@@ -85,7 +92,13 @@ class _Model(bentoml.Model):
   @classmethod
   def create(cls, tag, *, module, api_version, labels=None, metadata=None):
     return super().create(
-      tag, module=module, api_version=api_version, signatures={}, labels=labels, metadata=metadata, context=openllm.utils.generate_context('openllm')
+      tag,
+      module=module,
+      api_version=api_version,
+      signatures={},
+      labels=labels,
+      metadata=metadata,
+      context=openllm.utils.generate_context('openllm'),
     )
 
 
@@ -104,15 +117,27 @@ def save_model(
   _local: bool,
   _dtype: str,
   _model_store: ModelStore = Provide[BentoMLContainer.model_store],
-  _api_version: str ='v3.0.0',  #
+  _api_version: str = 'v3.0.0',  #
 ) -> bentoml.Model:
   imported_modules = []
   architectures = getattr(config, 'architectures', [])
-  _metadata = {'model_id': model_id, 'backend': backend, 'dtype': _dtype, 'architectures': architectures, '_revision': get_hash(config) or tag.version, '_local': _local, 'serialisation': serialisation}
+  _metadata = {
+    'model_id': model_id,
+    'backend': backend,
+    'dtype': _dtype,
+    'architectures': architectures,
+    '_revision': get_hash(config) or tag.version,
+    '_local': _local,
+    'serialisation': serialisation,
+  }
   if quantise:
     _metadata['_quantize'] = quantise
   bentomodel = _Model.create(
-    tag, module=f'openllm.serialisation.{module}', api_version=_api_version, labels=openllm.utils.generate_labels(serialisation), metadata=_metadata
+    tag,
+    module=f'openllm.serialisation.{module}',
+    api_version=_api_version,
+    labels=openllm.utils.generate_labels(serialisation),
+    metadata=_metadata,
   )
   with openllm.utils.analytics.set_bentoml_tracking():
     try:
@@ -125,7 +150,9 @@ def save_model(
       bentomodel.flush()
       bentomodel.save(_model_store)
       openllm.utils.analytics.track(
-        openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024)
+        openllm.utils.analytics.ModelSaveEvent(
+          module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024
+        )
       )
     finally:
       bentomodel.exit_cloudpickle_context(bentomodel.imported_modules)

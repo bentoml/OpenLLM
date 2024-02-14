@@ -5,7 +5,10 @@ import sys, attr
 M = TypeVar('M')
 T = TypeVar('T')
 
-def get_literal_args(typ: Any) -> Tuple[str, ...]: return getattr(typ, '__args__', tuple())
+
+def get_literal_args(typ: Any) -> Tuple[str, ...]:
+  return getattr(typ, '__args__', tuple())
+
 
 AnyCallable = Callable[..., Any]
 DictStrAny = Dict[str, Any]
@@ -15,13 +18,17 @@ LiteralDtype = Literal['float16', 'float32', 'bfloat16', 'int8', 'int16']
 LiteralSerialisation = Literal['safetensors', 'legacy']
 LiteralQuantise = Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
 LiteralBackend = Literal['pt', 'vllm', 'ctranslate', 'triton', 'ggml']  # TODO: ggml
-AdapterType = Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr']
+AdapterType = Literal[
+  'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
+]
 LiteralVersionStrategy = Literal['release', 'nightly', 'latest', 'custom']
+
 
 class AdapterTuple(Tuple[Any, ...]):
   adapter_id: str
   name: str
   config: DictStrAny
+
 
 AdapterMap = Dict[AdapterType, Tuple[AdapterTuple, ...]]
 
@@ -56,9 +63,19 @@ else:
 if sys.version_info[:2] >= (3, 10):
   from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 else:
-  from typing_extensions import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
+  from typing_extensions import (
+    Concatenate as Concatenate,
+    ParamSpec as ParamSpec,
+    TypeAlias as TypeAlias,
+    TypeGuard as TypeGuard,
+  )
 
 if sys.version_info[:2] >= (3, 9):
   from typing import Annotated as Annotated
 else:
   from typing_extensions import Annotated as Annotated
+
+
+class MessagesConverterInput(TypedDict):
+  add_generation_prompt: bool
+  messages: List[Dict[str, Any]]

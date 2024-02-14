@@ -10,15 +10,19 @@ DEV_DEBUG_VAR = 'DEBUG'
 
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 
+
 def check_bool_env(env, default=True):
   v = os.getenv(env, default=str(default)).upper()
   if v.isdigit():
     return bool(int(v))  # special check for digits
   return v in ENV_VARS_TRUE_VALUES
 
+
 # Special debug flag controled via DEBUG
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
 # Whether to show the codenge for debug purposes
-SHOW_CODEGEN = DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
+SHOW_CODEGEN = (
+  DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
+)
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False

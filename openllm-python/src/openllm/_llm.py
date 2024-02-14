@@ -2,7 +2,7 @@ from __future__ import annotations
 import functools, logging, os, warnings, typing as t
 from copy import deepcopy
 import attr, orjson, bentoml, openllm
-from openllm_core._schemas import GenerationOutput
+from openllm_core._schemas import GenerationOutput, GenerationInputDict, GenerationInput
 from openllm_core._typing_compat import (
   AdapterMap,
   AdapterTuple,
@@ -35,9 +35,11 @@ from .serialisation.constants import PEFT_CONFIG_NAME
 
 if t.TYPE_CHECKING:
   import torch, transformers
+  from _bentoml_sdk.service import Service
   from peft.config import PeftConfig
   from openllm_core._configuration import LLMConfig
   from ._runners import Runner, DeprecatedRunner
+  from ._llm import LLMService
 
 logger = logging.getLogger(__name__)
 _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
@@ -47,7 +49,9 @@ P = ParamSpec('P')
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
-  async def generate(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
+  async def generate(
+    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
+  ):
     if adapter_name is not None and self.__llm_backend__ != 'pt':
       raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
     config = self.config.model_construct_env(**attrs)
@@ -62,10 +66,15 @@ class LLM(t.Generic[M, T]):
       raise RuntimeError('No result is returned.')
     return final_result.with_options(
       prompt=prompt,
-      outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs],
+      outputs=[
+        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
+        for output in final_result.outputs
+      ],
     )
 
-  async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
+  async def generate_iterator(
+    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
+  ):
     if adapter_name is not None and self.__llm_backend__ != 'pt':
       raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
     config = self.config.model_construct_env(**attrs)
@@ -99,7 +108,9 @@ class LLM(t.Generic[M, T]):
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
-      generator = bentoml.io.SSE.from_iterator(self.proxy(prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)))
+      generator = self.proxy(
+        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
+      )
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
@@ -141,7 +152,10 @@ class LLM(t.Generic[M, T]):
     _internal=False,
     **attrs,
   ):
-    if not _internal: raise RuntimeError("'from_pretrained' is an internal API and not to be use. Make sure to use 'openllm.prepare_model' and 'LLM.from_model' instead.")
+    if not _internal:
+      raise RuntimeError(
+        "'from_pretrained' is an internal API and not to be use. Make sure to use 'openllm.prepare_model' and 'LLM.from_model' instead."
+      )
     att = deepcopy(attrs)
     return cls.from_model(
       openllm.prepare_model(
@@ -167,7 +181,16 @@ class LLM(t.Generic[M, T]):
 
   @classmethod
   def from_model(
-    cls, model, backend=None, llm_config=None, max_model_len=None, gpu_memory_utilization=0.9, trust_remote_code=False, adapter_map=None, **attrs
+    cls,
+    model,
+    backend=None,
+    llm_config=None,
+    max_model_len=None,
+    gpu_memory_utilization=0.9,
+    trust_remote_code=False,
+    adapter_map=None,
+    service_config=None,
+    **attrs,
   ):
     if not isinstance(model, bentoml.Model):
       raise TypeError(f'Expected `bentoml.Model`, got {type(model)}')
@@ -183,6 +206,7 @@ class LLM(t.Generic[M, T]):
       trust_remote_code=trust_remote_code,
       max_model_len=max_model_len,
       gpu_memory_utilization=gpu_memory_utilization,
+      service_config=service_config,
       _local=model.info.metadata['_local'],
       _eager=True,
       _from_model=True,
@@ -194,7 +218,9 @@ class LLM(t.Generic[M, T]):
   # The below are mainly for internal implementation that you don't have to worry about.
   _model_id: str
   _revision: t.Optional[str]  #
-  _quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]]
+  _quantization_config: t.Optional[
+    t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]
+  ]
   _quantise: t.Optional[LiteralQuantise]
   _model_decls: t.Tuple[t.Any, ...]
   __model_attrs: t.Dict[str, t.Any]  #
@@ -205,16 +231,20 @@ class LLM(t.Generic[M, T]):
   _local: bool
   _max_model_len: t.Optional[int]  #
   _gpu_memory_utilization: float
+  service_config: t.Dict[str, t.Any] = attr.field(factory=dict)
   _eager: bool = False  # whether to load the model eagerly
 
   __llm_dtype__: t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']] = 'auto'
   __llm_torch_dtype__: 'torch.dtype' = None
   __llm_config__: t.Optional[LLMConfig] = None
   __llm_backend__: LiteralBackend = None
-  __llm_quantization_config__: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]] = None
+  __llm_quantization_config__: t.Optional[
+    t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]
+  ] = None
   __llm_inference_bases__: t.Optional[Runner[M, T]] = None
   __llm_runner__: t.Optional[DeprecatedRunner[M, T]] = None
   __llm_model__: t.Optional[M] = None
+  __llm_service__: t.Optional[Service[LLMService]] = None
   __llm_tokenizer__: t.Optional[T] = None
   __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
   __llm_trust_remote_code__: bool = False
@@ -240,6 +270,7 @@ class LLM(t.Generic[M, T]):
     low_cpu_mem_usage=True,
     max_model_len=None,
     gpu_memory_utilization=0.9,
+    service_config=None,
     embedded=False,
     _local=False,
     _eager=False,
@@ -247,8 +278,29 @@ class LLM(t.Generic[M, T]):
     _bentomodel=None,
     **attrs,
   ):
+    if service_config is None:
+      service_config = {}
     if not _from_model:
       logger.warning('This is an internal API. Please use `openllm.LLM.from_model` instead.')
+      att = deepcopy(attrs)
+      _bentomodel = openllm.prepare_model(
+        model_id,
+        *args,
+        bentomodel_tag=model_tag,
+        bentomodel_version=model_version,
+        quantize=quantize,
+        quantization_config=quantization_config,
+        backend=backend,
+        dtype=dtype,
+        serialisation=serialisation,
+        trust_remote_code=trust_remote_code,
+        low_cpu_mem_usage=low_cpu_mem_usage,
+        **att,
+      )
+      if model_tag is None:
+        model_tag = _bentomodel.tag
+      if model_version is None:
+        model_version = _bentomodel.tag.version
 
     attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
@@ -266,6 +318,7 @@ class LLM(t.Generic[M, T]):
       local=_local,
       max_model_len=max_model_len,
       gpu_memory_utilization=gpu_memory_utilization,
+      service_config=service_config,
       eager=_eager,
       LLM__model_attrs=model_attrs,
       LLM__tokenizer_attrs=tokenizer_attrs,
@@ -274,7 +327,6 @@ class LLM(t.Generic[M, T]):
       llm_config__=llm_config,
       llm_trust_remote_code__=trust_remote_code,
     )
-    if _bentomodel is None: _bentomodel = bentoml.models.get(model_tag)
     self._tag = _bentomodel.tag  # resolve the tag
     self._revision = _bentomodel.tag.version
     if _eager and embedded:
@@ -323,7 +375,7 @@ class LLM(t.Generic[M, T]):
     from .serialisation.transformers import _torch_dtype
 
     if not isinstance(self.__llm_torch_dtype__, torch.dtype):
-      self.__llm_torch_dtype_ = _torch_dtype(self.__llm_dtype__, self.model_id, self.trust_remote_code)
+      self.__llm_torch_dtype__ = _torch_dtype(self.__llm_dtype__, self.model_id, self.trust_remote_code)
     return self.__llm_torch_dtype__
 
   @property
@@ -343,7 +395,9 @@ class LLM(t.Generic[M, T]):
     return self.__llm_proxy_caller__
 
   def _cascade_backend(self) -> LiteralBackend:
-    logger.warning('It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.')
+    logger.warning(
+      'It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.'
+    )
     if self._has_gpus:
       if is_vllm_available():
         return 'vllm'
@@ -376,31 +430,59 @@ class LLM(t.Generic[M, T]):
     return f'{self.__class__.__name__} {orjson.dumps({k: v for k, v in (("model_id", self._model_id if not self._local else self.tag.name), ("revision", self._revision if self._revision else self.tag.version), ("backend", self.__llm_backend__), ("type", self.llm_type))}, option=orjson.OPT_INDENT_2).decode()}'
 
   @property
-  def model_id(self): return self._model_id
+  def model_id(self):
+    return self._model_id
+
   @property
-  def revision(self): return self._revision
+  def revision(self):
+    return self._revision
+
   @property
-  def tag(self): return self._tag
+  def tag(self):
+    return self._tag
+
   @property
-  def bentomodel(self): return bentoml.models.get(self.tag)
+  def bentomodel(self):
+    return bentoml.models.get(self.tag)
+
   @property
-  def has_adapters(self): return self._adapter_map is not None
+  def has_adapters(self):
+    return self._adapter_map is not None
+
   @property
-  def local(self): return self._local
+  def local(self):
+    return self._local
+
   @property
-  def quantise(self): return self._quantise
+  def quantise(self):
+    return self._quantise
+
   @property
-  def llm_type(self): return normalise_model_name(self._model_id)
+  def llm_type(self):
+    return normalise_model_name(self._model_id)
+
   @property
-  def llm_parameters(self): return (self._model_decls, self._model_attrs), self._tokenizer_attrs
+  def llm_parameters(self):
+    return (self._model_decls, self._model_attrs), self._tokenizer_attrs
+
   @property
-  def _model_attrs(self): return {**self.import_kwargs[0], **self.__model_attrs}
+  def _model_attrs(self):
+    return {**self.import_kwargs[0], **self.__model_attrs}
+
   @_model_attrs.setter
-  def _model_attrs(self, model_attrs): self.__model_attrs = model_attrs
+  def _model_attrs(self, model_attrs):
+    self.__model_attrs = model_attrs
+
   @property
-  def _tokenizer_attrs(self): return {**self.import_kwargs[1], **self.__tokenizer_attrs}
+  def _tokenizer_attrs(self):
+    return {**self.import_kwargs[1], **self.__tokenizer_attrs}
+
   @property
-  def import_kwargs(self): return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {'padding_side': 'left', 'truncation_side': 'left'}
+  def import_kwargs(self):
+    return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {
+      'padding_side': 'left',
+      'truncation_side': 'left',
+    }
 
   @property
   def trust_remote_code(self):
@@ -417,7 +499,9 @@ class LLM(t.Generic[M, T]):
       if self._quantization_config is not None:
         self.__llm_quantization_config__ = self._quantization_config
       elif self._quantise is not None:
-        self.__llm_quantization_config__, self._model_attrs = infer_quantisation_config(self, self._quantise, **self._model_attrs)
+        self.__llm_quantization_config__, self._model_attrs = infer_quantisation_config(
+          self, self._quantise, **self._model_attrs
+        )
       else:
         raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
@@ -449,6 +533,22 @@ class LLM(t.Generic[M, T]):
       self.__llm_runner__ = runner(self)
     return self.__llm_runner__
 
+  @property
+  def service(self) -> Service[LLMService]:
+    if self.__llm_service__ is None:
+      from ._runners import apis
+
+      self.__llm_service__ = openllm.mount_entrypoints(
+        bentoml.service(
+          apis(self, GenerationInput.from_llm_config(self.config)),
+          name=f'llm-{self.config["start-name"]}-service',
+          **self.service_config,
+        ),
+        self,
+      )
+
+    return self.__llm_service__
+
   def bases(self) -> Runner[M, T]:
     from ._runners import bases
 
@@ -464,14 +564,22 @@ class LLM(t.Generic[M, T]):
 
     model = get_peft_model(
       prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking),
-      self.config['fine_tune_strategies'].get(adapter_type, self.config.make_fine_tune_config(adapter_type)).train().with_config(**attrs).build(),
+      self.config['fine_tune_strategies']
+      .get(adapter_type, self.config.make_fine_tune_config(adapter_type))
+      .train()
+      .with_config(**attrs)
+      .build(),
     )
     if DEBUG:
       model.print_trainable_parameters()
     return model, self.tokenizer
 
   def prepare_for_training(self, *args, **attrs):
-    warnings.warn('`prepare_for_training` is deprecated and will be removed in the future. Use `prepare` instead.', DeprecationWarning, stacklevel=3)
+    warnings.warn(
+      '`prepare_for_training` is deprecated and will be removed in the future. Use `prepare` instead.',
+      DeprecationWarning,
+      stacklevel=3,
+    )
     return self.prepare(*args, **attrs)
 
   @property
@@ -484,7 +592,10 @@ class LLM(t.Generic[M, T]):
     if self.__llm_adapter_map__ is None:
       _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
       for adapter_type, adapter_tuple in self._adapter_map.items():
-        base = first_not_none(self.config['fine_tune_strategies'].get(adapter_type), default=self.config.make_fine_tune_config(adapter_type))
+        base = first_not_none(
+          self.config['fine_tune_strategies'].get(adapter_type),
+          default=self.config.make_fine_tune_config(adapter_type),
+        )
         for adapter in adapter_tuple:
           _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
       self.__llm_adapter_map__ = _map
@@ -503,7 +614,9 @@ class LLM(t.Generic[M, T]):
     if self.__llm_config__ is None:
       if self.__llm_backend__ == 'ctranslate':
         try:
-          hf_config = transformers.AutoConfig.from_pretrained(self.bentomodel.path_of('/hf'), trust_remote_code=self.trust_remote_code)
+          hf_config = transformers.AutoConfig.from_pretrained(
+            self.bentomodel.path_of('/hf'), trust_remote_code=self.trust_remote_code
+          )
         except OpenLLMException:
           hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
         for architecture in hf_config.architectures:
@@ -524,7 +637,9 @@ class LLM(t.Generic[M, T]):
 
 def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
   if not is_peft_available():
-    raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'")
+    raise RuntimeError(
+      "LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'"
+    )
   from huggingface_hub import hf_hub_download
 
   resolved: AdapterMap = {}

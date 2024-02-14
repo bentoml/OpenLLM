@@ -44,7 +44,15 @@ from openllm_core.utils import (
 )
 
 from . import termui
-from ._factory import FC, _AnyCallable, machine_option, model_name_argument, parse_config_options, start_decorator, optimization_decorator
+from ._factory import (
+  FC,
+  _AnyCallable,
+  machine_option,
+  model_name_argument,
+  parse_config_options,
+  start_decorator,
+  optimization_decorator,
+)
 
 if t.TYPE_CHECKING:
   import torch
@@ -96,12 +104,18 @@ def backend_warning(backend: LiteralBackend, build: bool = False) -> None:
         'vLLM is not available. Note that PyTorch backend is not as performant as vLLM and you should always consider using vLLM for production.'
       )
     if build:
-      logger.info("Tip: You can set '--backend vllm' to package your Bento with vLLM backend regardless if vLLM is available locally.")
+      logger.info(
+        "Tip: You can set '--backend vllm' to package your Bento with vLLM backend regardless if vLLM is available locally."
+      )
 
 
 class Extensions(click.MultiCommand):
   def list_commands(self, ctx: click.Context) -> list[str]:
-    return sorted([filename[:-3] for filename in os.listdir(_EXT_FOLDER) if filename.endswith('.py') and not filename.startswith('__')])
+    return sorted([
+      filename[:-3]
+      for filename in os.listdir(_EXT_FOLDER)
+      if filename.endswith('.py') and not filename.startswith('__')
+    ])
 
   def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
     try:
@@ -110,7 +124,9 @@ class Extensions(click.MultiCommand):
       return None
     return mod.cli
 
+
 R = t.TypeVar('R')
+
 
 class OpenLLMCommandGroup(BentoMLCommandGroup):
   NUMBER_OF_COMMON_PARAMS = 5  # parameters in common_params + 1 faked group option header
@@ -119,19 +135,41 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
   def common_params(f: t.Callable[P, R]) -> t.Callable[Concatenate[bool, bool, str | None, P], R]:
     # The following logics is similar to one of BentoMLCommandGroup
     @cog.optgroup.group(name='Global options', help='Shared globals options for all OpenLLM CLI.')  # type: ignore[misc]
-    @cog.optgroup.option('-q', '--quiet', envvar=QUIET_ENV_VAR, is_flag=True, default=False, help='Suppress all output.', show_envvar=True)
     @cog.optgroup.option(
-      '--debug', '--verbose', 'debug', envvar=DEBUG_ENV_VAR, is_flag=True, default=False, help='Print out debug logs.', show_envvar=True
+      '-q', '--quiet', envvar=QUIET_ENV_VAR, is_flag=True, default=False, help='Suppress all output.', show_envvar=True
     )
     @cog.optgroup.option(
-      '--do-not-track', is_flag=True, default=False, envvar=analytics.OPENLLM_DO_NOT_TRACK, help='Do not send usage info', show_envvar=True
+      '--debug',
+      '--verbose',
+      'debug',
+      envvar=DEBUG_ENV_VAR,
+      is_flag=True,
+      default=False,
+      help='Print out debug logs.',
+      show_envvar=True,
     )
     @cog.optgroup.option(
-      '--context', 'cloud_context', envvar='BENTOCLOUD_CONTEXT', type=click.STRING, default=None, help='BentoCloud context name.', show_envvar=True
+      '--do-not-track',
+      is_flag=True,
+      default=False,
+      envvar=analytics.OPENLLM_DO_NOT_TRACK,
+      help='Do not send usage info',
+      show_envvar=True,
+    )
+    @cog.optgroup.option(
+      '--context',
+      'cloud_context',
+      envvar='BENTOCLOUD_CONTEXT',
+      type=click.STRING,
+      default=None,
+      help='BentoCloud context name.',
+      show_envvar=True,
     )
     @click.pass_context
     @functools.wraps(f)
-    def wrapper(ctx: click.Context, quiet: bool, debug: bool, cloud_context: str | None, *args: P.args, **attrs: P.kwargs) -> R:
+    def wrapper(
+      ctx: click.Context, quiet: bool, debug: bool, cloud_context: str | None, *args: P.args, **attrs: P.kwargs
+    ) -> R:
       ctx.obj = GlobalOptions(cloud_context=cloud_context)
       if quiet:
         set_quiet_mode(True)
@@ -145,7 +183,9 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
     return wrapper
 
   @staticmethod
-  def usage_tracking(func: t.Callable[P, R], group: click.Group, **attrs: t.Any) -> t.Callable[Concatenate[bool, P], R]:
+  def usage_tracking(
+    func: t.Callable[P, R], group: click.Group, **attrs: t.Any
+  ) -> t.Callable[Concatenate[bool, P], R]:
     command_name = attrs.get('name', func.__name__)
 
     @functools.wraps(func)
@@ -202,13 +242,17 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
 
       # move common parameters to end of the parameters list
       _memo = getattr(wrapped, '__click_params__', None)
-      if _memo is None: raise ValueError('Click command not register correctly.')
-      _object_setattr(wrapped, '__click_params__', _memo[-self.NUMBER_OF_COMMON_PARAMS :] + _memo[: -self.NUMBER_OF_COMMON_PARAMS])
+      if _memo is None:
+        raise ValueError('Click command not register correctly.')
+      _object_setattr(
+        wrapped, '__click_params__', _memo[-self.NUMBER_OF_COMMON_PARAMS :] + _memo[: -self.NUMBER_OF_COMMON_PARAMS]
+      )
       # NOTE: we need to call super of super to avoid conflict with BentoMLCommandGroup command setup
       cmd = super(BentoMLCommandGroup, self).command(*args, **kwargs)(wrapped)
       # NOTE: add aliases to a given commands if it is specified.
       if aliases is not None:
-        if not cmd.name: raise ValueError('name is required when aliases are available.')
+        if not cmd.name:
+          raise ValueError('name is required when aliases are available.')
         self._commands[cmd.name] = aliases
         self._aliases.update({alias: cmd.name for alias in aliases})
       return cmd
@@ -277,7 +321,12 @@ def cli() -> None:
   """
 
 
-@cli.command(context_settings=termui.CONTEXT_SETTINGS, name='start', aliases=['start-http'], short_help='Start a LLMServer for any supported LLM.')
+@cli.command(
+  context_settings=termui.CONTEXT_SETTINGS,
+  name='start',
+  aliases=['start-http'],
+  short_help='Start a LLMServer for any supported LLM.',
+)
 @click.argument('model_id', type=click.STRING, metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]', required=True)
 @click.option(
   '--model-id',
@@ -330,7 +379,9 @@ def start_command(
   ```
   """
   if backend == 'pt':
-    logger.warning('PyTorch backend is deprecated and will be removed in future releases. Make sure to use vLLM instead.')
+    logger.warning(
+      'PyTorch backend is deprecated and will be removed in future releases. Make sure to use vLLM instead.'
+    )
   if model_id in openllm.CONFIG_MAPPING:
     _model_name = model_id
     if deprecated_model_id is not None:
@@ -348,11 +399,17 @@ def start_command(
 
   from openllm.serialisation.transformers.weights import has_safetensors_weights
 
-  serialisation = first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy')
+  serialisation = first_not_none(
+    serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+  )
 
   if serialisation == 'safetensors' and quantize is not None:
     logger.warning("'--quantize=%s' might not work with 'safetensors' serialisation format.", quantize)
-    logger.warning("Make sure to check out '%s' repository to see if the weights is in '%s' format if unsure.", model_id, serialisation)
+    logger.warning(
+      "Make sure to check out '%s' repository to see if the weights is in '%s' format if unsure.",
+      model_id,
+      serialisation,
+    )
     logger.info("Tip: You can always fallback to '--serialisation legacy' when running quantisation.")
 
   import torch
@@ -380,7 +437,9 @@ def start_command(
   config, server_attrs = llm.config.model_validate_click(**attrs)
   server_timeout = first_not_none(server_timeout, default=config['timeout'])
   server_attrs.update({'working_dir': pkg.source_locations('openllm'), 'timeout': server_timeout})
-  development = server_attrs.pop('development')  # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
+  development = server_attrs.pop(
+    'development'
+  )  # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
   server_attrs.setdefault('production', not development)
 
   start_env = process_environ(
@@ -410,8 +469,12 @@ def start_command(
   return config
 
 
-def process_environ(config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, use_current_env=True):
-  environ = parse_config_options(config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {})
+def process_environ(
+  config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, use_current_env=True
+):
+  environ = parse_config_options(
+    config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {}
+  )
   environ.update({
     'OPENLLM_MODEL_ID': model_id,
     'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
@@ -456,7 +519,8 @@ def build_bento_instruction(llm, model_id, serialisation, adapter_map):
     cmd_name += f' --serialization {serialisation}'
   if adapter_map is not None:
     cmd_name += ' ' + ' '.join([
-      f'--adapter-id {s}' for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
+      f'--adapter-id {s}'
+      for s in [f'{p}:{name}' if name not in (None, 'default') else p for p, name in adapter_map.items()]
     ])
   if not openllm.utils.get_quiet_mode():
     termui.info(f"🚀Tip: run '{cmd_name}' to create a BentoLLM for '{model_id}'")
@@ -491,8 +555,12 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
   if return_process:
     return process
   stop_event = threading.Event()
-  stdout, stderr = threading.Thread(target=handle, args=(process.stdout, stop_event)), threading.Thread(target=handle, args=(process.stderr, stop_event))
-  stdout.start(); stderr.start()  # noqa: E702
+  stdout, stderr = (
+    threading.Thread(target=handle, args=(process.stdout, stop_event)),
+    threading.Thread(target=handle, args=(process.stderr, stop_event)),
+  )
+  stdout.start()
+  stderr.start()  # noqa: E702
 
   try:
     process.wait()
@@ -507,9 +575,12 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
     raise
   finally:
     stop_event.set()
-    stdout.join(); stderr.join()  # noqa: E702
-    if process.poll() is not None: process.kill()
-    stdout.join(); stderr.join()  # noqa: E702
+    stdout.join()
+    stderr.join()  # noqa: E702
+    if process.poll() is not None:
+      process.kill()
+    stdout.join()
+    stderr.join()  # noqa: E702
 
   return process.returncode
 
@@ -597,7 +668,10 @@ def import_command(
     backend=backend,
     dtype=dtype,
     serialisation=t.cast(
-      LiteralSerialisation, first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy')
+      LiteralSerialisation,
+      first_not_none(
+        serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+      ),
     ),
   )
   backend_warning(llm.__llm_backend__)
@@ -656,14 +730,21 @@ class BuildBentoOutput(TypedDict):
   metavar='[REMOTE_REPO/MODEL_ID | /path/to/local/model]',
   help='Deprecated. Use positional argument instead.',
 )
-@click.option('--bento-version', type=str, default=None, help='Optional bento version for this BentoLLM. Default is the the model revision.')
+@click.option(
+  '--bento-version',
+  type=str,
+  default=None,
+  help='Optional bento version for this BentoLLM. Default is the the model revision.',
+)
 @click.option('--overwrite', is_flag=True, help='Overwrite existing Bento for given LLM if it already exists.')
 @click.option(
   '--enable-features',
   multiple=True,
   nargs=1,
   metavar='FEATURE[,FEATURE]',
-  help='Enable additional features for building this LLM Bento. Available: {}'.format(', '.join(OPTIONAL_DEPENDENCIES)),
+  help='Enable additional features for building this LLM Bento. Available: {}'.format(
+    ', '.join(OPTIONAL_DEPENDENCIES)
+  ),
 )
 @optimization_decorator
 @click.option(
@@ -674,7 +755,12 @@ class BuildBentoOutput(TypedDict):
   help="Optional adapters id to be included within the Bento. Note that if you are using relative path, '--build-ctx' must be passed.",
 )
 @click.option('--build-ctx', help='Build context. This is required if --adapter-id uses relative path', default=None)
-@click.option('--dockerfile-template', default=None, type=click.File(), help='Optional custom dockerfile template to be used with this BentoLLM.')
+@click.option(
+  '--dockerfile-template',
+  default=None,
+  type=click.File(),
+  help='Optional custom dockerfile template to be used with this BentoLLM.',
+)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Utilities options')  # type: ignore[misc]
 @cog.optgroup.option(
   '--containerize',
@@ -767,7 +853,9 @@ def build_command(
   state = ItemState.NOT_FOUND
 
   if backend == 'pt':
-    logger.warning("PyTorch backend is deprecated and will be removed from the next releases. Will set default backend to 'vllm' instead.")
+    logger.warning(
+      "PyTorch backend is deprecated and will be removed from the next releases. Will set default backend to 'vllm' instead."
+    )
 
   llm = openllm.LLM(
     model_id=model_id,
@@ -777,7 +865,9 @@ def build_command(
     dtype=dtype,
     max_model_len=max_model_len,
     gpu_memory_utilization=gpu_memory_utilization,
-    serialisation=first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'),
+    serialisation=first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+    ),
     _eager=False,
   )
   if llm.__llm_backend__ not in llm.config['backend']:
@@ -789,7 +879,9 @@ def build_command(
     model = openllm.serialisation.import_model(llm, trust_remote_code=llm.trust_remote_code)
   llm._tag = model.tag
 
-  os.environ.update(**process_environ(llm.config, llm.config['timeout'], 1.0, None, True, llm.model_id, None, llm._serialisation, llm))
+  os.environ.update(
+    **process_environ(llm.config, llm.config['timeout'], 1.0, None, True, llm.model_id, None, llm._serialisation, llm)
+  )
 
   try:
     assert llm.bentomodel  # HACK: call it here to patch correct tag with revision and everything
@@ -856,7 +948,11 @@ def build_command(
 
   def get_current_bentocloud_context() -> str | None:
     try:
-      context = cloud_config.get_context(ctx.obj.cloud_context) if ctx.obj.cloud_context else cloud_config.get_current_context()
+      context = (
+        cloud_config.get_context(ctx.obj.cloud_context)
+        if ctx.obj.cloud_context
+        else cloud_config.get_current_context()
+      )
       return context.name
     except Exception:
       return None
@@ -880,7 +976,9 @@ def build_command(
     tag=str(bento_tag),
     backend=llm.__llm_backend__,
     instructions=[
-      DeploymentInstruction.from_content(type='bentocloud', instr="☁️  Push to BentoCloud with 'bentoml push':\n    $ {cmd}", cmd=push_cmd),
+      DeploymentInstruction.from_content(
+        type='bentocloud', instr="☁️  Push to BentoCloud with 'bentoml push':\n    $ {cmd}", cmd=push_cmd
+      ),
       DeploymentInstruction.from_content(
         type='container',
         instr="🐳 Container BentoLLM with 'bentoml containerize':\n    $ {cmd}",
@@ -906,7 +1004,9 @@ def build_command(
         termui.echo(f"  * {instruction['content']}\n", nl=False)
 
   if push:
-    BentoMLContainer.bentocloud_client.get().push_bento(bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push)
+    BentoMLContainer.bentocloud_client.get().push_bento(
+      bento, context=t.cast(GlobalOptions, ctx.obj).cloud_context, force=force_push
+    )
   elif containerize:
     container_backend = t.cast('DefaultBuilder', os.environ.get('BENTOML_CONTAINERIZE_BACKEND', 'docker'))
     try:
@@ -946,7 +1046,8 @@ def models_command(**_: t.Any) -> dict[t.LiteralString, ModelItem]:
       architecture=config.__openllm_architecture__,
       example_id=random.choice(config.__openllm_model_ids__),
       supported_backends=config.__openllm_backend__,
-      installation='pip install ' + (f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config.__openllm_requirements__ else 'openllm'),
+      installation='pip install '
+      + (f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config.__openllm_requirements__ else 'openllm'),
       items=[
         str(md.tag)
         for md in bentoml.models.list()
@@ -965,7 +1066,13 @@ def models_command(**_: t.Any) -> dict[t.LiteralString, ModelItem]:
 @cli.command()
 @model_name_argument(required=False)
 @click.option('-y', '--yes', '--assume-yes', is_flag=True, help='Skip confirmation when deleting a specific model')
-@click.option('--include-bentos/--no-include-bentos', is_flag=True, hidden=True, default=True, help='Whether to also include pruning bentos.')
+@click.option(
+  '--include-bentos/--no-include-bentos',
+  is_flag=True,
+  hidden=True,
+  default=True,
+  help='Whether to also include pruning bentos.',
+)
 @inject
 @click.pass_context
 def prune_command(
@@ -982,24 +1089,32 @@ def prune_command(
   If a model type is passed, then only prune models for that given model type.
   """
   available: list[tuple[bentoml.Model | bentoml.Bento, ModelStore | BentoStore]] = [
-    (m, model_store) for m in bentoml.models.list() if 'framework' in m.info.labels and m.info.labels['framework'] == 'openllm'
+    (m, model_store)
+    for m in bentoml.models.list()
+    if 'framework' in m.info.labels and m.info.labels['framework'] == 'openllm'
   ]
   if model_name is not None:
     available = [
-      (m, store) for m, store in available if 'model_name' in m.info.labels and m.info.labels['model_name'] == inflection.underscore(model_name)
+      (m, store)
+      for m, store in available
+      if 'model_name' in m.info.labels and m.info.labels['model_name'] == inflection.underscore(model_name)
     ] + [
       (b, bento_store)
       for b in bentoml.bentos.list()
       if 'start_name' in b.info.labels and b.info.labels['start_name'] == inflection.underscore(model_name)
     ]
   else:
-    available += [(b, bento_store) for b in bentoml.bentos.list() if '_type' in b.info.labels and '_framework' in b.info.labels]
+    available += [
+      (b, bento_store) for b in bentoml.bentos.list() if '_type' in b.info.labels and '_framework' in b.info.labels
+    ]
 
   for store_item, store in available:
     if yes:
       delete_confirmed = True
     else:
-      delete_confirmed = click.confirm(f"delete {'model' if isinstance(store, ModelStore) else 'bento'} {store_item.tag}?")
+      delete_confirmed = click.confirm(
+        f"delete {'model' if isinstance(store, ModelStore) else 'bento'} {store_item.tag}?"
+      )
     if delete_confirmed:
       store.delete(store_item.tag)
       termui.warning(f"{store_item} deleted from {'model' if isinstance(store, ModelStore) else 'bento'} store.")
@@ -1046,8 +1161,17 @@ def shared_client_options(f: _AnyCallable | None = None) -> t.Callable[[FC], FC]
 
 @cli.command()
 @shared_client_options
-@click.option('--server-type', type=click.Choice(['grpc', 'http']), help='Server type', default='http', show_default=True, hidden=True)
-@click.option('--stream/--no-stream', type=click.BOOL, is_flag=True, default=True, help='Whether to stream the response.')
+@click.option(
+  '--server-type',
+  type=click.Choice(['grpc', 'http']),
+  help='Server type',
+  default='http',
+  show_default=True,
+  hidden=True,
+)
+@click.option(
+  '--stream/--no-stream', type=click.BOOL, is_flag=True, default=True, help='Whether to stream the response.'
+)
 @click.argument('prompt', type=click.STRING)
 @click.option(
   '--sampling-params',
@@ -1098,4 +1222,6 @@ def query_command(
 def extension_command() -> None:
   """Extension for OpenLLM CLI."""
 
-if __name__ == '__main__': cli()
+
+if __name__ == '__main__':
+  cli()

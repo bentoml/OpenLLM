@@ -1,4 +1,18 @@
-from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Tuple, TypedDict, Union, Callable, TypeVar
+from typing import (
+  Any,
+  AsyncGenerator,
+  Dict,
+  Generic,
+  Iterable,
+  List,
+  Literal,
+  Optional,
+  Tuple,
+  TypedDict,
+  Union,
+  Callable,
+  TypeVar,
+)
 from _bentoml_sdk.service.factory import Service
 
 import attr
@@ -8,7 +22,7 @@ from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2Seq
 
 from bentoml import Model, Tag
 from openllm_core import LLMConfig
-from openllm_core._schemas import GenerationOutput
+from openllm_core._schemas import GenerationOutput, GenerationInputDict, MetadataOutput
 from openllm_core._typing_compat import (
   AdapterMap,
   AdapterType,
@@ -18,7 +32,9 @@ from openllm_core._typing_compat import (
   LiteralSerialisation,
   ParamSpec,
   Concatenate,
+  MessagesConverterInput,
 )
+from openllm_core.utils import api
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner, DeprecatedRunner
@@ -36,6 +52,16 @@ class IdentifyingParams(TypedDict):
 ResolvedAdapterMap = Dict[AdapterType, Dict[str, Tuple[PeftConfig, str]]]
 CTranslateDtype = Literal['int8_float32', 'int8_float16', 'int8_bfloat16']
 Dtype = Union[LiteralDtype, CTranslateDtype, Literal['auto', 'half', 'float']]
+
+class LLMService:
+  @api
+  async def generate_v1(self, parameters: GenerationInputDict = ...) -> GenerationOutput: ...
+  @api
+  async def generate_stream_v1(self, parameters: GenerationInputDict = ...) -> AsyncGenerator[str, None]: ...
+  @api
+  def metadata_v1(self) -> MetadataOutput: ...
+  @api
+  def helpers_messages_v1(self, message: MessagesConverterInput = ...) -> str: ...
 
 @attr.define(slots=True, repr=False, init=False)
 class LLM(Generic[M, T]):
@@ -89,6 +115,18 @@ class LLM(Generic[M, T]):
     adapter_name: Optional[str] = ...,
     **attrs: Any,
   ) -> AsyncGenerator[GenerationOutput, None]: ...
+  @classmethod
+  def from_model(
+    cls,
+    model: Model,
+    backend: Optional[LiteralBackend] = ...,
+    llm_config: Optional[LLMConfig] = ...,
+    max_model_len: Optional[int] = ...,
+    gpu_memory_utilization: float = ...,
+    trust_remote_code: bool = ...,
+    adapter_map: Optional[Dict[str, str]] = ...,
+    **attrs: Any,
+  ) -> LLM[M, T]: ...
   def __init__(
     self,
     model_id: str,
@@ -156,4 +194,6 @@ class LLM(Generic[M, T]):
   def service(self) -> Service[Runner[M, T]]: ...
   @property
   def adapter_map(self) -> ResolvedAdapterMap: ...
-  def prepare(self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any) -> Tuple[InjectedModel, T]: ...
+  def prepare(
+    self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any
+  ) -> Tuple[InjectedModel, T]: ...

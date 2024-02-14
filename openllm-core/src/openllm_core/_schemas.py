@@ -15,11 +15,18 @@ class MessageParam(TypedDict):
   role: t.Union[t.Literal['system', 'user', 'assistant'], LiteralString]
   content: str
 
+
 @attr.define
 class _SchemaMixin:
-  def model_dump(self) -> dict[str, t.Any]: return converter.unstructure(self)
-  def model_dump_json(self) -> str: return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
-  def with_options(self, **options: t.Any) -> Self: return attr.evolve(self, **options)
+  def model_dump(self) -> dict[str, t.Any]:
+    return converter.unstructure(self)
+
+  def model_dump_json(self) -> str:
+    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
+
+  def with_options(self, **options: t.Any) -> Self:
+    return attr.evolve(self, **options)
+
 
 @attach_pydantic_model(protected_namespaces=())
 @attr.define
@@ -39,6 +46,7 @@ class MetadataOutput(_SchemaMixin):
       'configuration': self.configuration,
     }
 
+
 class GenerationInputDict(TypedDict):
   prompt: t.Optional[str]
   prompt_token_ids: t.Optional[t.List[int]]
@@ -47,6 +55,7 @@ class GenerationInputDict(TypedDict):
   stop_token_ids: t.Optional[t.List[int]]
   request_id: t.Optional[str]
   adapter_name: t.Optional[str]
+
 
 class GenerationInputProtocol(t.Protocol):
   prompt: t.Optional[str]
@@ -57,9 +66,12 @@ class GenerationInputProtocol(t.Protocol):
   request_id: t.Optional[str]
   adapter_name: t.Optional[str]
   examples: GenerationInputDict
+
   def model_dump(self) -> dict[str, t.Any]: ...
+
   @classmethod
   def from_dict(cls, **structured: Unpack[GenerationInputDict]) -> GenerationInput: ...
+
 
 @attach_pydantic_model
 @attr.define
@@ -99,11 +111,15 @@ class GenerationInput(_SchemaMixin):
         return list(data)
 
     def llm_converter(data: dict[str, t.Any] | LLMConfig) -> TypeGuard[LLMConfig]:
-      if isinstance(data, LLMConfig): return data
+      if isinstance(data, LLMConfig):
+        return data
       return llm_config.__class__(**data)
 
     def from_dict(cls: type[GenerationInput], **structured: Unpack[GenerationInputDict]) -> GenerationInput:
-      if not hasattr(cls, '_class_ref'): raise ValueError('Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_llm_config".')
+      if not hasattr(cls, '_class_ref'):
+        raise ValueError(
+          'Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_llm_config".'
+        )
       return cls(
         prompt=structured['prompt'],
         prompt_token_ids=structured['prompt_token_ids'],
@@ -124,10 +140,14 @@ class GenerationInput(_SchemaMixin):
           'stop_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
           'request_id': attr.field(type=t.Optional[str], default=None),
           'adapter_name': attr.field(type=t.Optional[str], default=None),
-          'llm_config': attr.field(type=llm_config.__class__, default=llm_config.model_dump(), converter=llm_converter),
+          'llm_config': attr.field(
+            type=llm_config.__class__, default=llm_config.model_dump(), converter=llm_converter
+          ),
         },
         class_body={
-          'examples': cls(prompt='What is the meaning of life?', llm_config=llm_config, stop=['philosopher']).model_dump(),
+          'examples': cls(
+            prompt='What is the meaning of life?', llm_config=llm_config, stop=['philosopher']
+          ).model_dump(),
           'model_dump': cls.model_dump,
           'from_model': cls.from_model,
           'from_llm_config': cls.from_llm_config,
@@ -220,7 +240,9 @@ class GenerationOutput(_SchemaMixin):
   @classmethod
   def from_dict(cls, structured: dict[str, t.Any]) -> GenerationOutput:
     if structured['prompt_logprobs']:
-      structured['prompt_logprobs'] = [{int(k): v for k, v in it.items()} if it else None for it in structured['prompt_logprobs']]
+      structured['prompt_logprobs'] = [
+        {int(k): v for k, v in it.items()} if it else None for it in structured['prompt_logprobs']
+      ]
     return cls(
       prompt=structured['prompt'],
       finished=structured['finished'],
@@ -265,4 +287,6 @@ class GenerationOutput(_SchemaMixin):
     return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
 
 
-converter.register_structure_hook_func(lambda cls: attr.has(cls) and issubclass(cls, GenerationOutput), lambda data, cls: cls.from_dict(data))
+converter.register_structure_hook_func(
+  lambda cls: attr.has(cls) and issubclass(cls, GenerationOutput), lambda data, cls: cls.from_dict(data)
+)

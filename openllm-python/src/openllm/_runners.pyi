@@ -1,4 +1,18 @@
-from typing import Any, TypeVar, Protocol, AsyncGenerator, List, Optional, Iterable, Dict, Union, Tuple, Generic, Type, Literal
+from typing import (
+  Any,
+  TypeVar,
+  Protocol,
+  AsyncGenerator,
+  List,
+  Optional,
+  Iterable,
+  Dict,
+  Union,
+  Tuple,
+  Generic,
+  Type,
+  Literal,
+)
 import bentoml
 from bentoml._internal.runner.runner_handle import RunnerHandle
 
@@ -21,8 +35,6 @@ class Runner(Protocol[Mo, To]):
   __module__: str = ...
   llm: LLM[Mo, To] = ...
   llm_config: LLMConfig = ...
-  model: Mo = ...
-  tokenizer: To = ...
   llm_type: str = ...
   llm_tag: bentoml.Tag = ...
   llm_bentomodel: bentoml.Model = ...
@@ -34,7 +46,12 @@ class Runner(Protocol[Mo, To]):
 
   @api  # type: ignore[arg-type] # XXX: I don't really know how to fix this for marking positional-only arg as self?
   async def generate_iterator(
-    self, prompt_token_ids: List[int], request_id: str, stop: Optional[Iterable[str]] = ..., adapter_name: Optional[str] = ..., **attrs: Any
+    self,
+    prompt_token_ids: List[int],
+    request_id: str,
+    stop: Optional[Iterable[str]] = ...,
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
   ) -> AsyncGenerator[GenerationOutput, None]: ...
 
 class _Runnable(Protocol[Mo, To]):
@@ -42,8 +59,6 @@ class _Runnable(Protocol[Mo, To]):
   SUPPORTS_CPU_MULTI_THREADING: bool = ...
   llm: LLM[Mo, To] = ...
   config: LLMConfig = ...
-  model: Mo = ...
-  tokenizer: To = ...
   def __init__(self, llm: LLM[Mo, To]) -> None: ...
   async def generate_iterator(
     self,
@@ -75,7 +90,11 @@ class DeprecatedRunner(Protocol[Mo, To]):
   class generate_iterator(RunnerMethod[List[int], AsyncGenerator[str, None]]):
     @staticmethod
     def async_stream(
-      prompt_token_ids: List[int], request_id: str, stop: Optional[Union[Iterable[str], str]] = ..., adapter_name: Optional[str] = ..., **attrs: Any
+      prompt_token_ids: List[int],
+      request_id: str,
+      stop: Optional[Union[Iterable[str], str]] = ...,
+      adapter_name: Optional[str] = ...,
+      **attrs: Any,
     ) -> AsyncGenerator[str, None]: ...
 
   def __init__(
