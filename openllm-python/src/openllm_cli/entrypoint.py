@@ -362,7 +362,6 @@ def start_command(
   quantize: LiteralQuantise | None,
   backend: LiteralBackend | None,
   serialisation: LiteralSerialisation | None,
-  cors: bool,
   adapter_id: str | None,
   return_process: bool,
   dtype: LiteralDtype | t.Literal['auto', 'float'],
@@ -420,45 +419,56 @@ def start_command(
     elif dtype not in {'float', 'float32'}:
       logger.warning('"bfloat16" and "half" are not supported on CPU. OpenLLM will default fallback to "float32".')
     dtype = 'float'  # we need to cast back to full precision if cuda is not available
-  llm = openllm.LLM(
-    model_id=model_id,
-    model_version=model_version,
-    backend=backend,
-    adapter_map=adapter_map,
-    quantize=quantize,
-    serialisation=serialisation,
-    dtype=dtype,
-    max_model_len=max_model_len,
-    gpu_memory_utilization=gpu_memory_utilization,
-    trust_remote_code=check_bool_env('TRUST_REMOTE_CODE', False),
-  )
-  backend_warning(llm.__llm_backend__)
 
-  config, server_attrs = llm.config.model_validate_click(**attrs)
-  server_timeout = first_not_none(server_timeout, default=config['timeout'])
-  server_attrs.update({'working_dir': pkg.source_locations('openllm'), 'timeout': server_timeout})
-  development = server_attrs.pop(
-    'development'
-  )  # XXX: currently, theres no development args in bentoml.Server. To be fixed upstream.
-  server_attrs.setdefault('production', not development)
+  trust_remote_code = check_bool_env('TRUST_REMOTE_CODE', False)
+  bentomodel = openllm.prepare_model(
+    model_id,
+    bentomodel_version=model_version,
+    quantize=quantize,
+    backend=backend,
+    dtype=dtype,
+    serialistaion=serialisation,
+    trust_remote_code=trust_remote_code,
+  )
+  llm_config = openllm.AutoConfig.from_bentomodel(bentomodel)
+  backend_warning(backend)
+
+  # llm = openllm.LLM(
+  #   model_id=model_id,
+  #   model_version=model_version,
+  #   backend=backend,
+  #   adapter_map=adapter_map,
+  #   quantize=quantize,
+  #   serialisation=serialisation,
+  #   dtype=dtype,
+  #   max_model_len=max_model_len,
+  #   gpu_memory_utilization=gpu_memory_utilization,
+  #   trust_remote_code=check_bool_env('TRUST_REMOTE_CODE', False),
+  # )
+
+  config, _ = llm_config.model_validate_click(**attrs)
 
   start_env = process_environ(
     config,
     server_timeout,
-    process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
+    # process_workers_per_resource(first_not_none(workers_per_resource, default=config['workers_per_resource']), device),
     device,
-    cors,
     model_id,
     adapter_map,
+    quantize,
+    backend,
+    dtype,
     serialisation,
-    llm,
+    trust_remote_code,
+    max_model_len,
+    gpu_memory_utilization,
   )
 
-  server = bentoml.HTTPServer('_service:svc', **server_attrs)
+  server = bentoml.HTTPServer('_service.py:LLMService')
   openllm.utils.analytics.track_start_init(config)
 
   try:
-    build_bento_instruction(llm, model_id, serialisation, adapter_map)
+    # build_bento_instruction(llm, model_id, serialisation, adapter_map)
     it = run_server(server.args, start_env, return_process=return_process)
     if return_process:
       return it
@@ -470,11 +480,10 @@ def start_command(
 
 
 def process_environ(
-  config, server_timeout, wpr, device, cors, model_id, adapter_map, serialisation, llm, use_current_env=True
+  config, server_timeout, device, model_id, adapter_map, quantize, backend, dtype, serialisation, trust_remote_code, max_model_len, gpu_memory_utilization, use_current_env=True
 ):
-  environ = parse_config_options(
-    config, server_timeout, wpr, device, cors, os.environ.copy() if use_current_env else {}
-  )
+  environ = os.environ.copy() if use_current_env else {}
+
   environ.update({
     'OPENLLM_MODEL_ID': model_id,
     'BENTOML_DEBUG': str(openllm.utils.get_debug_mode()),
@@ -482,14 +491,13 @@ def process_environ(
     'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
     'OPENLLM_SERIALIZATION': serialisation,
     'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
-    'BACKEND': llm.__llm_backend__,
-    'DTYPE': str(llm._torch_dtype).split('.')[-1],
-    'TRUST_REMOTE_CODE': str(llm.trust_remote_code),
-    'MAX_MODEL_LEN': orjson.dumps(llm._max_model_len).decode(),
-    'GPU_MEMORY_UTILIZATION': orjson.dumps(llm._gpu_memory_utilization).decode(),
+    'BACKEND': backend,
+    'DTYPE': dtype,
+    'TRUST_REMOTE_CODE': str(trust_remote_code),
+    'MAX_MODEL_LEN': orjson.dumps(max_model_len).decode(),
+    'GPU_MEMORY_UTILIZATION': orjson.dumps(gpu_memory_utilization).decode(),
   })
-  if llm.quantise:
-    environ['QUANTIZE'] = str(llm.quantise)
+  if quantize: environ['QUANTIZE'] = str(quantize)
   return environ
 
 

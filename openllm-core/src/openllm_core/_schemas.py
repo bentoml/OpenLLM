@@ -16,6 +16,11 @@ class MessageParam(TypedDict):
   content: str
 
 
+class MessagesConverterInput(TypedDict):
+  add_generation_prompt: bool
+  messages: t.List[t.Dict[str, t.Any]]
+
+
 @attr.define
 class _SchemaMixin:
   def model_dump(self) -> dict[str, t.Any]:

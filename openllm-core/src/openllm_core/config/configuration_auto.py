@@ -8,6 +8,7 @@ from openllm_core.utils.import_utils import is_transformers_available, is_bentom
 
 if t.TYPE_CHECKING:
   import types
+  from bentoml import Model
   from collections import _odict_items, _odict_keys, _odict_values
 
   import openllm, openllm_core
@@ -221,4 +222,21 @@ class AutoConfig:
           return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
     raise ValueError(
       f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
+    )
+
+  @classmethod
+  def from_bentomodel(cls, bentomodel: Model) -> openllm_core.LLMConfig:
+    if not is_bentoml_available():
+      raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
+    config_file = bentomodel.path_of(CONFIG_FILE_NAME)
+    if not os.path.exists(config_file):
+      raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
+    with open(config_file, 'r', encoding='utf-8') as f:
+      loaded_config = orjson.loads(f.read())
+    if 'architectures' in loaded_config:
+      for architecture in loaded_config['architectures']:
+        if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
+          return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]).model_construct_env()
+    raise ValueError(
+      f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )

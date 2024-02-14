@@ -1,7 +1,7 @@
 import importlib
 from openllm_core.utils import LazyModule
 
-_import_structure = {'openai': [], 'hf': [], 'cohere': []}
+_import_structure = {'openai': [], 'hf': []}
 
 
 def mount_entrypoints(svc, llm):

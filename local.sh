@@ -98,9 +98,9 @@ else
   EXTENSIONS_STR=${EXTENSIONS_STR// /,} # Replace spaces with commas
 fi
 
+pip install -e "$GIT_ROOT/openllm-python$EXTENSIONS_STR" -v
 pip install -e "$GIT_ROOT/openllm-core"
 pip install -e "$GIT_ROOT/openllm-client"
-pip install -e "$GIT_ROOT/openllm-python$EXTENSIONS_STR" -v
 
 # running all script
 bash "$GIT_ROOT/all.sh"
