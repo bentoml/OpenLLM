@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile-upstream:master
 # Adapted from: https://github.com/pytorch/pytorch/blob/master/Dockerfile
-FROM nvidia/cuda:12.1.0-base-ubuntu22.04 as base-container
+FROM python:3.11-slim as base-container
 
 # Automatically set by buildx
 ARG TARGETPLATFORM
@@ -29,7 +29,7 @@ COPY hatch.toml README.md CHANGELOG.md openllm-python/pyproject.toml /openllm-py
 # below
 RUN --mount=type=cache,target=/root/.cache/pip \
   pip3 install -v --no-cache-dir \
-  "ray==2.6.0" "xformers==0.0.23" "vllm==0.2.6" && \
+  "ray==2.6.0" "vllm==0.2.7" && \
   pip3 install --no-cache-dir -e /openllm-python/
 
 COPY openllm-core/src openllm-core/src

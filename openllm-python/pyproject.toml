@@ -38,10 +38,10 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.1.10",
+    "bentoml[io]>=1.1.11,<1.2",
     "transformers[torch,tokenizers]>=4.36.0",
-    "openllm-client>=0.4.41",
-    "openllm-core>=0.4.41",
+    "openllm-client>=0.4.44",
+    "openllm-core>=0.4.44",
     "safetensors",
     "optimum>=1.12.0",
     "accelerate",
@@ -113,13 +113,13 @@ full = [
 ]
 ggml = ["ctransformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.1.10"]
+grpc = ["bentoml[grpc]>=1.1.11,<1.2"]
 mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm==0.2.6", "ray==2.6.0"]
+vllm = ["vllm==0.2.7", "ray==2.6.0"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

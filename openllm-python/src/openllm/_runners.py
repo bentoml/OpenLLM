@@ -294,7 +294,7 @@ class PyTorchRunnable:
         if config['logprobs']:
           sample_logprobs.append({token: token_logprobs})
 
-        yield GenerationOutput(
+        out = GenerationOutput(
           prompt='',
           finished=False,
           outputs=[
@@ -317,7 +317,7 @@ class PyTorchRunnable:
         finish_reason = 'length'
       if stopped:
         finish_reason = 'stop'
-      yield GenerationOutput(
+      out = GenerationOutput(
         prompt='',
         finished=True,
         outputs=[

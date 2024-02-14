@@ -99,16 +99,16 @@ class LLM(t.Generic[M, T]):
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
-      generator = self.proxy(prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True))
+      generator = bentoml.io.SSE.from_iterator(self.proxy(prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)))
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
     try:
       async for out in generator:
         if not self._eager:
-          generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+          generated = GenerationOutput.from_runner(out.data).with_options(prompt=prompt)
         else:
-          generated = out.with_options(prompt=prompt)
+          generated = out.data.with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:
           i = output.index

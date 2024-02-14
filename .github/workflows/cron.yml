@@ -31,7 +31,7 @@ jobs:
         run: sudo apt-get install -y jq curl
       - name: Import bot's GPG key for signing commits
         id: import-gpg-key
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # ratchet:crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4 # ratchet:crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}

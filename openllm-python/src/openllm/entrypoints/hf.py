@@ -50,7 +50,7 @@ async def hf_agent(req, llm):
     logger.error('Invalid JSON input received: %s', err)
     return error_response(HTTPStatus.BAD_REQUEST, 'Invalid JSON input received (Check server log).')
 
-  stop = request.parameters.pop('stop', ['\n'])
+  stop = request.parameters.pop('stop', [])
   try:
     result = await llm.generate(request.inputs, stop=stop, **request.parameters)
     return JSONResponse(converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value)

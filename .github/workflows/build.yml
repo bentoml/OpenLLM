@@ -130,7 +130,7 @@ jobs:
       - name: Extract metadata tags and labels for main, release or tag
         if: github.event_name != 'pull_request'
         id: meta
-        uses: docker/metadata-action@31cebacef4805868f9ce9a0cb03ee36c32df2ac4 # ratchet:docker/metadata-action@v5.3.0
+        uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c # ratchet:docker/metadata-action@v5.5.0
         with:
           flavor: |
             latest=auto
@@ -173,7 +173,7 @@ jobs:
           COSIGN_EXPERIMENTAL: 'true'
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
-        uses: aquasecurity/trivy-action@91713af97dc80187565512baba96e4364e983601 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@d43c1f16c00cfd3978dde6c07f4bbcf9eb6993ca # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -182,7 +182,7 @@ jobs:
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           scanners: 'vuln'
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@91713af97dc80187565512baba96e4364e983601 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@d43c1f16c00cfd3978dde6c07f4bbcf9eb6993ca # ratchet:aquasecurity/trivy-action@master
         if: ${{ github.event_name != 'pull_request' }}
         with:
           image-ref: 'ghcr.io/bentoml/openllm:sha-${{ env.GITHUB_SHA_SHORT }}'
@@ -191,7 +191,7 @@ jobs:
           severity: 'CRITICAL'
           scanners: 'vuln'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@b374143c1149a9115d881581d29b8390bbcbb59c # ratchet:github/codeql-action/upload-sarif@v3.22.11
+        uses: github/codeql-action/upload-sarif@0b21cf2492b6b02c465a3e5d7c473717ad7721ba # ratchet:github/codeql-action/upload-sarif@v3.23.1
         if: ${{ github.event_name != 'pull_request' }}
         with:
           sarif_file: 'trivy-results.sarif'

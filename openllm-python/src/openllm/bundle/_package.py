@@ -38,7 +38,8 @@ def build_editable(path, package='openllm'):
 def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=None):
   from . import RefResolver
 
-  packages = ['scipy', 'bentoml[tracing]>=1.1.10', f'openllm[vllm]>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
+  openllm_package = 'openllm[vllm]' if llm.__llm_backend__.lower() == "vllm" else "openllm"
+  packages = ['scipy', 'bentoml[tracing]>=1.1.11,<1.2', f'{openllm_package}>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
   if adapter_map is not None:
     packages += ['openllm[fine-tune]']
   if extra_dependencies is not None:
@@ -61,7 +62,7 @@ def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template,
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
   environ['NVIDIA_DRIVER_CAPABILITIES'] = 'compute,utility'
-  return DockerOptions(cuda_version='12.1', python_version='3.11', env=environ, dockerfile_template=dockerfile_template)
+  return DockerOptions(python_version='3.11', env=environ, dockerfile_template=dockerfile_template)
 
 
 @inject

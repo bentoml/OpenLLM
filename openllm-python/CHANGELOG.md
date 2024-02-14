@@ -18,6 +18,21 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.4.44](https://github.com/bentoml/openllm/tree/v0.4.44)
+No significant changes.
+
+
+## [0.4.43](https://github.com/bentoml/openllm/tree/v0.4.43)
+No significant changes.
+
+
+## [0.4.42](https://github.com/bentoml/openllm/tree/v0.4.42)
+
+### Changes
+
+- Bump vllm to 0.2.7 for a newly built bento
+  [#837](https://github.com/bentoml/openllm/issues/837)
+
 ## [0.4.41](https://github.com/bentoml/openllm/tree/v0.4.41)
 No significant changes.
 

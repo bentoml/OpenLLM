@@ -141,13 +141,14 @@ class Dependencies:
     return cls(*decls)
 
 
-_LOWER_BENTOML_CONSTRAINT = '1.1.10'
+_LOWER_BENTOML_CONSTRAINT = '1.1.11'
+_UPPER_BENTOML_CONSTRAINT = '1.2'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 _TRANSFORMERS_CONSTRAINTS = '4.36.0'
 
 FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
-GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
+GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT},<{_UPPER_BENTOML_CONSTRAINT}']
 OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
 AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
@@ -155,7 +156,7 @@ GGML_DEPS = ['ctransformers']
 CTRANSLATE_DEPS = ['ctranslate2>=3.22.0']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.2.6', 'ray==2.6.0']
+VLLM_DEPS = ['vllm==0.2.7', 'ray==2.6.0']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls.__openllm_requirements__
@@ -304,7 +305,11 @@ def main(args) -> int:
     release_version = openllm.bundle.RefResolver.from_strategy('release').version
 
   _BASE_DEPENDENCIES = [
-    Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=_LOWER_BENTOML_CONSTRAINT),
+    Dependencies(
+      name='bentoml', extensions=_BENTOML_EXT,
+      lower_constraint=_LOWER_BENTOML_CONSTRAINT,
+      upper_constraint=_UPPER_BENTOML_CONSTRAINT,
+    ),
     Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint=_TRANSFORMERS_CONSTRAINTS),
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
