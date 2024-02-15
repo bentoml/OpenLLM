@@ -266,9 +266,14 @@ class GenerationConfig(pydantic.BaseModel):
       return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
 
-  def keys(self): return list(self.model_fields.keys()) + list[self.model_extra.keys() if self.model_extra else {}]
-  def values(self): return [_object_getattribute.__get__(self)(k) for k in self.keys()]
-  def items(self): return [(k, _object_getattribute.__get__(self)(k)) for k in self.keys()]
+  def keys(self):
+    return list(self.model_fields.keys()) + list[self.model_extra.keys() if self.model_extra else {}]
+
+  def values(self):
+    return [_object_getattribute.__get__(self)(k) for k in self.keys()]
+
+  def items(self):
+    return [(k, _object_getattribute.__get__(self)(k)) for k in self.keys()]
 
   def build(self, config: t.Literal['vllm']) -> t.Any:
     if config == 'vllm':
@@ -278,8 +283,10 @@ class GenerationConfig(pydantic.BaseModel):
         )
       from vllm import SamplingParams
 
-      return SamplingParams(**{k: _object_getattribute.__get__(self)(k) for k in set(inspect.signature(SamplingParams).parameters.keys())})
-    raise ValueError(f"Unknown config type: {config}")
+      return SamplingParams(**{
+        k: _object_getattribute.__get__(self)(k) for k in set(inspect.signature(SamplingParams).parameters.keys())
+      })
+    raise ValueError(f'Unknown config type: {config}')
 
 
 LogitsProcessor = t.Callable[[t.List[int], 'torch.Tensor'], 'torch.Tensor']
