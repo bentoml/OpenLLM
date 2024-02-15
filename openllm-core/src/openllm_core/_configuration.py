@@ -73,8 +73,8 @@ class GenerationConfig(pydantic.BaseModel):
     None, description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
   )
   max_time: t.Optional[float] = pydantic.Field(
-        None,
-    description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.'
+    None,
+    description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.',
   )
   num_beams: int = pydantic.Field(1, description='Number of beams for beam search. 1 means no beam search.')
   num_beam_groups: int = pydantic.Field(
@@ -174,15 +174,16 @@ class GenerationConfig(pydantic.BaseModel):
   pad_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *padding* token.')
   bos_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *beginning-of-sequence* token.')
   eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
-        None,
-    description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.'
+    None,
+    description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.',
   )
   encoder_no_repeat_ngram_size: int = pydantic.Field(
     0,
     description='If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.',
   )
-  decoder_start_token_id: int = pydantic.Field(None,
-    description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
+  decoder_start_token_id: int = pydantic.Field(
+    None,
+    description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.',
   )
   # NOTE vLLM compatible fields.
   n: int = pydantic.Field(1, description='Number of output sequences to return for the given prompt.')
