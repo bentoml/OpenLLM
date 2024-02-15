@@ -195,7 +195,7 @@ class GenerationConfig(pydantic.BaseModel):
     0.0,
     description='Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.',
   )
-  frequency_penalty: float = dantic.Field(
+  frequency_penalty: float = pydantic.Field(
     0.0,
     description='Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.',
   )
@@ -239,11 +239,11 @@ class GenerationConfig(pydantic.BaseModel):
     False,
     description='Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.',
   )
-  max_new_tokens: int = pydantic.Field(
+  max_tokens: int = pydantic.Field(
     20,
     ge=0,
     description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.',
-    alias='max_tokens',
+    alias='max_new_tokens',
   )
   logprobs: t.Optional[int] = pydantic.Field(
     None, description='Number of log probabilities to return per output token.'
@@ -266,6 +266,10 @@ class GenerationConfig(pydantic.BaseModel):
       return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
 
+  def keys(self): return list(self.model_fields.keys()) + list[self.model_extra.keys() if self.model_extra else {}]
+  def values(self): return [_object_getattribute.__get__(self)(k) for k in self.keys()]
+  def items(self): return [(k, _object_getattribute.__get__(self)(k)) for k in self.keys()]
+
   def build(self, config: t.Literal['vllm']) -> t.Any:
     if config == 'vllm':
       if not is_vllm_available():
@@ -274,7 +278,8 @@ class GenerationConfig(pydantic.BaseModel):
         )
       from vllm import SamplingParams
 
-      keys = set(inspect.signature(SamplingParams).parameters.keys())
+      return SamplingParams(**{k: _object_getattribute.__get__(self)(k) for k in set(inspect.signature(SamplingParams).parameters.keys())})
+    raise ValueError(f"Unknown config type: {config}")
 
 
 LogitsProcessor = t.Callable[[t.List[int], 'torch.Tensor'], 'torch.Tensor']
