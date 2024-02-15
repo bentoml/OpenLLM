@@ -1,9 +1,9 @@
 from __future__ import annotations
 import typing as t
-import attr, inflection, orjson
+import pydantic, inflection, orjson
 from ._configuration import LLMConfig
 from .config import AutoConfig
-from .utils import converter, gen_random_uuid
+from .utils import gen_random_uuid
 from .utils.dantic import attach_pydantic_model
 from ._typing_compat import Required, TypedDict, TypeGuard, override, Unpack, LiteralString, Self
 
@@ -21,35 +21,12 @@ class MessagesConverterInput(TypedDict):
   messages: t.List[t.Dict[str, t.Any]]
 
 
-@attr.define
-class _SchemaMixin:
-  def model_dump(self) -> dict[str, t.Any]:
-    return converter.unstructure(self)
-
-  def model_dump_json(self, **attrs) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_INDENT_2).decode('utf-8')
-
-  def with_options(self, **options: t.Any) -> Self:
-    return attr.evolve(self, **options)
-
-
-@attach_pydantic_model(protected_namespaces=())
-@attr.define
-class MetadataOutput(_SchemaMixin):
+class MetadataOutput(pydantic.BaseModel):
   model_id: str
   timeout: int
   model_name: str
   backend: str
   configuration: str
-
-  def model_dump(self) -> dict[str, t.Any]:
-    return {
-      'model_id': self.model_id,
-      'timeout': self.timeout,
-      'model_name': self.model_name,
-      'backend': self.backend,
-      'configuration': self.configuration,
-    }
 
 
 class GenerationInputDict(TypedDict):
@@ -62,48 +39,18 @@ class GenerationInputDict(TypedDict):
   adapter_name: t.Optional[str]
 
 
-class GenerationInputProtocol(t.Protocol):
-  prompt: t.Optional[str]
-  llm_config: LLMConfig
-  prompt_token_ids: t.Optional[t.List[int]]
-  stop: t.Optional[t.List[str]]
-  stop_token_ids: t.Optional[t.List[int]]
-  request_id: t.Optional[str]
-  adapter_name: t.Optional[str]
-  examples: GenerationInputDict
-
-  def model_dump(self) -> dict[str, t.Any]: ...
-
-  @classmethod
-  def from_dict(cls, **structured: Unpack[GenerationInputDict]) -> GenerationInput: ...
-
-
-@attach_pydantic_model
-@attr.define
-class GenerationInput(_SchemaMixin):
-  prompt: t.Optional[str]
-  llm_config: LLMConfig
-  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
-  stop: t.Optional[t.List[str]] = attr.field(default=None)
-  stop_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
-  request_id: t.Optional[str] = attr.field(default=None)
-  adapter_name: t.Optional[str] = attr.field(default=None)
+class GenerationInput(pydantic.BaseModel):
+  prompt: t.Optional[str] = pydantic.Field(default=None)
+  llm_config: t.Optional[LLMConfig] = pydantic.Field(default_factory=dict)
+  prompt_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
+  stop: t.Optional[t.List[str]] = pydantic.Field(default=None)
+  stop_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
+  request_id: t.Optional[str] = pydantic.Field(default=None)
+  adapter_name: t.Optional[str] = pydantic.Field(default=None)
 
   @classmethod
   def from_model(cls, model_name: LiteralString, **attrs: t.Any) -> type[GenerationInputProtocol]:
     return cls.from_llm_config(AutoConfig.for_model(model_name, **attrs))
-
-  @override
-  def model_dump(self) -> GenerationInputDict:
-    return {
-      'prompt': self.prompt,
-      'prompt_token_ids': self.prompt_token_ids,
-      'llm_config': self.llm_config.model_dump(flatten=True),
-      'stop': self.stop,
-      'stop_token_ids': self.stop_token_ids,
-      'request_id': self.request_id,
-      'adapter_name': self.adapter_name,
-    }
 
   @classmethod
   def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInputProtocol]:
@@ -177,29 +124,22 @@ PromptLogprobs = t.List[t.Optional[t.Dict[int, float]]]
 FinishReason = t.Literal['length', 'stop']
 
 
-@attach_pydantic_model
-@attr.define
-class CompletionChunk(_SchemaMixin):
+class CompletionChunk(pydantic.BaseModel):
   index: int
   text: str
   token_ids: t.List[int]
   cumulative_logprob: float
-  logprobs: t.Optional[SampleLogprobs] = None
-  finish_reason: t.Optional[FinishReason] = None
-
-  def model_dump_json(self, **attrs) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
+  logprobs: t.Optional[SampleLogprobs] = pydantic.Field(default=None)
+  finish_reason: t.Optional[FinishReason] = pydantic.Field(default=None)
 
 
-@attach_pydantic_model
-@attr.define
-class GenerationOutput(_SchemaMixin):
+class GenerationOutput(pydantic.BaseModel):
   prompt: str
   finished: bool
   outputs: t.List[CompletionChunk]
-  prompt_token_ids: t.Optional[t.List[int]] = attr.field(default=None)
-  prompt_logprobs: t.Optional[PromptLogprobs] = attr.field(default=None)
-  request_id: str = attr.field(factory=lambda: gen_random_uuid())
+  prompt_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
+  prompt_logprobs: t.Optional[PromptLogprobs] = pydantic.Field(default=None)
+  request_id: str = pydantic.Field(default_factory=gen_random_uuid)
 
   @classmethod
   def examples(cls) -> dict[str, t.Any]:
@@ -287,11 +227,3 @@ class GenerationOutput(_SchemaMixin):
         for it in request_output.outputs
       ],
     )
-
-  def model_dump_json(self, **attrs) -> str:
-    return orjson.dumps(self.model_dump(), option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
-
-
-converter.register_structure_hook_func(
-  lambda cls: attr.has(cls) and issubclass(cls, GenerationOutput), lambda data, cls: cls.from_dict(data)
-)

@@ -1,8 +1,6 @@
 from __future__ import annotations
 import copy, importlib.util, inspect, logging, os, sys, types, warnings, typing as t
-import attr, inflection, orjson, click_option_group as cog
-from attr._make import _CountingAttr, _make_init, _transform_attrs
-from cattr.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
+import attr, inflection, orjson, pydantic
 from deepmerge.merger import Merger
 
 from ._typing_compat import (
@@ -36,14 +34,13 @@ from .utils import (
   first_not_none,
   lenient_issubclass,
   correct_closure,
+  is_vllm_available,
 )
 from .utils.dantic import attach_pydantic_model
-from .utils.peft import PEFT_TASK_TYPE_TARGET_MAPPING, FineTuneConfig
 
 if t.TYPE_CHECKING:
-  import click, openllm_core, transformers, vllm, openllm
+  import click, openllm_core, transformers, vllm, openllm, torch
 
-  from attrs import AttrsInstance
   from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
   from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 
@@ -56,7 +53,6 @@ else:
     exc_msg='vLLM is not installed. Make sure to install it with `pip install "openllm[vllm]"`',
   )
   transformers = LazyLoader('transformers', globals(), 'transformers')
-  peft = LazyLoader('peft', globals(), 'peft')
 
 __all__ = ['LLMConfig', 'GenerationConfig', 'SamplingParams', 'field_env_key']
 
@@ -65,190 +61,132 @@ config_merger = Merger([(dict, 'merge')], ['override'], ['override'])
 _object_setattr = object.__setattr__
 
 
-@attr.frozen(slots=True, repr=False, init=False)
-class GenerationConfig(ReprMixin):
-  max_new_tokens: int = dantic.Field(
-    20, ge=0, description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
-  )
-  min_length: int = dantic.Field(
+class GenerationConfig(pydantic.BaseModel):
+  min_length: int = pydantic.Field(
     0,
     ge=0,  #
     description='The minimum length of the sequence to be generated. Corresponds to the length of the input prompt + `min_new_tokens`. Its effect is overridden by `min_new_tokens`, if also set.',
   )
-  min_new_tokens: int = dantic.Field(
-    description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
+  min_new_tokens: t.Optional[int] = pydantic.Field(
+    None, description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
   )
-  early_stopping: bool = dantic.Field(
-    False,
-    description="Controls the stopping condition for beam-based methods, like beam-search. It accepts the following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; `'never'`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm) ",
-  )
-  max_time: float = dantic.Field(
+  max_time: t.Optional[float] = pydantic.Field(
     description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.'
   )
-  num_beams: int = dantic.Field(1, description='Number of beams for beam search. 1 means no beam search.')
-  num_beam_groups: int = dantic.Field(
+  num_beams: int = pydantic.Field(1, description='Number of beams for beam search. 1 means no beam search.')
+  num_beam_groups: int = pydantic.Field(
     1,
     description='Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.',
   )
-  penalty_alpha: float = dantic.Field(
-    description='The values balance the model confidence and the degeneration penalty in contrastive search decoding.'
+  penalty_alpha: t.Optional[float] = pydantic.Field(
+    None,
+    description='The values balance the model confidence and the degeneration penalty in contrastive search decoding.',
   )
-  use_cache: bool = dantic.Field(
+  use_cache: bool = pydantic.Field(
     True,
     description='Whether or not the model should use the past last key/values attentions (if applicable to the model) to speed up decoding.',
   )
-  temperature: float = dantic.Field(
-    1.0, ge=0.0, le=1.0, description='The value used to modulate the next token probabilities.'
-  )
-  top_k: int = dantic.Field(
-    50, description='The number of highest probability vocabulary tokens to keep for top-k-filtering.'
-  )
-  top_p: float = dantic.Field(
-    1.0,
-    description='If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation.',
-  )
-  typical_p: float = dantic.Field(
+  typical_p: float = pydantic.Field(
     1.0,
     description='Local typicality measures how similar the conditional probability of predicting a target token next is to the expected conditional probability of predicting a random token next, given the partial text already generated. If set to float < 1, the smallest set of the most locally typical tokens with probabilities that add up to `typical_p` or higher are kept for generation. See [this paper](https://arxiv.org/pdf/2202.00666.pdf) for more details.',
   )
-  epsilon_cutoff: float = dantic.Field(
+  epsilon_cutoff: float = pydantic.Field(
     0.0,
     description='If set to float strictly between 0 and 1, only tokens with a conditional probability greater than `epsilon_cutoff` will be sampled. In the paper, suggested values range from 3e-4 to 9e-4, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details.',
   )
-  eta_cutoff: float = dantic.Field(
+  eta_cutoff: float = pydantic.Field(
     0.0,
     description='Eta sampling is a hybrid of locally typical sampling and epsilon sampling. If set to float strictly between 0 and 1, a token is only considered if it is greater than either `eta_cutoff` or `sqrt(eta_cutoff) * exp(-entropy(softmax(next_token_logits)))`. The latter term is intuitively the expected next token probability, scaled by `sqrt(eta_cutoff)`. In the paper, suggested values range from 3e-4 to 2e-3, depending on the size of the model. See [Truncation Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more details. ',
   )
-  diversity_penalty: float = dantic.Field(
+  diversity_penalty: float = pydantic.Field(
     0.0,
     description="This value is subtracted from a beam's score if it generates a token same as any beam from other group at a particular time. Note that `diversity_penalty` is only effective if `group beam search` is enabled. ",
   )
-  repetition_penalty: float = dantic.Field(
+  repetition_penalty: float = pydantic.Field(
     1.0,
     description='The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.',
   )
-  encoder_repetition_penalty: float = dantic.Field(
+  encoder_repetition_penalty: float = pydantic.Field(
     1.0,
     description='The paramater for encoder_repetition_penalty. An exponential penalty on sequences that are not in the original input. 1.0 means no penalty.',
   )
-  length_penalty: float = dantic.Field(
-    1.0,
-    description='Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while `length_penalty` < 0.0 encourages shorter sequences.',
-  )
-  no_repeat_ngram_size: int = dantic.Field(
+  no_repeat_ngram_size: int = pydantic.Field(
     0, description='If set to int > 0, all ngrams of that size can only occur once.'
   )
-  bad_words_ids: t.List[t.List[int]] = dantic.Field(
-    description='List of token ids that are not allowed to be generated. In order to get the token ids of the words that should not appear in the generated text, use `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.'
+  bad_words_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
+    None,
+    description='List of token ids that are not allowed to be generated. In order to get the token ids of the words that should not appear in the generated text, use `tokenizer(bad_words, add_prefix_space=True, add_special_tokens=False).input_ids`.',
   )
-  force_words_ids: t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]] = dantic.Field(
-    description='List of token ids that must be generated. If given a `List[List[int]]`, this is treated as a simple list of words that must be included, the opposite to `bad_words_ids`. If given `List[List[List[int]]]`, this triggers a [disjunctive constraint](https://github.com/huggingface/transformers/issues/14081), where one can allow different forms of each word. '
+  force_words_ids: t.Optional[t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]] = pydantic.Field(
+    None,
+    description='List of token ids that must be generated. If given a `List[List[int]]`, this is treated as a simple list of words that must be included, the opposite to `bad_words_ids`. If given `List[List[List[int]]]`, this triggers a [disjunctive constraint](https://github.com/huggingface/transformers/issues/14081), where one can allow different forms of each word. ',
   )
-  renormalize_logits: bool = dantic.Field(
+  renormalize_logits: bool = pydantic.Field(
     False,
     description="Whether to renormalize the logits after applying all the logits processors or warpers (including the custom ones). It's highly recommended to set this flag to `True` as the search algorithms suppose the score logits are normalized but some logit processors or warpers break the normalization. ",
   )
-  forced_bos_token_id: int = dantic.Field(
-    description='The id of the token to force as the first generated token after the ``decoder_start_token_id``. Useful for multilingual models like [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs to be the target language token. '
+  forced_bos_token_id: t.Optional[int] = pydantic.Field(
+    None,
+    description='The id of the token to force as the first generated token after the ``decoder_start_token_id``. Useful for multilingual models like [mBART](https://huggingface.co/docs/transformers/model_doc/mbart) where the first generated token needs to be the target language token. ',
   )
-  forced_eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
-    description='The id of the token to force as the last generated token when `max_length` is reached. Optionally, use a list to set multiple *end-of-sequence* tokens.'
+  forced_eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
+    None,
+    description='The id of the token to force as the last generated token when `max_length` is reached. Optionally, use a list to set multiple *end-of-sequence* tokens.',
   )
-  remove_invalid_values: bool = dantic.Field(
+  remove_invalid_values: bool = pydantic.Field(
     False,
     description='Whether to remove possible *nan* and *inf* outputs of the model to prevent the generation method to crash. Note that using `remove_invalid_values` can slow down generation.',
   )
-  exponential_decay_length_penalty: t.Tuple[int, float] = dantic.Field(
-    description='This tuple adds an exponentially increasing length penalty, after a certain amount of tokens have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` indicates where penalty starts and `decay_factor` represents the factor of exponential decay'
+  exponential_decay_length_penalty: t.Optional[t.Tuple[int, float]] = pydantic.Field(
+    None,
+    description='This tuple adds an exponentially increasing length penalty, after a certain amount of tokens have been generated. The tuple shall consist of: `(start_index, decay_factor)` where `start_index` indicates where penalty starts and `decay_factor` represents the factor of exponential decay',
   )
-  suppress_tokens: t.List[int] = dantic.Field(
-    description='A list of tokens that will be suppressed at generation. The `SupressTokens` logit processor will set their log probs to `-inf` so that they are not sampled.'
+  suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
+    None,
+    description='A list of tokens that will be suppressed at generation. The `SupressTokens` logit processor will set their log probs to `-inf` so that they are not sampled.',
   )
-  begin_suppress_tokens: t.List[int] = dantic.Field(
-    description='A list of tokens that will be suppressed at the beginning of the generation. The `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled. '
+  begin_suppress_tokens: t.Optional[t.List[int]] = pydantic.Field(
+    None,
+    description='A list of tokens that will be suppressed at the beginning of the generation. The `SupressBeginTokens` logit processor will set their log probs to `-inf` so that they are not sampled. ',
   )
-  forced_decoder_ids: t.List[t.List[int]] = dantic.Field(
-    description='A list of pairs of integers which indicates a mapping from generation indices to token indices that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always be a token of index 123.'
+  forced_decoder_ids: t.Optional[t.List[t.List[int]]] = pydantic.Field(
+    None,
+    description='A list of pairs of integers which indicates a mapping from generation indices to token indices that will be forced before sampling. For example, `[[1, 123]]` means the second generated token will always be a token of index 123.',
   )
-  num_return_sequences: int = dantic.Field(
+  num_return_sequences: int = pydantic.Field(
     1, description='The number of independently computed returned sequences for each element in the batch.'
   )
-  output_attentions: bool = dantic.Field(
+  output_attentions: bool = pydantic.Field(
     False,
     description='Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned tensors for more details.',
   )
-  output_hidden_states: bool = dantic.Field(
+  output_hidden_states: bool = pydantic.Field(
     False,
     description='Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for more details.',
   )
-  output_scores: bool = dantic.Field(
+  output_scores: bool = pydantic.Field(
     False,
     description='Whether or not to return the prediction scores. See `scores` under returned tensors for more details.',
   )
-  pad_token_id: int = dantic.Field(description='The id of the *padding* token.')
-  bos_token_id: int = dantic.Field(description='The id of the *beginning-of-sequence* token.')
-  eos_token_id: t.Union[int, t.List[int]] = dantic.Field(
+  pad_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *padding* token.')
+  bos_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *beginning-of-sequence* token.')
+  eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
     description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.'
   )
-  encoder_no_repeat_ngram_size: int = dantic.Field(
+  encoder_no_repeat_ngram_size: int = pydantic.Field(
     0,
     description='If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.',
   )
-  decoder_start_token_id: int = dantic.Field(
+  decoder_start_token_id: int = pydantic.Field(
     description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
   )
-  # NOTE: This is now implemented and supported for both PyTorch and vLLM
-  logprobs: t.Optional[int] = dantic.Field(None, description='Number of log probabilities to return per output token.')
-  prompt_logprobs: t.Optional[int] = dantic.Field(
-    None, description='Number of log probabilities to return per input token.'
-  )
-
-  def __init__(self, *, _internal: bool = False, **attrs: t.Any):
-    if not _internal:
-      raise RuntimeError(
-        'GenerationConfig is not meant to be used directly, but you can access this via a LLMConfig.generation_config'
-      )
-    self.__attrs_init__(**attrs)
-
-  def __getitem__(self, item: str) -> t.Any:
-    if hasattr(self, item):
-      return getattr(self, item)
-    raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
-
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {i.name for i in attr.fields(self.__class__)}
-
-
-converter.register_unstructure_hook_factory(
-  lambda cls: attr.has(cls) and lenient_issubclass(cls, GenerationConfig),
-  lambda cls: make_dict_unstructure_fn(
-    cls,
-    converter,  #
-    **{k: override(omit=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)},
-  ),
-)
-
-_GenerationConfigT = t.TypeVar('_GenerationConfigT', bound=GenerationConfig)
-
-
-@attr.frozen(slots=True, repr=False, init=False)
-class SamplingParams(ReprMixin):
-  """SamplingParams is the attr-compatible version of ``vllm.SamplingParams``. It provides some utilities to also respect shared variables from ``openllm.LLMConfig``.
-
-  The following value will be parsed directly from ``openllm.LLMConfig``:
-  - temperature
-  - top_k
-  - top_p
-  - max_tokens -> max_new_tokens
-  """
-
-  n: int = dantic.Field(1, description='Number of output sequences to return for the given prompt.')
-  best_of: int = dantic.Field(
+  # NOTE vLLM compatible fields.
+  n: int = pydantic.Field(1, description='Number of output sequences to return for the given prompt.')
+  best_of: t.Optional[int] = pydantic.Field(
     None,
     description='Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`.',
   )
-  presence_penalty: float = dantic.Field(
+  presence_penalty: float = pydantic.Field(
     0.0,
     description='Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.',
   )
@@ -256,52 +194,87 @@ class SamplingParams(ReprMixin):
     0.0,
     description='Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.',
   )
-  use_beam_search: bool = dantic.Field(False, description='Whether to use beam search instead of sampling.')
-  ignore_eos: bool = dantic.Field(
+  temperature: float = pydantic.Field(
+    1.0, ge=0.0, le=1.0, description='The value used to modulate the next token probabilities.'
+  )
+  top_k: int = pydantic.Field(
+    50, description='The number of highest probability vocabulary tokens to keep for top-k-filtering.'
+  )
+  top_p: float = pydantic.Field(
+    1.0,
+    description='If set to float < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation.',
+  )
+  min_p: float = pydantic.Field(
+    0.0,
+    ge=0,
+    le=1.0,
+    description='Float that represents the minimum probability for a token to be considered, relative to the probability of the most likely token. Must be in [0, 1]. Set to 0 to disable this.',
+  )
+  use_beam_search: bool = pydantic.Field(False, description='Whether to use beam search instead of sampling.')
+  length_penalty: float = pydantic.Field(
+    1.0,
+    description='Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while `length_penalty` < 0.0 encourages shorter sequences.',
+  )
+  early_stopping: bool = pydantic.Field(
+    False,
+    description="Controls the stopping condition for beam-based methods, like beam-search. It accepts the following values: `True`, where the generation stops as soon as there are `num_beams` complete candidates; `False`, where an heuristic is applied and the generation stops when is it very unlikely to find better candidates; `'never'`, where the beam search procedure only stops when there cannot be better candidates (canonical beam search algorithm) ",
+  )
+  stop: t.Optional[t.Union[str, t.List[str]]] = pydantic.Field(
+    None,
+    description='List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.',
+  )
+  stop_token_ids: t.Optional[t.List[int]] = pydantic.Field(
+    None,
+    description='List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens.',
+  )
+  include_stop_str_in_output: bool = pydantic.Field(
+    False, description='Whether to include the stop strings in output text. Defaults to False.'
+  )
+  ignore_eos: bool = pydantic.Field(
     False,
     description='Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.',
   )
-  skip_special_tokens: bool = dantic.Field(True, description='Whether to skip special tokens in the generated output.')
-  # space_between_special_tokens: bool = dantic.Field(True, description='Whether to add a space between special tokens in the generated output.')
-
-  if t.TYPE_CHECKING:
-    max_tokens: int
-    temperature: float
-    top_k: int
-    top_p: float
-    logprobs: t.Optional[int]
-    repetition_penalty: float
-    length_penalty: float
-    early_stopping: bool
-    prompt_logprobs: t.Optional[int]
-    stop: t.Optional[t.Union[str, t.List[str]]]
-
-  def __init__(self, *, _internal: bool = False, **attrs: t.Any):
-    if not _internal:
-      raise RuntimeError(
-        'SamplingParams is not meant to be used directly, but you can access this via a LLMConfig.sampling_config.'
-      )
-    _object_setattr(self, 'max_tokens', attrs.pop('max_tokens', 16))
-    _object_setattr(self, 'temperature', attrs.pop('temperature', 1.0))
-    _object_setattr(self, 'top_k', attrs.pop('top_k', -1))
-    _object_setattr(self, 'top_p', attrs.pop('top_p', 1.0))
-    _object_setattr(self, 'repetition_penalty', attrs.pop('repetition_penalty', 1.0))
-    _object_setattr(self, 'length_penalty', attrs.pop('length_penalty', 1.0))
-    _object_setattr(self, 'early_stopping', attrs.pop('early_stopping', False))
-    _object_setattr(self, 'logprobs', attrs.pop('logprobs', None))
-    _object_setattr(self, 'prompt_logprobs', attrs.pop('prompt_logprobs', None))
-    _object_setattr(self, 'stop', attrs.pop('stop', None))
-    self.__attrs_init__(**attrs)
+  max_new_tokens: int = pydantic.Field(
+    20,
+    ge=0,
+    description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.',
+    alias='max_tokens',
+  )
+  logprobs: t.Optional[int] = pydantic.Field(
+    None, description='Number of log probabilities to return per output token.'
+  )
+  prompt_logprobs: t.Optional[int] = pydantic.Field(
+    None, description='Number of log probabilities to return per input token.'
+  )
+  skip_special_tokens: bool = pydantic.Field(
+    True, description='Whether to skip special tokens in the generated output.'
+  )
+  spaces_between_special_tokens: bool = pydantic.Field(
+    True, description='Whether to add a space between special tokens in the generated output.'
+  )
+  logits_processors: t.Optional[t.List[LogitsProcessor]] = pydantic.Field(
+    None, description='List of functions that modify logits based on previously generated tokens.'
+  )
 
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item):
       return getattr(self, item)
     raise KeyError(f"'{self.__class__.__name__}' has no attribute {item}.")
 
-  @property
-  def __repr_keys__(self) -> set[str]:
-    return {i.name for i in attr.fields(self.__class__)}
+  def build(self, config: t.Literal['vllm']) -> t.Any:
+    if config == 'vllm':
+      if not is_vllm_available():
+        raise MissingDependencyError(
+          'vLLM is not installed. Make sure to install it with `pip install "openllm-core[vllm]"`'
+        )
+      from vllm import SamplingParams
 
+
+LogitsProcessor = t.Callable[[t.List[int], 'torch.Tensor'], 'torch.Tensor']
+
+
+@attr.frozen(slots=True, repr=False, init=False)
+class SamplingParams(ReprMixin):
   def build(self) -> vllm.SamplingParams:
     return vllm.SamplingParams(
       max_tokens=self.max_tokens,
@@ -357,27 +330,6 @@ class SamplingParams(ReprMixin):
       **attrs,
     )
 
-
-converter.register_unstructure_hook_factory(
-  lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
-  lambda cls: make_dict_unstructure_fn(
-    cls,
-    converter,
-    _cattrs_omit_if_default=False,
-    _cattrs_use_linecache=True,
-    **{
-      k: override(omit_if_default=True) for k, v in attr.fields_dict(cls).items() if v.default in (None, attr.NOTHING)
-    },
-  ),
-)
-converter.register_structure_hook_factory(
-  lambda cls: attr.has(cls) and lenient_issubclass(cls, SamplingParams),
-  lambda cls: make_dict_structure_fn(
-    cls, converter, _cattrs_forbid_extra_keys=True, max_new_tokens=override(rename='max_tokens')
-  ),
-)
-
-_SamplingParamsT = t.TypeVar('_SamplingParamsT', bound=SamplingParams)
 
 # cached it here to save one lookup per assignment
 _object_getattribute = object.__getattribute__
