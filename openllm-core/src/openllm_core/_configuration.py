@@ -1,5 +1,5 @@
 from __future__ import annotations
-import copy, importlib.util, inspect, logging, os, sys, types, warnings, typing as t
+import copy, inspect, importlib.util, inspect, logging, os, sys, types, warnings, typing as t
 import attr, inflection, orjson, pydantic
 from deepmerge.merger import Merger
 
@@ -62,6 +62,8 @@ _object_setattr = object.__setattr__
 
 
 class GenerationConfig(pydantic.BaseModel):
+  model_config = pydantic.ConfigDict(extra='allow')
+
   min_length: int = pydantic.Field(
     0,
     ge=0,  #
@@ -71,6 +73,7 @@ class GenerationConfig(pydantic.BaseModel):
     None, description='The minimum numbers of tokens to generate, ignoring the number of tokens in the prompt.'
   )
   max_time: t.Optional[float] = pydantic.Field(
+        None,
     description='The maximum amount of time you allow the computation to run for in seconds. generation will still finish the current pass after allocated time has been passed.'
   )
   num_beams: int = pydantic.Field(1, description='Number of beams for beam search. 1 means no beam search.')
@@ -171,13 +174,14 @@ class GenerationConfig(pydantic.BaseModel):
   pad_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *padding* token.')
   bos_token_id: t.Optional[int] = pydantic.Field(None, description='The id of the *beginning-of-sequence* token.')
   eos_token_id: t.Optional[t.Union[int, t.List[int]]] = pydantic.Field(
+        None,
     description='The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.'
   )
   encoder_no_repeat_ngram_size: int = pydantic.Field(
     0,
     description='If set to int > 0, all ngrams of that size that occur in the `encoder_input_ids` cannot occur in the `decoder_input_ids`.',
   )
-  decoder_start_token_id: int = pydantic.Field(
+  decoder_start_token_id: int = pydantic.Field(None,
     description='If an encoder-decoder model starts decoding with a different token than *bos*, the id of that token.'
   )
   # NOTE vLLM compatible fields.
@@ -268,6 +272,8 @@ class GenerationConfig(pydantic.BaseModel):
           'vLLM is not installed. Make sure to install it with `pip install "openllm-core[vllm]"`'
         )
       from vllm import SamplingParams
+
+      keys = set(inspect.signature(SamplingParams).parameters.keys())
 
 
 LogitsProcessor = t.Callable[[t.List[int], 'torch.Tensor'], 'torch.Tensor']
@@ -364,27 +370,6 @@ class ModelSettings(TypedDict, total=False):
   fine_tune_strategies: t.Tuple[t.Dict[str, t.Any], ...]
 
 
-_transformed_type: DictStrAny = {'fine_tune_strategies': t.Dict[AdapterType, FineTuneConfig]}
-
-
-@attr.define(
-  frozen=False,
-  slots=True,  #
-  field_transformer=lambda _, __: [
-    attr.Attribute.from_counting_attr(
-      k,
-      dantic.Field(
-        kw_only=False if t.get_origin(ann) is not Required else True,
-        auto_default=True,
-        use_default_converter=False,  #
-        type=_transformed_type.get(k, ann),
-        metadata={'target': f'__openllm_{k}__'},
-        description=f'ModelSettings field for {k}.',
-      ),
-    )
-    for k, ann in t.get_type_hints(ModelSettings).items()
-  ],
-)
 class _ModelSettingsAttr:
   def __getitem__(self, key: str) -> t.Any:
     if key in codegen.get_annotations(ModelSettings):
