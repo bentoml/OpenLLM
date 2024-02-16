@@ -20,6 +20,8 @@ class MessagesConverterInput(TypedDict):
 
 
 class MetadataOutput(pydantic.BaseModel):
+  model_config = pydantic.ConfigDict(protected_namespaces=())
+
   model_id: str
   timeout: int
   model_name: str
@@ -85,8 +87,11 @@ class GenerationInput(pydantic.BaseModel):
   def from_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
     klass = pydantic.create_model(
       inflection.camelize(llm_config['model_name']) + 'GenerationInput',
-      __config__={'extra': 'forbid', 'frozen': True},
-      __base__=(cls,),
+      __base__=(
+        cls,
+        pydantic.create_model(f'_{llm_config["model_name"]}_base', __config__={'extra': 'forbid', 'frozen': True}),
+      ),
+      llm_config=(LLMConfig, pydantic.Field(default=llm_config)),
     )
     klass._class_ref = llm_config.__class__
     return klass

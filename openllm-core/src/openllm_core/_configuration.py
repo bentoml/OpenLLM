@@ -17,12 +17,12 @@ from ._typing_compat import (
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
 from .utils import field_env_key, first_not_none, is_vllm_available, is_transformers_available
-from .protocol.openai import ChatCompletionRequest, CompletionRequest
 
 if t.TYPE_CHECKING:
   import transformers, vllm, openllm, torch
 
   from ._schemas import MessageParam
+  from .protocol.openai import ChatCompletionRequest, CompletionRequest
 
 __all__ = ['GenerationConfig', 'LLMConfig', 'field_env_key']
 
@@ -550,6 +550,7 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       except orjson.JSONDecodeError as e:
         raise RuntimeError("Failed to parse 'OPENLLM_CONFIG' as valid JSON string.") from e
 
+    generation_config = {}
     if 'generation_config' in attrs and 'sampling_config' in attrs:  # backward compatibility
       generation_config = attrs.pop('generation_config')
       sampling_config = attrs.pop('sampling_config')
@@ -588,6 +589,8 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       return config.generation_config.build('pt')
 
   def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
+    from .protocol.openai import ChatCompletionRequest, CompletionRequest
+
     if isinstance(request, (ChatCompletionRequest, CompletionRequest)):
       return self.openai.build(self, request)
     raise TypeError(f'Unknown request type {type(request)}')
