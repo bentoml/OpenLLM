@@ -158,9 +158,9 @@ GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
 VLLM_DEPS = ['vllm==0.3.0']
 
 _base_requirements: dict[str, t.Any] = {
-  inflection.dasherize(name): config_cls.__openllm_requirements__
+  inflection.dasherize(name): config_cls()['requirements']
   for name, config_cls in openllm.CONFIG_MAPPING.items()
-  if config_cls.__openllm_requirements__
+  if 'requirements' in config_cls()
 }
 
 # shallow copy from locals()

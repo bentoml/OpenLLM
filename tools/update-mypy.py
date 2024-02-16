@@ -31,7 +31,7 @@ def pyi_in_subdir(directory: str, git_root: str) -> List[str]:
 def find_pyi_files(git_root: str) -> List[str]:
   # List all subdirectories
   subdirectories = [
-    os.path.join(git_root, name) for name in os.listdir(git_root) if os.path.isdir(os.path.join(git_root, name))
+    os.path.join(git_root, name) for name in os.listdir(git_root) if os.path.isdir(os.path.join(git_root, name)) and name not in ['venv', '.git', '.venv']
   ]
 
   # Use a thread pool to execute searches concurrently

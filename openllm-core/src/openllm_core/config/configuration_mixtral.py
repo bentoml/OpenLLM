@@ -14,7 +14,7 @@ class MixtralConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
   metadata_config: ModelSettings = pydantic.Field(
     default={

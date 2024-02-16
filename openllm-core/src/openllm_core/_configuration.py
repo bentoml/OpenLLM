@@ -1,9 +1,7 @@
 from __future__ import annotations
-import abc, inspect, importlib.util, logging, os, typing as t
+import abc, inspect, logging, os, typing as t
 import inflection, orjson, pydantic
 from deepmerge.merger import Merger
-
-from openllm_core.utils.import_utils import is_transformers_available
 
 from ._typing_compat import (
   DictStrAny,
@@ -18,13 +16,11 @@ from ._typing_compat import (
   overload,
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
-from .utils import field_env_key, first_not_none, is_vllm_available
+from .utils import field_env_key, first_not_none, is_vllm_available, is_transformers_available
+from .protocol.openai import ChatCompletionRequest, CompletionRequest
 
 if t.TYPE_CHECKING:
   import transformers, vllm, openllm, torch
-
-  from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
-  from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
 
   from ._schemas import MessageParam
 
@@ -309,7 +305,6 @@ class ModelSettings(TypedDict, total=False):
   start_name: NotRequired[str]
   # serving configuration
   timeout: int
-  workers_per_resource: t.Union[int, float]
 
   # the target generation_config class to be used.
   fine_tune_strategies: t.Tuple[t.Dict[str, t.Any], ...]
@@ -317,9 +312,26 @@ class ModelSettings(TypedDict, total=False):
 
 _reserved_namespace = {'metadata_config'}
 
+_DEFAULT = ModelSettings(
+  name_type='dasherize',
+  url='',  #
+  backend=('pt', 'vllm'),
+  timeout=int(36e6),
+  service_name='',  #
+  model_type='causal_lm',
+  requirements=None,  #
+  trust_remote_code=False,
+  default_id='__default__',
+  model_ids=['__default__'],  #
+  architecture='PreTrainedModel',
+  serialisation='legacy',  #
+)
+
 
 class LLMConfig(pydantic.BaseModel, abc.ABC):
-  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
+
+  _done_initialisation = False
 
   if t.TYPE_CHECKING:
     # NOTE: We will dynamically add these fields to the class on all configuration fields
@@ -327,11 +339,28 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     generation_config: t.ClassVar[GenerationConfig]
 
   def __setattr__(self, attr: str, value: t.Any) -> None:
-    if attr in _reserved_namespace:
+    if attr in _reserved_namespace and self._done_initialisation:
       raise ForbiddenAttributeError(
         f'{attr} should not be set during runtime as these value will be reflected during runtime. Instead, you can create a custom LLM subclass {self.__class__.__name__}.'
       )
     super().__setattr__(attr, value)
+
+  def model_post_init(self, *_: t.Any):
+    _cl_name = self.__class__.__name__.replace('Config', '')
+    has_custom_name = all(i in self.metadata_config for i in {'model_name', 'start_name'})
+
+    _attr: ModelSettings = {}
+    _config = {**_DEFAULT, **self.metadata_config}
+    dasherize = _config.get('name_type', 'dasherize') == 'dasherize'
+
+    if not has_custom_name:
+      _attr['model_name'] = inflection.underscore(_cl_name) if dasherize else _cl_name.lower()
+      _attr['start_name'] = inflection.dasherize(_attr['model_name']) if dasherize else _attr['model_name']
+    _attr.update({
+      'service_name': f'generated_{_attr["model_name"] if "model_name" in _attr else _config["model_name"]}_service.py'
+    })
+    self.metadata_config = ModelSettings(**{**_config, **_attr})
+    self._done_initialisation = True
 
   # fmt: off
   # update-config-stubs.py: start
@@ -366,31 +395,23 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   def __getitem__(self, item: t.Literal['timeout']) -> int: ...
   @overload
   def __getitem__(self, item: t.Literal['workers_per_resource']) -> t.Union[int, float]: ...
-  # NOTE: GenerationConfig arguments
   @overload
-  def __getitem__(self, item: t.Literal['max_new_tokens']) -> int: ...
+  def __getitem__(self, item: t.Literal['fine_tune_strategies']) -> t.Tuple[t.Dict[str, t.Any], ...]: ...
+  # NOTE: GenerationConfig arguments
   @overload
   def __getitem__(self, item: t.Literal['min_length']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['min_new_tokens']) -> int: ...
+  def __getitem__(self, item: t.Literal['min_new_tokens']) -> t.Optional[int]: ...
   @overload
-  def __getitem__(self, item: t.Literal['early_stopping']) -> bool: ...
-  @overload
-  def __getitem__(self, item: t.Literal['max_time']) -> float: ...
+  def __getitem__(self, item: t.Literal['max_time']) -> t.Optional[float]: ...
   @overload
   def __getitem__(self, item: t.Literal['num_beams']) -> int: ...
   @overload
   def __getitem__(self, item: t.Literal['num_beam_groups']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['penalty_alpha']) -> float: ...
+  def __getitem__(self, item: t.Literal['penalty_alpha']) -> t.Optional[float]: ...
   @overload
   def __getitem__(self, item: t.Literal['use_cache']) -> bool: ...
-  @overload
-  def __getitem__(self, item: t.Literal['temperature']) -> float: ...
-  @overload
-  def __getitem__(self, item: t.Literal['top_k']) -> int: ...
-  @overload
-  def __getitem__(self, item: t.Literal['top_p']) -> float: ...
   @overload
   def __getitem__(self, item: t.Literal['typical_p']) -> float: ...
   @overload
@@ -404,29 +425,27 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   @overload
   def __getitem__(self, item: t.Literal['encoder_repetition_penalty']) -> float: ...
   @overload
-  def __getitem__(self, item: t.Literal['length_penalty']) -> float: ...
-  @overload
   def __getitem__(self, item: t.Literal['no_repeat_ngram_size']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['bad_words_ids']) -> t.List[t.List[int]]: ...
+  def __getitem__(self, item: t.Literal['bad_words_ids']) -> t.Optional[t.List[t.List[int]]]: ...
   @overload
-  def __getitem__(self, item: t.Literal['force_words_ids']) -> t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]: ...
+  def __getitem__(self, item: t.Literal['force_words_ids']) -> t.Optional[t.Union[t.List[t.List[int]], t.List[t.List[t.List[int]]]]]: ...
   @overload
   def __getitem__(self, item: t.Literal['renormalize_logits']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['forced_bos_token_id']) -> int: ...
+  def __getitem__(self, item: t.Literal['forced_bos_token_id']) -> t.Optional[int]: ...
   @overload
-  def __getitem__(self, item: t.Literal['forced_eos_token_id']) -> t.Union[int, t.List[int]]: ...
+  def __getitem__(self, item: t.Literal['forced_eos_token_id']) -> t.Optional[t.Union[int, t.List[int]]]: ...
   @overload
   def __getitem__(self, item: t.Literal['remove_invalid_values']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['exponential_decay_length_penalty']) -> t.Tuple[int, float]: ...
+  def __getitem__(self, item: t.Literal['exponential_decay_length_penalty']) -> t.Optional[t.Tuple[int, float]]: ...
   @overload
-  def __getitem__(self, item: t.Literal['suppress_tokens']) -> t.List[int]: ...
+  def __getitem__(self, item: t.Literal['suppress_tokens']) -> t.Optional[t.List[int]]: ...
   @overload
-  def __getitem__(self, item: t.Literal['begin_suppress_tokens']) -> t.List[int]: ...
+  def __getitem__(self, item: t.Literal['begin_suppress_tokens']) -> t.Optional[t.List[int]]: ...
   @overload
-  def __getitem__(self, item: t.Literal['forced_decoder_ids']) -> t.List[t.List[int]]: ...
+  def __getitem__(self, item: t.Literal['forced_decoder_ids']) -> t.Optional[t.List[t.List[int]]]: ...
   @overload
   def __getitem__(self, item: t.Literal['num_return_sequences']) -> int: ...
   @overload
@@ -436,55 +455,57 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   @overload
   def __getitem__(self, item: t.Literal['output_scores']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['pad_token_id']) -> int: ...
+  def __getitem__(self, item: t.Literal['pad_token_id']) -> t.Optional[int]: ...
   @overload
-  def __getitem__(self, item: t.Literal['bos_token_id']) -> int: ...
+  def __getitem__(self, item: t.Literal['bos_token_id']) -> t.Optional[int]: ...
   @overload
-  def __getitem__(self, item: t.Literal['eos_token_id']) -> t.Union[int, t.List[int]]: ...
+  def __getitem__(self, item: t.Literal['eos_token_id']) -> t.Optional[t.Union[int, t.List[int]]]: ...
   @overload
   def __getitem__(self, item: t.Literal['encoder_no_repeat_ngram_size']) -> int: ...
   @overload
   def __getitem__(self, item: t.Literal['decoder_start_token_id']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['logprobs']) -> t.Optional[int]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['prompt_logprobs']) -> t.Optional[int]: ...
-  # NOTE: SamplingParams arguments
-  @overload
   def __getitem__(self, item: t.Literal['n']) -> int: ...
   @overload
-  def __getitem__(self, item: t.Literal['best_of']) -> int: ...
+  def __getitem__(self, item: t.Literal['best_of']) -> t.Optional[int]: ...
   @overload
   def __getitem__(self, item: t.Literal['presence_penalty']) -> float: ...
   @overload
   def __getitem__(self, item: t.Literal['frequency_penalty']) -> float: ...
   @overload
+  def __getitem__(self, item: t.Literal['temperature']) -> float: ...
+  @overload
+  def __getitem__(self, item: t.Literal['top_k']) -> int: ...
+  @overload
+  def __getitem__(self, item: t.Literal['top_p']) -> float: ...
+  @overload
+  def __getitem__(self, item: t.Literal['min_p']) -> float: ...
+  @overload
   def __getitem__(self, item: t.Literal['use_beam_search']) -> bool: ...
+  @overload
+  def __getitem__(self, item: t.Literal['length_penalty']) -> float: ...
+  @overload
+  def __getitem__(self, item: t.Literal['early_stopping']) -> bool: ...
+  @overload
+  def __getitem__(self, item: t.Literal['stop']) -> t.Optional[t.Union[str, t.List[str]]]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['stop_token_ids']) -> t.Optional[t.List[int]]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['include_stop_str_in_output']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['ignore_eos']) -> bool: ...
   @overload
+  def __getitem__(self, item: t.Literal['max_tokens']) -> int: ...
+  @overload
+  def __getitem__(self, item: t.Literal['logprobs']) -> t.Optional[int]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['prompt_logprobs']) -> t.Optional[int]: ...
+  @overload
   def __getitem__(self, item: t.Literal['skip_special_tokens']) -> bool: ...
-  # NOTE: PeftType arguments
   @overload
-  def __getitem__(self, item: t.Literal['prompt_tuning']) -> t.Dict[str, t.Any]: ...
+  def __getitem__(self, item: t.Literal['spaces_between_special_tokens']) -> bool: ...
   @overload
-  def __getitem__(self, item: t.Literal['multitask_prompt_tuning']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['p_tuning']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['prefix_tuning']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['lora']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['adalora']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['adaption_prompt']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['ia3']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['loha']) -> t.Dict[str, t.Any]: ...
-  @overload
-  def __getitem__(self, item: t.Literal['lokr']) -> t.Dict[str, t.Any]: ...
+  def __getitem__(self, item: t.Literal['logits_processors']) -> t.Optional[t.List[LogitsProcessor]]: ...
   # update-config-stubs.py: stop
   # fmt: on
   def __getitem__(self, item: LiteralString | t.Any) -> t.Any:
@@ -506,12 +527,16 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     else:
       raise KeyError(item)
 
-  def __getattribute__(self, name: str) -> t.Any:
-    if name in _reserved_namespace:
-      raise ForbiddenAttributeError(
-        f"'{name}' is a reserved namespace for {self.__class__} and should not be access nor modified."
-      )
-    return super().__getattribute__(name)
+  def __contains__(self, item: LiteralString) -> bool:
+    try:
+      self[item]
+      return True
+    except KeyError:
+      return False
+
+  @pydantic.model_serializer
+  def ser_model(self) -> dict[str, t.Any]:
+    return self.generation_config.model_dump()
 
   @classmethod
   def model_construct_env(cls, **attrs: t.Any) -> Self:  # All LLMConfig init should start from here.
@@ -530,13 +555,9 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       sampling_config = attrs.pop('sampling_config')
       generation_config.update(sampling_config)
     elif 'llm_config' in attrs:  # NOTE: this is the new key
-      llm_config = attrs.pop('llm_config')
-      generation_config = {k: v for k, v in llm_config.items() if k in GenerationConfig.model_fields}
-    else:
-      generation_config = {k: v for k, v in attrs.items() if k in GenerationConfig.model_fields}
-    additional_extras = {k: v for k, v in attrs.items() if k not in generation_config}
+      generation_config = attrs.pop('llm_config')
 
-    config_from_env.update({**attrs, **generation_config, **additional_extras})
+    config_from_env.update({**attrs, **generation_config})
     return cls.model_construct(**config_from_env)
 
   def inference_options(self, llm: openllm.LLM, backend: str | None = None) -> tuple[Self, t.Any]:
@@ -566,26 +587,10 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     def build(config: LLMConfig) -> transformers.GenerationConfig:
       return config.generation_config.build('pt')
 
-  @overload
-  def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]: ...
-
-  @overload
-  def compatible_options(self, request: CohereChatRequest | CohereGenerateRequest) -> dict[str, t.Any]: ...
-
-  def compatible_options(self, request: t.Any) -> dict[str, t.Any]:
-    if importlib.util.find_spec('openllm') is None:
-      raise MissingDependencyError(
-        "'openllm' is required to use 'compatible_options'. Make sure to install with 'pip install openllm'."
-      )
-    from openllm.protocol.cohere import CohereChatRequest, CohereGenerateRequest
-    from openllm.protocol.openai import ChatCompletionRequest, CompletionRequest
-
+  def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
     if isinstance(request, (ChatCompletionRequest, CompletionRequest)):
       return self.openai.build(self, request)
-    elif isinstance(request, (CohereChatRequest, CohereGenerateRequest)):
-      return self.cohere.build(self, request)
-    else:
-      raise TypeError(f'Unknown request type {type(request)}')
+    raise TypeError(f'Unknown request type {type(request)}')
 
   class openai:
     @staticmethod
@@ -597,29 +602,12 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
         best_of=first_not_none(request.best_of, config['best_of']),
         n=first_not_none(request.n, default=config['n']),
         stop=first_not_none(request.stop, default=None),
-        max_new_tokens=first_not_none(request.max_tokens, default=config['max_new_tokens']),
+        max_new_tokens=first_not_none(request.max_tokens, default=config['max_tokens']),
         presence_penalty=first_not_none(request.presence_penalty, default=config['presence_penalty']),
         frequency_penalty=first_not_none(request.frequency_penalty, default=config['frequency_penalty']),
       )
       if hasattr(request, 'logprobs'):
         d['logprobs'] = first_not_none(request.logprobs, default=config['logprobs'])
-      return d
-
-  class cohere:
-    @staticmethod
-    def build(config: LLMConfig, request: CohereGenerateRequest | CohereChatRequest) -> dict[str, t.Any]:
-      d = dict(
-        max_new_tokens=first_not_none(request.max_tokens, default=config['max_new_tokens']),
-        temperature=first_not_none(request.temperature, default=config['temperature']),
-        top_k=first_not_none(request.k, default=config['top_k']),
-        top_p=first_not_none(request.p, default=config['top_p']),
-      )
-      if hasattr(request, 'num_generations'):
-        d['n'] = first_not_none(request.num_generations, default=config['n'])
-      if hasattr(request, 'frequency_penalty'):
-        d['frequency_penalty'] = first_not_none(request.frequency_penalty, default=config['frequency_penalty'])
-      if hasattr(request, 'presence_penalty'):
-        d['presence_penalty'] = first_not_none(request.presence_penalty, default=config['presence_penalty'])
       return d
 
   @property
@@ -643,11 +631,6 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       MessageParam(role='user', content="Hello, I'm looking for a chatbot that can help me with my work."),
       MessageParam(role='assistant', content='Yes? What can I help you with?'),
     ]
-
-  # # holds a mapping from self.__openllm_model_type__ to peft.TaskType
-  # @classmethod
-  # def peft_task_type(cls) -> str:
-  #   return PEFT_TASK_TYPE_TARGET_MAPPING[cls.__openllm_model_type__]
 
 
 OPENLLM_HOME = os.path.expanduser(

@@ -12,7 +12,7 @@ class FalconConfig(openllm_core.LLMConfig):
   Refer to [Falcon's HuggingFace page](https://huggingface.co/tiiuae/falcon-7b) for more information.
   """
 
-  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
   metadata_config: ModelSettings = pydantic.Field(
     default={

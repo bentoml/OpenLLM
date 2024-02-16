@@ -6,10 +6,6 @@ from pathlib import Path
 # currently we are assuming the indentatio level is 2 for comments
 START_COMMENT = f'# {os.path.basename(__file__)}: start\n'
 END_COMMENT = f'# {os.path.basename(__file__)}: stop\n'
-START_SPECIAL_COMMENT = f'# {os.path.basename(__file__)}: special start\n'
-END_SPECIAL_COMMENT = f'# {os.path.basename(__file__)}: special stop\n'
-START_ATTRS_COMMENT = f'# {os.path.basename(__file__)}: attrs start\n'
-END_ATTRS_COMMENT = f'# {os.path.basename(__file__)}: attrs stop\n'
 # Stubs for auto class
 START_AUTO_STUBS_COMMENT = f'# {os.path.basename(__file__)}: auto stubs start\n'
 END_AUTO_STUBS_COMMENT = f'# {os.path.basename(__file__)}: auto stubs stop\n'
@@ -78,15 +74,6 @@ _value_docstring = {
   'model_name': 'The normalized version of __openllm_start_name__, determined by __openllm_name_type__',
   'start_name': 'Default name to be used with `openllm start`',
   'timeout': 'The default timeout to be set for this given LLM.',
-  'workers_per_resource': """The number of workers per resource. This is used to determine the number of workers to use for this model.
-        For example, if this is set to 0.5, then OpenLLM will use 1 worker per 2 resources. If this is set to 1, then
-        OpenLLM will use 1 worker per resource. If this is set to 2, then OpenLLM will use 2 workers per resource.
-
-        See StarCoder for more advanced usage. See
-        https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy for more details.
-
-        By default, it is set to 1.
-        """,
   'fine_tune_strategies': 'The fine-tune strategies for this given LLM.',
 }
 
@@ -98,33 +85,7 @@ def main() -> int:
     processed = f.readlines()
 
   start_idx, end_idx = processed.index(' ' * 2 + START_COMMENT), processed.index(' ' * 2 + END_COMMENT)
-  start_stub_idx, end_stub_idx = (
-    processed.index(' ' * 4 + START_SPECIAL_COMMENT),
-    processed.index(' ' * 4 + END_SPECIAL_COMMENT),
-  )
-  start_attrs_idx, end_attrs_idx = (
-    processed.index(' ' * 4 + START_ATTRS_COMMENT),
-    processed.index(' ' * 4 + END_ATTRS_COMMENT),
-  )
 
-  # NOTE: inline stubs metadata_config attrs representation
-  special_attrs_lines: list[str] = []
-  for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
-    special_attrs_lines.append(
-      f"{' ' * 4}{keys}: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}\n"
-    )
-  # NOTE: inline stubs for _ConfigAttr type stubs
-  config_attr_lines: list[str] = []
-  for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
-    config_attr_lines.extend(
-      [
-        ' ' * 4 + line
-        for line in [
-          f'__openllm_{keys}__: {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))} = Field(None)\n',
-          f'"""{_value_docstring[keys]}"""\n',
-        ]
-      ]
-    )
   # NOTE: inline runtime __getitem__ overload process
   lines: list[str] = []
   lines.append(' ' * 2 + '# NOTE: ModelSettings arguments\n')
@@ -134,7 +95,7 @@ def main() -> int:
         ' ' * 2 + line
         for line in [
           '@overload\n',
-          f"def __getitem__(self, item: t.Literal['{keys}']) -> {_transformed.get(keys, process_annotations(ForwardRef.__forward_arg__))}: ...\n",
+          f"def __getitem__(self, item: t.Literal['{keys}']) -> {process_annotations(ForwardRef.__forward_arg__)}: ...\n",
         ]
       ]
     )
@@ -147,27 +108,8 @@ def main() -> int:
         for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]
       ]
     )
-  # lines.append(' ' * 2 + '# NOTE: PeftType arguments\n')
-  # for keys in PeftType._member_names_:
-  #   lines.extend(
-  #     [
-  #       ' ' * 2 + line
-  #       for line in [
-  #         '@overload\n',
-  #         f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> t.Dict[str, t.Any]: ...\n",
-  #       ]
-  #     ]
-  #   )
 
-  processed = (
-    processed[:start_attrs_idx]
-    + [' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT]
-    + processed[end_attrs_idx + 1: start_stub_idx]
-    + [' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT]
-    + processed[end_stub_idx + 1: start_idx]
-    + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT]
-    + processed[end_idx + 1:]
-  )
+  processed = processed[:start_idx] + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT] + processed[end_idx + 1:]
   with _TARGET_FILE.open('w') as f: f.writelines(processed)
 
   with _TARGET_AUTO_FILE.open('r') as f: processed = f.readlines()

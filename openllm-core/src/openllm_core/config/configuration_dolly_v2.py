@@ -34,7 +34,7 @@ class DollyV2Config(openllm_core.LLMConfig):
   Refer to [Databricks's Dolly page](https://github.com/databrickslabs/dolly) for more information.
   """
 
-  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
   metadata_config: ModelSettings = pydantic.Field(
     default={

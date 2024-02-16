@@ -12,7 +12,7 @@ class FlanT5Config(openllm_core.LLMConfig):
   Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
   """
 
-  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
   metadata_config: ModelSettings = pydantic.Field(
     default={
