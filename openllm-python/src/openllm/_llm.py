@@ -1,7 +1,7 @@
 from __future__ import annotations
 import functools, logging, os, warnings, types, typing as t
 from copy import deepcopy
-import attr, orjson, bentoml, openllm
+import attr, orjson, bentoml, openllm_core, openllm
 from openllm_core._schemas import (
   MessageParam,
   GenerationInput,
@@ -10,7 +10,6 @@ from openllm_core._schemas import (
   MessagesConverterInput,
 )
 from openllm_core._typing_compat import (
-  AdapterMap,
   AdapterTuple,
   AdapterType,
   LiteralBackend,
@@ -23,22 +22,17 @@ from openllm_core._typing_compat import (
   M,
   T,
 )
-from openllm_core.exceptions import MissingDependencyError
 from openllm_core.utils import (
-  DEBUG,
   check_bool_env,
   codegen,
   first_not_none,
   flatten_attrs,
   gen_random_uuid,
-  is_ctranslate_available,
-  is_peft_available,
   is_vllm_available,
   normalise_model_name,
 )
 
-from .exceptions import ForbiddenAttributeError, OpenLLMException
-from .serialisation.constants import PEFT_CONFIG_NAME
+from .exceptions import ForbiddenAttributeError
 
 if t.TYPE_CHECKING:
   import torch, transformers
@@ -155,7 +149,6 @@ class LLM(t.Generic[M, T]):
     llm_config=None,
     max_model_len=None,
     gpu_memory_utilization=0.9,
-    adapter_map=None,
     _internal=False,
     **attrs,
   ):
@@ -182,7 +175,6 @@ class LLM(t.Generic[M, T]):
       llm_config=llm_config,
       max_model_len=max_model_len,
       gpu_memory_utilization=gpu_memory_utilization,
-      adapter_map=adapter_map,
       **att,
     )
 
@@ -195,7 +187,6 @@ class LLM(t.Generic[M, T]):
     max_model_len=None,
     gpu_memory_utilization=0.9,
     trust_remote_code=False,
-    adapter_map=None,
     service_config=None,
     **attrs,
   ):
@@ -208,7 +199,6 @@ class LLM(t.Generic[M, T]):
       llm_config=llm_config,
       backend=first_not_none(backend, default=model.info.metadata['backend']),
       quantize=model.info.metadata.get('_quantize'),
-      adapter_map=adapter_map,
       serialisation=model.info.metadata['serialisation'],
       trust_remote_code=trust_remote_code,
       max_model_len=max_model_len,
@@ -233,7 +223,6 @@ class LLM(t.Generic[M, T]):
   __model_attrs: t.Dict[str, t.Any]  #
   __tokenizer_attrs: t.Dict[str, t.Any]
   _tag: bentoml.Tag
-  _adapter_map: t.Optional[AdapterMap]  #
   _serialisation: LiteralSerialisation
   _local: bool
   _max_model_len: t.Optional[int]  #
@@ -253,7 +242,6 @@ class LLM(t.Generic[M, T]):
   __llm_model__: t.Optional[M] = None
   __llm_service__: t.Optional[Service[LLMService]] = None
   __llm_tokenizer__: t.Optional[T] = None
-  __llm_adapter_map__: t.Optional[ResolvedAdapterMap] = None
   __llm_trust_remote_code__: bool = False
   __llm_proxy_caller__: t.Callable[
     Concatenate[t.List[int], str, t.Optional[t.Union[t.Iterable[str], str]], t.Optional[str], t.Optional[str], P],
@@ -270,7 +258,6 @@ class LLM(t.Generic[M, T]):
     *args,
     quantize=None,
     quantization_config=None,
-    adapter_map=None,
     serialisation='safetensors',
     trust_remote_code=False,
     dtype='auto',
@@ -320,7 +307,6 @@ class LLM(t.Generic[M, T]):
       quantization_config=quantization_config,
       quantise=getattr(self._Quantise, backend)(self, quantize),
       model_decls=args,
-      adapter_map=convert_peft_config_type(adapter_map) if adapter_map is not None else None,
       serialisation=serialisation,
       local=_local,
       max_model_len=max_model_len,
@@ -406,12 +392,7 @@ class LLM(t.Generic[M, T]):
       'It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.'
     )
     if self._has_gpus:
-      if is_vllm_available():
-        return 'vllm'
-      elif is_ctranslate_available():
-        return 'ctranslate'
-    elif is_ctranslate_available():
-      return 'ctranslate'
+      return 'vllm' if is_vllm_available() else 'pt'
     else:
       return 'pt'
 
@@ -425,7 +406,6 @@ class LLM(t.Generic[M, T]):
       del (
         self.__llm_model__,
         self.__llm_tokenizer__,
-        self.__llm_adapter_map__,
         self.__llm_runner__,
         self.__llm_inference_bases__,
         self.__llm_proxy_caller__,
@@ -451,10 +431,6 @@ class LLM(t.Generic[M, T]):
   @property
   def bentomodel(self):
     return bentoml.models.get(self.tag)
-
-  @property
-  def has_adapters(self):
-    return self._adapter_map is not None
 
   @property
   def local(self):
@@ -563,51 +539,6 @@ class LLM(t.Generic[M, T]):
       self.__llm_inference_bases__ = bases(self)()
     return self.__llm_inference_bases__
 
-  def prepare(self, adapter_type='lora', use_gradient_checking=True, **attrs):
-    if self.__llm_backend__ != 'pt':
-      raise RuntimeError('Fine tuning is only supported for PyTorch backend.')
-    from peft.mapping import get_peft_model
-    from peft.utils.other import prepare_model_for_kbit_training
-
-    model = get_peft_model(
-      prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking),
-      self.config['fine_tune_strategies']
-      .get(adapter_type, self.config.make_fine_tune_config(adapter_type))
-      .train()
-      .with_config(**attrs)
-      .build(),
-    )
-    if DEBUG:
-      model.print_trainable_parameters()
-    return model, self.tokenizer
-
-  def prepare_for_training(self, *args, **attrs):
-    warnings.warn(
-      '`prepare_for_training` is deprecated and will be removed in the future. Use `prepare` instead.',
-      DeprecationWarning,
-      stacklevel=3,
-    )
-    return self.prepare(*args, **attrs)
-
-  @property
-  def adapter_map(self):
-    if not is_peft_available():
-      raise MissingDependencyError("Failed to import 'peft'. Make sure to do 'pip install \"openllm[fine-tune]\"'")
-    if not self.has_adapters:
-      raise AttributeError('Adapter map is not available.')
-    assert self._adapter_map is not None
-    if self.__llm_adapter_map__ is None:
-      _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
-      for adapter_type, adapter_tuple in self._adapter_map.items():
-        base = first_not_none(
-          self.config['fine_tune_strategies'].get(adapter_type),
-          default=self.config.make_fine_tune_config(adapter_type),
-        )
-        for adapter in adapter_tuple:
-          _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
-      self.__llm_adapter_map__ = _map
-    return self.__llm_adapter_map__
-
   @property
   def model(self):
     if self.__llm_model__ is None:
@@ -616,57 +547,9 @@ class LLM(t.Generic[M, T]):
 
   @property
   def config(self):
-    import transformers
-
     if self.__llm_config__ is None:
-      if self.__llm_backend__ == 'ctranslate':
-        try:
-          hf_config = transformers.AutoConfig.from_pretrained(
-            self.bentomodel.path_of('/hf'), trust_remote_code=self.trust_remote_code
-          )
-        except OpenLLMException:
-          hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
-        for architecture in hf_config.architectures:
-          if architecture in openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-            config = openllm.AutoConfig.from_classname(
-              openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
-            ).model_construct_env(**self._model_attrs)
-            break
-          else:
-            raise OpenLLMException(
-              f"Failed to infer the configuration class. Make sure the model is a supported model. Supported models are: {', '.join(openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE.keys())}"
-            )
-      else:
-        config = openllm.AutoConfig.from_llm(self).model_construct_env(**self._model_attrs)
-      self.__llm_config__ = config
+      self.__llm_config__ = openllm_core.AutoConfig.from_llm(self).model_construct_env(**self._model_attrs)
     return self.__llm_config__
-
-
-def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
-  if not is_peft_available():
-    raise RuntimeError(
-      "LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'"
-    )
-  from huggingface_hub import hf_hub_download
-
-  resolved: AdapterMap = {}
-  for path_or_adapter_id, name in adapter_map.items():
-    if name is None:
-      raise ValueError('Adapter name must be specified.')
-    if os.path.isfile(os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)):
-      config_file = os.path.join(path_or_adapter_id, PEFT_CONFIG_NAME)
-    else:
-      try:
-        config_file = hf_hub_download(path_or_adapter_id, PEFT_CONFIG_NAME)
-      except Exception as err:
-        raise ValueError(f"Can't find '{PEFT_CONFIG_NAME}' at '{path_or_adapter_id}'") from err
-    with open(config_file, 'r') as file:
-      resolved_config = orjson.loads(file.read())
-    _peft_type = resolved_config['peft_type'].lower()
-    if _peft_type not in resolved:
-      resolved[_peft_type] = ()
-    resolved[_peft_type] += (_AdapterTuple((path_or_adapter_id, name, resolved_config)),)
-  return resolved
 
 
 def apis(llm, generations):

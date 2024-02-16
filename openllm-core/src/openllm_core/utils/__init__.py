@@ -242,8 +242,6 @@ def generate_context(framework_name):
   }
   if iutils.is_torch_available():
     framework_versions['torch'] = pkg.get_pkg_version('torch')
-  if iutils.is_ctranslate_available():
-    framework_versions['ctranslate2'] = pkg.get_pkg_version('ctranslate2')
   if iutils.is_vllm_available():
     framework_versions['vllm'] = pkg.get_pkg_version('vllm')
   if iutils.is_autoawq_available():
@@ -391,7 +389,6 @@ __lazy = LazyModule(
       'is_notebook_available',
       'is_autogptq_available',
       'is_grpc_available',
-      'is_ctranslate_available',
       'is_transformers_available',
       'is_autoawq_available',
       'is_flash_attn_2_available',

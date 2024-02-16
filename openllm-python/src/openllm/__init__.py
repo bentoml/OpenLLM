@@ -31,7 +31,7 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     'protocol': ['openai'],
     'utils': ['api'],
     'entrypoints': ['mount_entrypoints'],
-    'serialisation': ['ggml', 'transformers', 'ctranslate', 'vllm', 'prepare_model'],
+    'serialisation': ['ggml', 'transformers', 'vllm', 'prepare_model'],
     '_llm': ['LLM'],
     '_deprecated': ['Runner'],
     '_runners': ['runner', 'bases'],

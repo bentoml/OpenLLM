@@ -2,18 +2,7 @@ import importlib, importlib.metadata, importlib.util, os, inspect, typing as t
 from .codegen import _make_method
 from ._constants import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 
-OPTIONAL_DEPENDENCIES = {
-  'vllm',
-  'fine-tune',
-  'ggml',
-  'ctranslate',
-  'agents',
-  'openai',
-  'playground',
-  'gptq',
-  'grpc',
-  'awq',
-}
+OPTIONAL_DEPENDENCIES = {'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_VLLM = os.getenv('USE_VLLM', 'AUTO').upper()
 
@@ -28,7 +17,6 @@ def _has_package(package: str) -> bool:
   return _package_available
 
 
-_ctranslate_available = _has_package('ctranslate2')
 _grpc_available = _has_package('grpc')
 _triton_available = _has_package('triton')
 _torch_available = _has_package('torch')

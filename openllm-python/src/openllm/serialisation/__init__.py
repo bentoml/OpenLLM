@@ -137,15 +137,13 @@ def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], Ty
     > [!NOTE] See 'openllm.serialisation.transformers' if 'llm.__llm_backend__ in ("pt", "vllm")'
 
     > [!NOTE] See 'openllm.serialisation.ggml' if 'llm.__llm_backend__="ggml"'
-
-    > [!NOTE] See 'openllm.serialisation.ctranslate' if 'llm.__llm_backend__="ctranslate"'
     """
     backend = kwargs.get('_backend', None)
     if backend is None:
       if llm is None:
         raise OpenLLMException('Cannot dispatch without LLM instance.')
       backend = llm.__llm_backend__
-    serde_mapping = {'pt': 'transformers', 'vllm': 'vllm', 'ggml': 'ggml', 'ctranslate': 'ctranslate'}
+    serde_mapping = {'pt': 'transformers', 'vllm': 'vllm', 'ggml': 'ggml'}
     try:
       serde = serde_mapping[backend]
     except KeyError:
@@ -158,7 +156,7 @@ def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], Ty
 
 
 _extras = ['import_model', 'load_model']
-_import_structure = {'ggml', 'transformers', 'ctranslate', 'vllm', 'constants'}
+_import_structure = {'ggml', 'transformers', 'vllm', 'constants'}
 __all__ = ['prepare_model', 'load_tokenizer', *_extras, *_import_structure]
 
 

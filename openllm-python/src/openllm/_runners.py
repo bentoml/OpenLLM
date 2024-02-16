@@ -1,9 +1,9 @@
 from __future__ import annotations
 import gc, types, typing as t, bentoml, openllm
-from openllm_core.exceptions import OpenLLMException, MissingDependencyError
+from openllm_core.exceptions import MissingDependencyError
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
 from openllm_core._typing_compat import LiteralString, ParamSpec, overload, M, T
-from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available, correct_closure
+from openllm_core.utils import ReprMixin, is_vllm_available, correct_closure
 
 if t.TYPE_CHECKING:
   from ._runners import Runner
@@ -82,7 +82,6 @@ def runner(llm):
         ('backend', llm.__llm_backend__),
         ('llm_tag', llm.tag),
       ),
-      'has_adapters': llm.has_adapters,
       'template': llm.config.template,
       'system_message': llm.config.system_message,
     }),
@@ -138,7 +137,6 @@ def bases(llm):
         ('llm_tag', llm.tag),
         ('backend', llm.__llm_backend__),
       ),
-      'has_adapters': llm.has_adapters,
       'template': llm.config.template,
       'system_message': llm.config.system_message,
       'impl': backend_cls,
@@ -163,9 +161,9 @@ class vLLMRunnable:
     adapter_name: t.Optional[str] = None,
     **attrs: t.Any,
   ) -> t.AsyncGenerator[GenerationOutput, None]:
-    _, sampling_params = self.llm.config.model_construct_env(
-      stop=list(stop) if stop else None, **attrs
-    ).inference_options(self.llm)
+    if stop is not None:
+      stop = [stop] if isinstance(stop, str) else list(stop)
+    sampling_params = self.llm.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)[-1]
     async for request_output in self.llm.model.generate(None, sampling_params, request_id, prompt_token_ids):
       yield GenerationOutput.from_vllm(request_output)
 
@@ -195,6 +193,9 @@ class PyTorchRunnable:
   ) -> t.AsyncGenerator[GenerationOutput, None]:
     from ._generation import get_context_length, prepare_logits_processor
     import torch
+
+    if stop is not None:
+      stop = [stop] if isinstance(stop, str) else list(stop)
 
     if adapter_name is not None:
       self.llm.model.set_adapter(adapter_name)
@@ -363,55 +364,3 @@ class PyTorchRunnable:
     del past_key_values, out
     gc.collect()
     torch.cuda.empty_cache()
-
-
-@registry
-class CTranslateRunnable:
-  llm: openllm.LLM
-
-  def __init__(self) -> None:
-    if not is_ctranslate_available():
-      raise MissingDependencyError('ctranslate is not installed. Do `pip install "openllm[ctranslate]"`')
-
-  @openllm.utils.api(output=GenerationOutput)
-  async def generate_iterator(
-    self,
-    prompt_token_ids: t.List[int],
-    request_id: str,
-    stop: t.Optional[t.Iterable[str]] = None,
-    adapter_name: t.Optional[str] = None,
-    **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
-    if adapter_name is not None:
-      raise OpenLLMException('Adapter is not supported with CTranslate')
-    config, sampling_params = self.llm.config.model_construct_env(
-      stop=list(stop) if stop else None, **attrs
-    ).inference_options(self.llm)
-    cumulative_logprob, output_token_ids, input_len = 0.0, list(prompt_token_ids), len(prompt_token_ids)
-    tokens = self.llm.tokenizer.convert_ids_to_tokens(prompt_token_ids)
-    async for request_output in self.llm.model.async_generate_tokens(tokens, **sampling_params):
-      if config['logprobs']:
-        cumulative_logprob += request_output.log_prob
-      output_token_ids.append(request_output.token_id)
-      text = self.llm.tokenizer.decode(
-        output_token_ids[input_len:],
-        skip_special_tokens=True,
-        spaces_between_special_tokens=False,
-        clean_up_tokenization_spaces=True,
-      )
-      yield GenerationOutput(
-        prompt_token_ids=prompt_token_ids,
-        prompt='',
-        finished=request_output.is_last,
-        request_id=request_id,
-        outputs=[
-          CompletionChunk(
-            index=0,
-            text=text,
-            finish_reason=None,
-            token_ids=output_token_ids[input_len:],
-            cumulative_logprob=cumulative_logprob,
-            # TODO: logprobs, but seems like we don't have access to the raw logits
-          )
-        ],
-      )

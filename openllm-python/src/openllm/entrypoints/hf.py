@@ -27,7 +27,6 @@ def mount_to_svc(svc, llm):
     debug=True,
     routes=[
       Route('/agent', endpoint=functools.partial(hf_agent, llm=llm), name='hf_agent', methods=['POST']),
-      Route('/adapters', endpoint=functools.partial(hf_adapters, llm=llm), name='adapters', methods=['GET']),
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )
@@ -62,16 +61,3 @@ async def hf_agent(req, llm):
   except Exception as err:
     logger.error('Error while generating: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error while generating (Check server log).')
-
-
-@add_schema_definitions
-def hf_adapters(req, llm):
-  if not llm.has_adapters:
-    return error_response(HTTPStatus.NOT_FOUND, 'No adapters found.')
-  return JSONResponse(
-    {
-      adapter_tuple[1]: {'adapter_name': k, 'adapter_type': adapter_tuple[0].peft_type.value}
-      for k, adapter_tuple in dict(*llm.adapter_map.values()).items()
-    },
-    status_code=HTTPStatus.OK.value,
-  )

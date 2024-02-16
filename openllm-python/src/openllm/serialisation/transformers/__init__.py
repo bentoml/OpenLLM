@@ -230,9 +230,5 @@ def load_model(llm, *decls, **attrs):
       model = model.to('cuda')
     except Exception as err:
       raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
-  if llm.has_adapters:
-    logger.debug('Applying the following adapters: %s', llm.adapter_map)
-    for adapter_dict in llm.adapter_map.values():
-      for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
-        model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
+
   return model

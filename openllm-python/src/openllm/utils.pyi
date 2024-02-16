@@ -36,7 +36,6 @@ from openllm_core.utils import (
   is_autogptq_available as is_autogptq_available,
   is_bentoml_available as is_bentoml_available,
   is_bitsandbytes_available as is_bitsandbytes_available,
-  is_ctranslate_available as is_ctranslate_available,
   is_flash_attn_2_available as is_flash_attn_2_available,
   is_grpc_available as is_grpc_available,
   is_jupyter_available as is_jupyter_available,

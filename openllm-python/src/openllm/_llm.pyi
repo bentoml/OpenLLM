@@ -50,8 +50,7 @@ class IdentifyingParams(TypedDict):
   model_id: str
 
 ResolvedAdapterMap = Dict[AdapterType, Dict[str, Tuple[PeftConfig, str]]]
-CTranslateDtype = Literal['int8_float32', 'int8_float16', 'int8_bfloat16']
-Dtype = Union[LiteralDtype, CTranslateDtype, Literal['auto', 'half', 'float']]
+Dtype = Union[LiteralDtype, Literal['auto', 'half', 'float']]
 
 class LLMService:
   @api
@@ -169,8 +168,6 @@ class LLM(Generic[M, T]):
   def bentomodel(self) -> Model: ...
   @property
   def quantization_config(self) -> QuantizationConfig: ...
-  @property
-  def has_adapters(self) -> bool: ...
   @property
   def local(self) -> bool: ...
   @property
