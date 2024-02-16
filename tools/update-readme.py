@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-import os
-import shutil
-import sys
-
-import tomlkit
+import os, shutil, sys, tomlkit
 
 START_COMMENT = f'<!-- {os.path.basename(__file__)}: start -->\n'
 END_COMMENT = f'<!-- {os.path.basename(__file__)}: stop -->\n'
@@ -11,6 +7,7 @@ END_COMMENT = f'<!-- {os.path.basename(__file__)}: stop -->\n'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'openllm-core', 'src'))
 from openllm_core.config import CONFIG_MAPPING
+from openllm_core.config.configuration_auto import CONFIG_TO_ALIAS_NAMES
 
 
 def markdown_noteblock(text: str):
@@ -35,8 +32,9 @@ def main() -> int:
     it = it()
     architecture_name = it.__class__.__name__[:-6]
     details_block = ['<details>\n', f'<summary>{architecture_name}</summary>\n\n', '### Quickstart\n']
-    if it['start_name'] in deps:
-      instruction = f'> ```bash\n> pip install "openllm[{it["start_name"]}]"\n> ```'
+    nitem = CONFIG_TO_ALIAS_NAMES[it.__class__.__name__]
+    if nitem in deps:
+      instruction = f'> ```bash\n> pip install "openllm[{nitem}]"\n> ```'
       details_block.extend(markdown_noteblock(f'{architecture_name} requires to install with:\n{instruction}\n'))
     details_block.extend(
       [
@@ -52,7 +50,7 @@ export OPENLLM_ENDPOINT=http://localhost:3000
 openllm query 'What are large language models?'
 ```""",
         *markdown_noteblock(
-          f"Any {architecture_name} variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search={it['model_name']}) to see more {architecture_name}-compatible models.\n"
+          f"Any {architecture_name} variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search={nitem}) to see more {architecture_name}-compatible models.\n"
         ),
         '\n### Supported models\n',
         f'You can specify any of the following {architecture_name} models via `openllm start`:\n\n',

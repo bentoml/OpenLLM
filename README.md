@@ -1004,7 +1004,7 @@ openllm start facebook/opt-125m --backend pt
 Run the following command to quickly spin up a Phi server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -1023,6 +1023,7 @@ openllm query 'What are large language models?'
 You can specify any of the following Phi models via `openllm start`:
 
 
+- [microsoft/phi-2](https://huggingface.co/microsoft/phi-2)
 - [microsoft/phi-1_5](https://huggingface.co/microsoft/phi-1_5)
 
 ### Supported backends
@@ -1041,7 +1042,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend vllm
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend vllm
 ```
 
 
@@ -1056,7 +1057,7 @@ TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend vllm
 
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend pt
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend pt
 ```
 
 </details>

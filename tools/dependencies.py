@@ -206,13 +206,13 @@ def create_classifiers() -> Array:
 
 def create_optional_table() -> Table:
   all_array = tomlkit.array()
-  all_array.append(f"openllm[{','.join(_base_requirements)}]")
+  all_array.append(f"openllm[{','.join([k for k,v in _base_requirements.items() if v])}]")
 
   table = tomlkit.table(is_super_table=True)
   _base_requirements.update(
     {'full': correct_style(all_array.multiline(True)), 'all': tomlkit.array('["openllm[full]"]')}
   )
-  table.update({k: v for k, v in sorted(_base_requirements.items())})
+  table.update({k: v for k, v in sorted(_base_requirements.items()) if v})
   table.add(tomlkit.nl())
 
   return table
