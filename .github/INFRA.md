@@ -22,7 +22,7 @@ The folder structure of this are as follow:
     ├── build.yml             # Self-hosted EC2 runners
     ├── ci.yml                # CI workflow
     ├── cleanup.yml           # Cache cleanup
-    ├── compile-pypi.yml      # Compile PyPI packages
+    ├── build-pypi.yml        # Build PyPI packages
     ├── create-releases.yml   # Create GitHub releases
     ├── cron.yml              # Cron jobs
     └── release-notes.yml     # Generate release notes
@@ -53,7 +53,7 @@ There are a few ways to trigger this workflow:
 
 ### Wheel compilation
 
-The workflow for wheel compilation is located in [compile-pypi.yml](/.github/workflows/compile-pypi.yml).
+The workflow for wheel compilation is located in [build-pypi.yml](/.github/workflows/build-pypi.yml).
 
 To speed up CI, opt in to the following label `02 - Wheel Build` on pull request or add `[wheel build]` to commit message.
 

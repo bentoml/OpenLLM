@@ -66,17 +66,17 @@ jobs:
           version="$(git describe --tags "$(git rev-list --tags --max-count=1)")"
           echo "Release version: $version"
           echo "version=$version" >> $GITHUB_OUTPUT
-  compile-pypi:
+  build-pypi:
     if: github.repository_owner == 'bentoml'
     needs:
       - release
     name: Compile PyPI distribution for OpenLLM
-    uses: bentoml/OpenLLM/.github/workflows/compile-pypi.yml@main # ratchet:exclude
+    uses: bentoml/OpenLLM/.github/workflows/build-pypi.yml@main # ratchet:exclude
     with:
       tags: ${{ needs.release.outputs.version }}
   publish-python:
     needs:
-      - compile-pypi
+      - build-pypi
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -85,32 +85,12 @@ jobs:
         with:
           ref: '${{ needs.release.outputs.version }}'
           token: ${{ secrets.OPENLLM_PAT }}
-      # NOTE: Keep this section in sync with compile-pypi.yml
+      # NOTE: Keep this section in sync with build-pypi.yml
       - name: Download Python artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
         with:
           name: python-artefacts
           path: dist
-      # - name: Download Linux x86_64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: linux-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS x86_64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS arm64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-arm64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS universal2 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-universal2-mypyc-wheels
-      #     path: dist
       - name: Smoke test compiled artefacts
         run: ls -R dist
       - name: Publish to PyPI
@@ -176,7 +156,7 @@ jobs:
           git push origin HEAD:main
   binary-distribution:
     if: github.repository_owner == 'bentoml'
-    needs: compile-pypi
+    needs: build-pypi
     name: Create binary/wheels distribution
     uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main # ratchet:exclude
   release-notes:
