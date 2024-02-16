@@ -1,10 +1,9 @@
 from __future__ import annotations
-import importlib, os, typing as t
-import inflection, orjson
+
+import importlib, typing as t, inflection
 from collections import OrderedDict
-from openllm_core.exceptions import MissingDependencyError, OpenLLMException
-from openllm_core.utils.import_utils import is_transformers_available, is_bentoml_available
-from ..utils import ReprMixin
+from ..exceptions import MissingDependencyError
+from ..utils import ReprMixin, is_bentoml_available
 
 if t.TYPE_CHECKING:
   import types
@@ -42,6 +41,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     ('yi', 'YiConfig'),
   ])
 )
+CONFIG_TO_ALIAS_NAMES = OrderedDict({v: k for k, v in CONFIG_MAPPING_NAMES.items()})
 
 
 class _LazyConfigMapping(OrderedDictType, ReprMixin):
@@ -94,13 +94,6 @@ class _LazyConfigMapping(OrderedDictType, ReprMixin):
 
 
 CONFIG_MAPPING: dict[LiteralString, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
-# The below handle special alias when we call underscore to the name directly without processing camelcase first.
-CONFIG_NAME_ALIASES: dict[str, str] = {
-  'chat_glm': 'chatglm',
-  'stable_lm': 'stablelm',
-  'star_coder': 'starcoder',
-  'gpt_neo_x': 'gpt_neox',
-}
 CONFIG_FILE_NAME = 'config.json'
 
 
@@ -169,72 +162,23 @@ class AutoConfig:
       f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
     )
 
-  _cached_mapping = None
-
   @classmethod
-  def _CONFIG_MAPPING_NAMES_TO_ARCHITECTURE(cls) -> dict[str, str]:
-    if cls._cached_mapping is None:
-      AutoConfig._cached_mapping = {v.metadata_config['architecture']: k for k, v in CONFIG_MAPPING.items()}
-    return AutoConfig._cached_mapping
-
-  @classmethod
-  def from_classname(cls, name: str) -> type[openllm_core.LLMConfig]:
-    model_name = inflection.underscore(name)
-    if model_name in CONFIG_NAME_ALIASES:
-      model_name = CONFIG_NAME_ALIASES[model_name]
-    if model_name in CONFIG_MAPPING:
-      return CONFIG_MAPPING[model_name]
-    raise ValueError(
-      f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
-    )
-
-  @classmethod
-  def from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
-    if not is_bentoml_available():
-      raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
-    if llm._local:
-      config_file = os.path.join(llm.model_id, CONFIG_FILE_NAME)
-    else:
-      try:
-        config_file = llm.bentomodel.path_of(CONFIG_FILE_NAME)
-      except OpenLLMException as err:
-        if not is_transformers_available():
-          raise MissingDependencyError(
-            "Requires 'transformers' to be available. Do 'pip install transformers'"
-          ) from err
-        from transformers.utils import cached_file
-
-        try:
-          config_file = cached_file(llm.model_id, CONFIG_FILE_NAME)
-        except Exception as err:
-          raise ValueError(
-            "Failed to determine architecture from 'config.json'. If this is a gated model, make sure to pass in HUGGING_FACE_HUB_TOKEN"
-          ) from err
-    if not os.path.exists(config_file):
-      raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
-    with open(config_file, 'r', encoding='utf-8') as f:
-      loaded_config = orjson.loads(f.read())
-    if 'architectures' in loaded_config:
-      for architecture in loaded_config['architectures']:
-        if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-          return cls.from_classname(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
+  def from_llm(cls, llm: openllm.LLM[M, T], **attrs: t.Any) -> openllm_core.LLMConfig:
+    config_cls = llm.config.__class__.__name__
+    if config_cls in CONFIG_TO_ALIAS_NAMES:
+      return cls.for_model(CONFIG_TO_ALIAS_NAMES[config_cls]).model_construct_env(**attrs)
     raise ValueError(
       f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
     )
 
   @classmethod
-  def from_bentomodel(cls, bentomodel: Model) -> openllm_core.LLMConfig:
+  def from_bentomodel(cls, bentomodel: Model, **attrs: t.Any) -> openllm_core.LLMConfig:
     if not is_bentoml_available():
       raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
-    config_file = bentomodel.path_of(CONFIG_FILE_NAME)
-    if not os.path.exists(config_file):
-      raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
-    with open(config_file, 'r', encoding='utf-8') as f:
-      loaded_config = orjson.loads(f.read())
-    if 'architectures' in loaded_config:
-      for architecture in loaded_config['architectures']:
-        if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-          return cls.from_classname(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]).model_construct_env()
+
+    config_cls = bentomodel.info.metadata['_config_cls']
+    if config_cls in CONFIG_TO_ALIAS_NAMES:
+      return cls.for_model(CONFIG_TO_ALIAS_NAMES[config_cls]).model_construct_env(**attrs)
     raise ValueError(
       f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )

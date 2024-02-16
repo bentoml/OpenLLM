@@ -16,8 +16,6 @@ class FalconConfig(openllm_core.LLMConfig):
 
   metadata_config: ModelSettings = pydantic.Field(
     default={
-      'name_type': 'lowercase',
-      'trust_remote_code': False,
       'timeout': int(36e6),
       'url': 'https://falconllm.tii.ae/',
       'requirements': ['xformers'],

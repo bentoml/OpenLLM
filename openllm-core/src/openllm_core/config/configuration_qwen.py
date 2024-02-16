@@ -14,12 +14,10 @@ Refer to [Qwen's GitHub page](https://github.com/QwenLM/Qwen) for more informati
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'trust_remote_code': True,
   'timeout': 3600000,
   'url': 'https://github.com/QwenLM/Qwen',
   'requirements': ['cpm-kernels', 'tiktoken'],
-  'backend': ('pt', 'vllm'),
   'architecture': 'QWenLMHeadModel',
   'default_id': 'qwen/Qwen-7B-Chat',
   'model_ids': [

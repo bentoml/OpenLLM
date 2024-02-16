@@ -21,8 +21,6 @@ for more information.
 """
 
 metadata_config: ModelSettings = {
-  'model_name': 'gpt_neox',
-  'start_name': 'gpt-neox',
   'architecture': 'GPTNeoXForCausalLM',
   # NOTE: See https://huggingface.co/togethercomputer/GPT-NeoXT-Chat-Base-20B
   'url': 'https://github.com/EleutherAI/gpt-neox',

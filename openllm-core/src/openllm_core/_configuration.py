@@ -286,24 +286,14 @@ class ModelSettings(TypedDict, total=False):
   default_id: Required[str]
   model_ids: Required[ListStr]
   architecture: Required[str]
-
-  # meta
   url: str
   serialisation: LiteralSerialisation
   trust_remote_code: bool
   service_name: NotRequired[str]
   requirements: t.Optional[ListStr]
-
   # llm implementation specifics
   model_type: t.Literal['causal_lm', 'seq2seq_lm']
-
-  # naming convention, only name_type is needed to infer from the class
-  # as the three below it can be determined automatically
-  name_type: NotRequired[t.Optional[t.Literal['dasherize', 'lowercase']]]
   backend: t.Tuple[LiteralBackend, ...]
-  model_name: NotRequired[str]
-  start_name: NotRequired[str]
-  # serving configuration
   timeout: int
 
   # the target generation_config class to be used.
@@ -313,11 +303,10 @@ class ModelSettings(TypedDict, total=False):
 _reserved_namespace = {'metadata_config'}
 
 _DEFAULT = ModelSettings(
-  name_type='dasherize',
   url='',  #
   backend=('pt', 'vllm'),
   timeout=int(36e6),
-  service_name='',  #
+  service_name='generated_service.py',  #
   model_type='causal_lm',
   requirements=None,  #
   trust_remote_code=False,
@@ -333,11 +322,6 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
 
   _done_initialisation = False
 
-  if t.TYPE_CHECKING:
-    # NOTE: We will dynamically add these fields to the class on all configuration fields
-    metadata_config: t.ClassVar[ModelSettings]
-    generation_config: t.ClassVar[GenerationConfig]
-
   def __setattr__(self, attr: str, value: t.Any) -> None:
     if attr in _reserved_namespace and self._done_initialisation:
       raise ForbiddenAttributeError(
@@ -345,21 +329,13 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       )
     super().__setattr__(attr, value)
 
+  @classmethod
+  def __pydantic_init_subclass__(cls, *_: t.Any):
+    if any(i not in cls.model_fields for i in ('metadata_config', 'generation_config')):
+      raise TypeError(f'{cls.__name__} must have a `metadata_config` annd `generation_config` attribute.')
+
   def model_post_init(self, *_: t.Any):
-    _cl_name = self.__class__.__name__.replace('Config', '')
-    has_custom_name = all(i in self.metadata_config for i in {'model_name', 'start_name'})
-
-    _attr: ModelSettings = {}
-    _config = {**_DEFAULT, **self.metadata_config}
-    dasherize = _config.get('name_type', 'dasherize') == 'dasherize'
-
-    if not has_custom_name:
-      _attr['model_name'] = inflection.underscore(_cl_name) if dasherize else _cl_name.lower()
-      _attr['start_name'] = inflection.dasherize(_attr['model_name']) if dasherize else _attr['model_name']
-    _attr.update({
-      'service_name': f'generated_{_attr["model_name"] if "model_name" in _attr else _config["model_name"]}_service.py'
-    })
-    self.metadata_config = ModelSettings(**{**_config, **_attr})
+    self.metadata_config = ModelSettings(**{**_DEFAULT, **self.metadata_config})
     self._done_initialisation = True
 
   # fmt: off

@@ -23,7 +23,6 @@ class StableLMConfig(openllm_core.LLMConfig):
 
   metadata_config: ModelSettings = pydantic.Field(
     default={
-      'name_type': 'lowercase',
       'url': 'https://github.com/Stability-AI/StableLM',
       'architecture': 'GPTNeoXForCausalLM',
       'default_id': 'stabilityai/stablelm-tuned-alpha-3b',

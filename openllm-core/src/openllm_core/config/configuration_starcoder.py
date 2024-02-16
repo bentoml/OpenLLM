@@ -15,7 +15,6 @@ Refer to [StarCoder's model card](https://huggingface.co/bigcode/starcoder) for 
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'url': 'https://github.com/bigcode-project/starcoder',
   'architecture': 'GPTBigCodeForCausalLM',
   'requirements': ['bitsandbytes'],

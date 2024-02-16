@@ -20,12 +20,10 @@ Refer to [ChatGLM's GitHub page](https://github.com/THUDM/ChatGLM-6B) for more i
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'trust_remote_code': True,
   'timeout': 3600000,
   'url': 'https://github.com/THUDM/ChatGLM-6B',
   'requirements': ['cpm-kernels'],
-  'backend': ('pt', 'vllm'),
   'architecture': 'ChatGLMModel',
   'default_id': 'thudm/chatglm-6b',
   'model_ids': [

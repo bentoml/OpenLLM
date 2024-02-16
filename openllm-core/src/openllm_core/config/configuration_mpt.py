@@ -15,7 +15,6 @@ for more details on specific models.
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'trust_remote_code': True,
   'url': 'https://huggingface.co/mosaicml',
   'timeout': int(36e6),

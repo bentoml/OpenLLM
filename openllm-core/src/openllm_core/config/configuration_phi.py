@@ -21,14 +21,12 @@ class PhiConfig(openllm_core.LLMConfig):
 
   metadata_config: ModelSettings = pydantic.Field(
     default={
-      'name_type': 'lowercase',
       'url': 'https://arxiv.org/abs/2309.05463',
       'architecture': 'PhiForCausalLM',
       'trust_remote_code': True,
-      'backend': ('pt', 'vllm'),
-      'default_id': 'microsoft/phi-1_5',
+      'default_id': 'microsoft/phi-2',
       'serialisation': 'safetensors',
-      'model_ids': ['microsoft/phi-1_5'],
+      'model_ids': ['microsoft/phi-2', 'microsoft/phi-1_5'],
       'fine_tune_strategies': (
         {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
       ),

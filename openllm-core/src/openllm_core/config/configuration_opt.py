@@ -16,7 +16,6 @@ Refer to [OPT's HuggingFace page](https://huggingface.co/docs/transformers/model
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'trust_remote_code': False,
   'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
   'default_id': 'facebook/opt-1.3b',

@@ -14,11 +14,9 @@ See [Yi's GitHub](https://github.com/01-ai/Yi) for more information.
 """
 
 metadata_config: ModelSettings = {
-  'name_type': 'lowercase',
   'url': 'https://01.ai/',
   'architecture': 'YiForCausalLM',
   'trust_remote_code': True,
-  'backend': ('pt', 'vllm'),
   'default_id': '01-ai/Yi-6B',
   'serialisation': 'safetensors',
   'model_ids': ['01-ai/Yi-6B', '01-ai/Yi-34B', '01-ai/Yi-6B-200K', '01-ai/Yi-34B-200K'],
