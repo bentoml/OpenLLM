@@ -159,9 +159,7 @@ def cli(
       for architecture in config.architectures:
         if architecture in openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
           system_message = (
-            openllm.AutoConfig.infer_class_from_name(
-              openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
-            )
+            openllm.AutoConfig.from_classname(openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
             .model_construct_env()
             .system_message
           )

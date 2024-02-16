@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import openllm_core, typing as t
-
-if t.TYPE_CHECKING:
-  from openllm_core._schemas import MessageParam
+import openllm_core, pydantic
+from openllm_core._schemas import MessageParam
+from openllm_core._configuration import ModelSettings
 
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'
 
@@ -15,21 +14,24 @@ class MixtralConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  __config__ = {
-    'name_type': 'lowercase',
-    'url': 'https://mistral.ai',
-    'serialisation': 'safetensors',
-    'architecture': 'MixtralForCausalLM',
-    'default_id': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
-    'model_ids': ['mistralai/Mixtral-8x7B-Instruct-v0.1', 'mistralai/Mixtral-8x7B-v0.1'],
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
 
-  class GenerationConfig:
-    max_new_tokens: int = 20
-    temperature: float = 0.7
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'name_type': 'lowercase',
+      'url': 'https://mistral.ai',
+      'serialisation': 'safetensors',
+      'architecture': 'MixtralForCausalLM',
+      'default_id': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'model_ids': ['mistralai/Mixtral-8x7B-Instruct-v0.1', 'mistralai/Mixtral-8x7B-v0.1'],
+    },
+    repr=False,
+    exclude=True,
+  )
 
-  class SamplingParams:
-    best_of: int = 1
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig(max_new_tokens=20, temperature=0.7, best_of=1)
+  )
 
   # NOTE: see https://docs.mistral.ai/usage/guardrailing/ and https://docs.mistral.ai/llm/mistral-instruct-v0.1
   @property
@@ -55,8 +57,6 @@ class MixtralConfig(openllm_core.LLMConfig):
 
   @property
   def chat_messages(self) -> list[MessageParam]:
-    from openllm_core._schemas import MessageParam
-
     return [
       MessageParam(role='user', content='What is your favourite condiment?'),
       MessageParam(

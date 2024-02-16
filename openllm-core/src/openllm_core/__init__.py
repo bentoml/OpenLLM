@@ -1,9 +1,5 @@
 from . import exceptions as exceptions, utils as utils
-from ._configuration import (
-  GenerationConfig as GenerationConfig,
-  LLMConfig as LLMConfig,
-  SamplingParams as SamplingParams,
-)
+from ._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig
 from ._schemas import (
   GenerationInput as GenerationInput,
   GenerationOutput as GenerationOutput,

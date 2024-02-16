@@ -196,4 +196,4 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   )
 
 
-__all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']
+__all__ = ['gen_sdk', 'generate_function', 'generate_unique_filename', 'make_attr_tuple_class', 'make_env_transformer']

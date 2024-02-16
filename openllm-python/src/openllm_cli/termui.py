@@ -87,4 +87,4 @@ CONTEXT_SETTINGS: DictStrAny = {
   'max_content_width': COLUMNS,
   'token_normalize_func': inflection.underscore,
 }
-__all__ = ['echo', 'COLUMNS', 'CONTEXT_SETTINGS', 'log', 'warning', 'error', 'critical', 'debug', 'info', 'Level']
+__all__ = ['COLUMNS', 'CONTEXT_SETTINGS', 'Level', 'critical', 'debug', 'echo', 'error', 'info', 'log', 'warning']

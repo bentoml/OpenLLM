@@ -25,17 +25,17 @@ _TARGET_INIT_FILE = ROOT/'openllm-python'/'src'/'openllm'/'__init__.pyi'
 _TARGET_IMPORT_UTILS_FILE = ROOT/'openllm-core'/'src'/'openllm_core'/'utils'/'import_utils.pyi'
 
 sys.path.insert(0, (ROOT/'openllm-core'/'src').__fspath__())
-from openllm_core._configuration import GenerationConfig, ModelSettings, SamplingParams
+from openllm_core._configuration import GenerationConfig, ModelSettings
 from openllm_core.config.configuration_auto import CONFIG_MAPPING_NAMES
 from openllm_core.utils import codegen, import_utils as iutils
-from openllm_core.utils.peft import PeftType
+# from openllm_core.utils.peft import PeftType
 
 
 def process_annotations(annotations: str) -> str:
   if 'NotRequired' in annotations:
-    return annotations[len('NotRequired[') : -1]
+    return annotations[len('NotRequired['): -1]
   elif 'Required' in annotations:
-    return annotations[len('Required[') : -1]
+    return annotations[len('Required['): -1]
   else:
     return annotations
 
@@ -44,7 +44,7 @@ _value_docstring = {
   'default_id': """Return the default model to use when using 'openllm start <model_id>'.
         This could be one of the keys in 'self.model_ids' or custom users model.
 
-        This field is required when defining under '__config__'.
+        This field is required when defining under 'metadata_config'.
         """,
   'model_ids': """A list of supported pretrained models tag for this given runnable.
 
@@ -52,7 +52,7 @@ _value_docstring = {
             For FLAN-T5 impl, this would be ["google/flan-t5-small", "google/flan-t5-base",
                                             "google/flan-t5-large", "google/flan-t5-xl", "google/flan-t5-xxl"]
 
-        This field is required when defining under '__config__'.
+        This field is required when defining under 'metadata_config'.
         """,
   'architecture': """The model architecture that is supported by this LLM.
 
@@ -107,7 +107,7 @@ def main() -> int:
     processed.index(' ' * 4 + END_ATTRS_COMMENT),
   )
 
-  # NOTE: inline stubs __config__ attrs representation
+  # NOTE: inline stubs metadata_config attrs representation
   special_attrs_lines: list[str] = []
   for keys, ForwardRef in codegen.get_annotations(ModelSettings).items():
     special_attrs_lines.append(
@@ -138,21 +138,6 @@ def main() -> int:
         ]
       ]
     )
-  # special case variables: generation_class, extras, sampling_class
-  lines.append(' ' * 2 + '# NOTE: generation_class, sampling_class and extras arguments\n')
-  lines.extend(
-    [
-      ' ' * 2 + line
-      for line in [
-        '@overload\n',
-        "def __getitem__(self, item: t.Literal['generation_class']) -> t.Type[openllm_core.GenerationConfig]: ...\n",
-        '@overload\n',
-        "def __getitem__(self, item: t.Literal['sampling_class']) -> t.Type[openllm_core.SamplingParams]: ...\n",
-        '@overload\n',
-        "def __getitem__(self, item: t.Literal['extras']) -> t.Dict[str, t.Any]: ...\n",
-      ]
-    ]
-  )
   lines.append(' ' * 2 + '# NOTE: GenerationConfig arguments\n')
   generation_config_anns = codegen.get_annotations(GenerationConfig)
   for keys, type_pep563 in generation_config_anns.items():
@@ -162,35 +147,26 @@ def main() -> int:
         for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]
       ]
     )
-  lines.append(' ' * 2 + '# NOTE: SamplingParams arguments\n')
-  for keys, type_pep563 in codegen.get_annotations(SamplingParams).items():
-    if keys not in generation_config_anns:
-      lines.extend(
-        [
-          ' ' * 2 + line
-          for line in ['@overload\n', f"def __getitem__(self, item: t.Literal['{keys}']) -> {type_pep563}: ...\n"]
-        ]
-      )
-  lines.append(' ' * 2 + '# NOTE: PeftType arguments\n')
-  for keys in PeftType._member_names_:
-    lines.extend(
-      [
-        ' ' * 2 + line
-        for line in [
-          '@overload\n',
-          f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> t.Dict[str, t.Any]: ...\n",
-        ]
-      ]
-    )
+  # lines.append(' ' * 2 + '# NOTE: PeftType arguments\n')
+  # for keys in PeftType._member_names_:
+  #   lines.extend(
+  #     [
+  #       ' ' * 2 + line
+  #       for line in [
+  #         '@overload\n',
+  #         f"def __getitem__(self, item: t.Literal['{keys.lower()}']) -> t.Dict[str, t.Any]: ...\n",
+  #       ]
+  #     ]
+  #   )
 
   processed = (
     processed[:start_attrs_idx]
     + [' ' * 4 + START_ATTRS_COMMENT, *special_attrs_lines, ' ' * 4 + END_ATTRS_COMMENT]
-    + processed[end_attrs_idx + 1 : start_stub_idx]
+    + processed[end_attrs_idx + 1: start_stub_idx]
     + [' ' * 4 + START_SPECIAL_COMMENT, *config_attr_lines, ' ' * 4 + END_SPECIAL_COMMENT]
-    + processed[end_stub_idx + 1 : start_idx]
+    + processed[end_stub_idx + 1: start_idx]
     + [' ' * 2 + START_COMMENT, *lines, ' ' * 2 + END_COMMENT]
-    + processed[end_idx + 1 :]
+    + processed[end_idx + 1:]
   )
   with _TARGET_FILE.open('w') as f: f.writelines(processed)
 
@@ -209,14 +185,14 @@ def main() -> int:
         ]
       ]
     )
-  processed = processed[:start_auto_stubs_idx] + [' ' * 2 + START_AUTO_STUBS_COMMENT, *lines, ' ' * 2 + END_AUTO_STUBS_COMMENT] + processed[end_auto_stubs_idx + 1 :]
+  processed = processed[:start_auto_stubs_idx] + [' ' * 2 + START_AUTO_STUBS_COMMENT, *lines, ' ' * 2 + END_AUTO_STUBS_COMMENT] + processed[end_auto_stubs_idx + 1:]
   with _TARGET_AUTO_FILE.open('w') as f: f.writelines(processed)
 
   with _TARGET_INIT_FILE.open('r') as f: processed = f.readlines()
 
   start_import_stubs_idx, end_import_stubs_idx = processed.index(START_IMPORT_STUBS_COMMENT), processed.index(END_IMPORT_STUBS_COMMENT)
   mm = {
-    '_configuration': ("GenerationConfig", "LLMConfig", "SamplingParams",),
+    '_configuration': ("GenerationConfig", "LLMConfig"),
     '_schemas': ('GenerationInput', 'GenerationOutput', 'MetadataOutput', 'MessageParam'),
     'utils': ('api',),
   }
@@ -225,11 +201,11 @@ def main() -> int:
     f'from openlm_core.config import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig, {", ".join([a+" as "+a for a in CONFIG_MAPPING_NAMES.values()])}',
   ]
   lines.extend([f'from openllm_core.{module} import {", ".join([a+" as "+a for a in attr])}' for module, attr in mm.items()])
-  processed = processed[:start_import_stubs_idx] + [START_IMPORT_STUBS_COMMENT, '\n'.join(lines) + '\n', END_IMPORT_STUBS_COMMENT] + processed[end_import_stubs_idx + 1 :]
+  processed = processed[:start_import_stubs_idx] + [START_IMPORT_STUBS_COMMENT, '\n'.join(lines) + '\n', END_IMPORT_STUBS_COMMENT] + processed[end_import_stubs_idx + 1:]
   with _TARGET_INIT_FILE.open('w') as f: f.writelines(processed)
 
   lines = [
-    f'# fmt: off\n',
+    '# fmt: off\n',
     f'# AUTOGENERATED BY {os.path.basename(__file__)}. DO NOT EDIT\n',
     'from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig\n',
     *[f'from .configuration_{k} import {a} as {a}\n' for k, a in CONFIG_MAPPING_NAMES.items()]
@@ -237,7 +213,7 @@ def main() -> int:
   with _TARGET_CORE_INIT_FILE.open('w') as f: f.writelines(lines)
 
   lines = [
-    f'# fmt: off\n',
+    '# fmt: off\n',
     f'# AUTOGENERATED BY {os.path.basename(__file__)}. DO NOT EDIT\n', 'import typing as t\n',
     'def is_autoawq_available() -> bool: ...\n', 'def is_vllm_available() -> bool: ...\n',
     *[f'def {k}() -> bool: ...\n' for k in iutils.caller],

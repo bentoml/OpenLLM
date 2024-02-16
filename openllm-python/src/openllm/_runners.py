@@ -1,15 +1,8 @@
 from __future__ import annotations
-import gc, types, inspect, typing as t, bentoml, openllm
+import gc, types, typing as t, bentoml, openllm
 from openllm_core.exceptions import OpenLLMException, MissingDependencyError
-from openllm_core._schemas import (
-  CompletionChunk,
-  GenerationOutput,
-  SampleLogprobs,
-  MessageParam,
-  GenerationInputDict,
-  GenerationInput,
-)
-from openllm_core._typing_compat import LiteralString, ParamSpec, overload, M, T, MessagesConverterInput
+from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
+from openllm_core._typing_compat import LiteralString, ParamSpec, overload, M, T
 from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available, correct_closure
 
 if t.TYPE_CHECKING:

@@ -25,7 +25,7 @@ def test_forbidden_access():
     },
   )
 
-  assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), '__config__')
+  assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'metadata_config')
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'GenerationConfig')
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'SamplingParams')
   assert openllm.utils.lenient_issubclass(cl_.__openllm_generation_class__, GenerationConfig)
@@ -102,7 +102,11 @@ def test_struct_envvar():
   with patch_env(**{field_env_key('field1'): '4', field_env_key('temperature', suffix='generation'): '0.2'}):
 
     class EnvLLM(openllm.LLMConfig):
-      __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'}
+      metadata_config = {
+        'default_id': 'asdfasdf',
+        'model_ids': ['asdf', 'asdfasdfads'],
+        'architecture': 'PreTrainedModel',
+      }
       field1: int = 2
 
       class GenerationConfig:
@@ -119,7 +123,11 @@ def test_struct_envvar():
 
 def test_struct_provided_fields():
   class EnvLLM(openllm.LLMConfig):
-    __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'}
+    metadata_config = {
+      'default_id': 'asdfasdf',
+      'model_ids': ['asdf', 'asdfasdfads'],
+      'architecture': 'PreTrainedModel',
+    }
     field1: int = 2
 
     class GenerationConfig:

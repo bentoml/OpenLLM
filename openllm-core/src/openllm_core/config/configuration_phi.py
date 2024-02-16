@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import openllm_core, typing as t
-
-if t.TYPE_CHECKING:
-  from openllm_core._schemas import MessageParam
+import openllm_core, pydantic
+from openllm_core._schemas import MessageParam
+from openllm_core._configuration import ModelSettings
 
 
 class PhiConfig(openllm_core.LLMConfig):
@@ -18,25 +17,29 @@ class PhiConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  __config__ = {
-    'name_type': 'lowercase',
-    'url': 'https://arxiv.org/abs/2309.05463',
-    'architecture': 'PhiForCausalLM',
-    'trust_remote_code': True,
-    'backend': ('pt', 'vllm'),
-    'default_id': 'microsoft/phi-1_5',
-    'serialisation': 'safetensors',
-    'model_ids': ['microsoft/phi-1_5'],
-    'fine_tune_strategies': (
-      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
-    ),
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
 
-  class GenerationConfig:
-    max_new_tokens: int = 200
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'name_type': 'lowercase',
+      'url': 'https://arxiv.org/abs/2309.05463',
+      'architecture': 'PhiForCausalLM',
+      'trust_remote_code': True,
+      'backend': ('pt', 'vllm'),
+      'default_id': 'microsoft/phi-1_5',
+      'serialisation': 'safetensors',
+      'model_ids': ['microsoft/phi-1_5'],
+      'fine_tune_strategies': (
+        {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+      ),
+    },
+    repr=False,
+    exclude=True,
+  )
 
-  class SamplingParams:
-    best_of: int = 1
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig(max_new_tokens=200, best_of=1)
+  )
 
   @property
   def chat_template(self) -> str:
@@ -46,8 +49,6 @@ class PhiConfig(openllm_core.LLMConfig):
 
   @property
   def chat_messages(self) -> list[MessageParam]:
-    from openllm_core._schemas import MessageParam
-
     return [
       MessageParam(
         role='user', content="I don't know why, I'm struggling to maintain focus while studying. Any suggestions?"

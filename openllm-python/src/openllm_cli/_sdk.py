@@ -273,4 +273,4 @@ start, build, import_model, list_models = (
   codegen.gen_sdk(_import_model),
   codegen.gen_sdk(_list_models),
 )
-__all__ = ['start', 'build', 'import_model', 'list_models']
+__all__ = ['build', 'import_model', 'list_models', 'start']

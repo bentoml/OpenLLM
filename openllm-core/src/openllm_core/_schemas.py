@@ -2,10 +2,8 @@ from __future__ import annotations
 import typing as t
 import pydantic, inflection, orjson
 from ._configuration import LLMConfig
-from .config import AutoConfig
 from .utils import gen_random_uuid
-from .utils.dantic import attach_pydantic_model
-from ._typing_compat import Required, TypedDict, TypeGuard, override, Unpack, LiteralString, Self
+from ._typing_compat import Required, TypedDict, TypeGuard, Unpack, LiteralString
 
 if t.TYPE_CHECKING:
   import vllm
@@ -39,6 +37,21 @@ class GenerationInputDict(TypedDict):
   adapter_name: t.Optional[str]
 
 
+def stop_converter(data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
+  if data is None:
+    return None
+  if isinstance(data, str):
+    return [data]
+  else:
+    return list(data)
+
+
+def llm_converter(data: dict[str, t.Any] | LLMConfig, llm_config: type[LLMConfig]) -> TypeGuard[LLMConfig]:
+  if isinstance(data, LLMConfig):
+    return data
+  return llm_config(**data)
+
+
 class GenerationInput(pydantic.BaseModel):
   prompt: t.Optional[str] = pydantic.Field(default=None)
   llm_config: t.Optional[LLMConfig] = pydantic.Field(default_factory=dict)
@@ -49,71 +62,34 @@ class GenerationInput(pydantic.BaseModel):
   adapter_name: t.Optional[str] = pydantic.Field(default=None)
 
   @classmethod
-  def from_model(cls, model_name: LiteralString, **attrs: t.Any) -> type[GenerationInputProtocol]:
-    return cls.from_llm_config(AutoConfig.for_model(model_name, **attrs))
+  def from_dict(cls, **structured: Unpack[GenerationInputDict]) -> GenerationInput:
+    if not hasattr(cls, '_class_ref'):
+      raise ValueError(
+        'Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_config".'
+      )
+
+    return cls(
+      prompt=structured.get('prompt'),
+      prompt_token_ids=structured.get('prompt_token_ids'),
+      llm_config=llm_converter(structured.get('llm_config'), cls._class_ref),
+      stop=stop_converter(structured.get('stop')),
+      stop_token_ids=structured.get('stop_token_ids'),
+      request_id=structured.get('request_id'),
+      adapter_name=structured.get('adapter_name'),
+    )
+
+  if t.TYPE_CHECKING:
+    _class_ref: t.ClassVar[type[LLMConfig]]
 
   @classmethod
-  def from_llm_config(cls, llm_config: LLMConfig) -> type[GenerationInputProtocol]:
-    def stop_converter(data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
-      if data is None:
-        return None
-      if isinstance(data, str):
-        return [data]
-      else:
-        return list(data)
-
-    def llm_converter(data: dict[str, t.Any] | LLMConfig) -> TypeGuard[LLMConfig]:
-      if isinstance(data, LLMConfig):
-        return data
-      return llm_config.__class__(**data)
-
-    def from_dict(cls: type[GenerationInput], **structured: Unpack[GenerationInputDict]) -> GenerationInput:
-      if not hasattr(cls, '_class_ref'):
-        raise ValueError(
-          'Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_llm_config".'
-        )
-      return cls(
-        prompt=structured['prompt'],
-        prompt_token_ids=structured['prompt_token_ids'],
-        llm_config=cls._class_ref.model_construct_env(**structured['llm_config']),
-        stop=structured['stop'],
-        stop_token_ids=structured['stop_token_ids'],
-        request_id=structured['request_id'],
-        adapter_name=structured['adapter_name'],
-      )
-
-    return attach_pydantic_model(
-      attr.make_class(
-        inflection.camelize(llm_config['model_name']) + 'GenerationInput',
-        {
-          'prompt': attr.field(type=t.Optional[str]),
-          'prompt_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
-          'stop': attr.field(type=t.Optional[t.List[str]], default=None, converter=stop_converter),
-          'stop_token_ids': attr.field(type=t.Optional[t.List[int]], default=None),
-          'request_id': attr.field(type=t.Optional[str], default=None),
-          'adapter_name': attr.field(type=t.Optional[str], default=None),
-          'llm_config': attr.field(
-            type=llm_config.__class__, default=llm_config.model_dump(), converter=llm_converter
-          ),
-        },
-        class_body={
-          'examples': cls(
-            prompt='What is the meaning of life?', llm_config=llm_config, stop=['philosopher']
-          ).model_dump(),
-          'model_dump': cls.model_dump,
-          'from_model': cls.from_model,
-          'from_llm_config': cls.from_llm_config,
-          'from_dict': classmethod(from_dict),
-          '__module__': cls.__module__,
-          '_class_ref': llm_config.__class__,
-        },
-        slots=True,
-        weakref_slot=True,
-        frozen=True,
-        repr=True,
-        collect_by_mro=True,
-      )
+  def from_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
+    klass = pydantic.create_model(
+      inflection.camelize(llm_config['model_name']) + 'GenerationInput',
+      __config__={'extra': 'forbid', 'frozen': True},
+      __base__=(cls,),
     )
+    klass._class_ref = llm_config.__class__
+    return klass
 
 
 # NOTE: parameters from vllm.RequestOutput and vllm.CompletionOutput since vllm is not available on CPU.

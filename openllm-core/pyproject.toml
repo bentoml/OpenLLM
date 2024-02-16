@@ -61,7 +61,6 @@ dependencies = [
     "pydantic>2",
     "orjson",
     "inflection",
-    "deepmerge",
     "typing_extensions",
     "mypy_extensions",
 ]
@@ -78,7 +77,8 @@ Homepage = "https://bentoml.com"
 Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
-full = ["openllm-core[vllm,bentoml]"]
+full = ["openllm-core[vllm,bentoml,transformers]"]
+transformers = ["transformers>=4.36.0"]
 vllm = ["vllm>=0.3.0"]
 bentoml = ["bentoml>=1.2"]
 

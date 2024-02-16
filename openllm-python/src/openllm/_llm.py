@@ -628,7 +628,7 @@ class LLM(t.Generic[M, T]):
           hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
         for architecture in hf_config.architectures:
           if architecture in openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-            config = openllm.AutoConfig.infer_class_from_name(
+            config = openllm.AutoConfig.from_classname(
               openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
             ).model_construct_env(**self._model_attrs)
             break
@@ -637,7 +637,7 @@ class LLM(t.Generic[M, T]):
               f"Failed to infer the configuration class. Make sure the model is a supported model. Supported models are: {', '.join(openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE.keys())}"
             )
       else:
-        config = openllm.AutoConfig.infer_class_from_llm(self).model_construct_env(**self._model_attrs)
+        config = openllm.AutoConfig.from_llm(self).model_construct_env(**self._model_attrs)
       self.__llm_config__ = config
     return self.__llm_config__
 

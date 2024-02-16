@@ -1,10 +1,10 @@
 from __future__ import annotations
 import importlib, os, typing as t
-from collections import OrderedDict
 import inflection, orjson
+from collections import OrderedDict
 from openllm_core.exceptions import MissingDependencyError, OpenLLMException
-from openllm_core.utils import ReprMixin
 from openllm_core.utils.import_utils import is_transformers_available, is_bentoml_available
+from ..utils import ReprMixin
 
 if t.TYPE_CHECKING:
   import types
@@ -68,9 +68,6 @@ class _LazyConfigMapping(OrderedDictType, ReprMixin):
   @property
   def __repr_keys__(self) -> set[str]:
     return set(self._mapping.keys())
-
-  def __repr__(self) -> str:
-    return ReprMixin.__repr__(self)
 
   def __repr_args__(self) -> t.Generator[tuple[str, t.Any], t.Any, t.Any]:
     yield from self._mapping.items()
@@ -163,21 +160,11 @@ class AutoConfig:
   def for_model(cls, model_name: t.Literal['yi'], **attrs: t.Any) -> openllm_core.config.YiConfig: ...
   # update-config-stubs.py: auto stubs stop
   # fmt: on
+  @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:
     model_name = inflection.underscore(model_name)
     if model_name in CONFIG_MAPPING:
       return CONFIG_MAPPING[model_name].model_construct_env(**attrs)
-    raise ValueError(
-      f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
-    )
-
-  @classmethod
-  def infer_class_from_name(cls, name: str) -> type[openllm_core.LLMConfig]:
-    model_name = inflection.underscore(name)
-    if model_name in CONFIG_NAME_ALIASES:
-      model_name = CONFIG_NAME_ALIASES[model_name]
-    if model_name in CONFIG_MAPPING:
-      return CONFIG_MAPPING[model_name]
     raise ValueError(
       f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
     )
@@ -187,11 +174,22 @@ class AutoConfig:
   @classmethod
   def _CONFIG_MAPPING_NAMES_TO_ARCHITECTURE(cls) -> dict[str, str]:
     if cls._cached_mapping is None:
-      AutoConfig._cached_mapping = {v.__config__['architecture']: k for k, v in CONFIG_MAPPING.items()}
+      AutoConfig._cached_mapping = {v.metadata_config['architecture']: k for k, v in CONFIG_MAPPING.items()}
     return AutoConfig._cached_mapping
 
   @classmethod
-  def infer_class_from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
+  def from_classname(cls, name: str) -> type[openllm_core.LLMConfig]:
+    model_name = inflection.underscore(name)
+    if model_name in CONFIG_NAME_ALIASES:
+      model_name = CONFIG_NAME_ALIASES[model_name]
+    if model_name in CONFIG_MAPPING:
+      return CONFIG_MAPPING[model_name]
+    raise ValueError(
+      f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+    )
+
+  @classmethod
+  def from_llm(cls, llm: openllm.LLM[M, T]) -> type[openllm_core.LLMConfig]:
     if not is_bentoml_available():
       raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
     if llm._local:
@@ -219,7 +217,7 @@ class AutoConfig:
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
         if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-          return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
+          return cls.from_classname(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
     raise ValueError(
       f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
     )
@@ -236,9 +234,7 @@ class AutoConfig:
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
         if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
-          return cls.infer_class_from_name(
-            cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
-          ).model_construct_env()
+          return cls.from_classname(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]).model_construct_env()
     raise ValueError(
       f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )

@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
   from ._shim import AsyncClient, Client
 
 
-__all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse', 'Helpers']
+__all__ = ['CompletionChunk', 'Helpers', 'Metadata', 'Response', 'StreamingResponse']
 
 
 @attr.define

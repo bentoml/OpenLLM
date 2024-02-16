@@ -1,5 +1,5 @@
 from __future__ import annotations
-import functools, importlib, os, sys, types, typing as t
+import functools, importlib, os, sys, typing as t
 from enum import Enum
 import attr, click, inflection, orjson, click_option_group as cog
 from click import ParamType, shell_completion as sc, types as click_types
@@ -14,24 +14,24 @@ AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
 __all__ = [
+  'CUDA',
   'FC',
-  'attrs_to_options',
-  'attach_pydantic_model',
-  'Field',
-  'parse_type',
-  'is_typing',
-  'is_literal',
-  'ModuleType',
+  'BytesType',
   'EnumChoice',
+  'Field',
+  'JsonType',
   'LiteralChoice',
+  'ModuleType',
   'allows_multiple',
-  'is_mapping',
+  'attach_pydantic_model',
+  'attrs_to_options',
   'is_container',
+  'is_literal',
+  'is_mapping',
+  'is_typing',
   'parse_container_args',
   'parse_single_arg',
-  'CUDA',
-  'JsonType',
-  'BytesType',
+  'parse_type',
 ]
 
 
@@ -89,7 +89,7 @@ def attach_pydantic_model(
         cls.__name__ + 'Pydantic',
         __base__=(
           IODescriptor,
-          pydantic.create_model(cls.__name__ + 'BaseModel', __config__=config, __module__=cls.__module__),
+          pydantic.create_model(cls.__name__ + 'BaseModel', metadata_config=config, __module__=cls.__module__),
         ),
         __module__=cls.__module__,
         **field_dict,

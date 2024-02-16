@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import openllm_core
+import openllm_core, pydantic
+from openllm_core._configuration import ModelSettings
 
 
 class StableLMConfig(openllm_core.LLMConfig):
@@ -18,24 +19,28 @@ class StableLMConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  __config__ = {
-    'name_type': 'lowercase',
-    'url': 'https://github.com/Stability-AI/StableLM',
-    'architecture': 'GPTNeoXForCausalLM',
-    'default_id': 'stabilityai/stablelm-tuned-alpha-3b',
-    'model_ids': [
-      'stabilityai/stablelm-tuned-alpha-3b',
-      'stabilityai/stablelm-tuned-alpha-7b',
-      'stabilityai/stablelm-base-alpha-3b',
-      'stabilityai/stablelm-base-alpha-7b',
-    ],
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', frozen=True, protected_namespaces=())
 
-  class GenerationConfig:
-    temperature: float = 0.9
-    max_new_tokens: int = 128
-    top_k: int = 0
-    top_p: float = 0.9
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'name_type': 'lowercase',
+      'url': 'https://github.com/Stability-AI/StableLM',
+      'architecture': 'GPTNeoXForCausalLM',
+      'default_id': 'stabilityai/stablelm-tuned-alpha-3b',
+      'model_ids': [
+        'stabilityai/stablelm-tuned-alpha-3b',
+        'stabilityai/stablelm-tuned-alpha-7b',
+        'stabilityai/stablelm-base-alpha-3b',
+        'stabilityai/stablelm-base-alpha-7b',
+      ],
+    },
+    repr=False,
+    exclude=True,
+  )
+
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig(temperature=0.9, max_new_tokens=128, top_k=0, top_p=0.9)
+  )
 
   @property
   def template(self) -> str:

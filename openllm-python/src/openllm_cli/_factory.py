@@ -18,7 +18,7 @@ from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
 
 
 class _OpenLLM_GenericInternalConfig(LLMConfig):
-  __config__ = {
+  metadata_config = {
     'name_type': 'lowercase',
     'default_id': 'openllm/generic',
     'model_ids': ['openllm/generic'],

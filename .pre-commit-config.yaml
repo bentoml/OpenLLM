@@ -13,7 +13,7 @@ repos:
       - id: ruff
         alias: r
         verbose: true
-        args: [--exit-non-zero-on-fix, --show-fixes]
+        args: [--exit-non-zero-on-fix, --show-fixes, --fix]
         types_or: [python, pyi, jupyter]
       - id: ruff-format
         alias: rf

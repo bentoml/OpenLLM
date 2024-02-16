@@ -40,7 +40,7 @@ def make_llm_config(
   for attr, value in dunder_config.items():
     _config_args.append(f'"{attr}": __attr_{attr}')
     globs[f'_{cls_name}Config__attr_{attr}'] = value
-  lines.append(f'    __config__ = {{ {", ".join(_config_args)} }}')
+  lines.append(f'    metadata_config = {{ {", ".join(_config_args)} }}')
   if fields is not None:
     for field, type_, default in fields:
       lines.append(f'    {field}: {type_} = openllm.LLMConfig.Field({default!r})')

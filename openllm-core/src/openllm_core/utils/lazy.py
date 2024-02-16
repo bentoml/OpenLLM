@@ -17,7 +17,7 @@ import attr
 
 import openllm_core
 
-__all__ = ['VersionInfo', 'LazyModule', 'LazyLoader']
+__all__ = ['LazyLoader', 'LazyModule', 'VersionInfo']
 
 logger = logging.getLogger(__name__)
 

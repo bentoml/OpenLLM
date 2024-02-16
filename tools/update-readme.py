@@ -98,7 +98,7 @@ openllm query 'What are large language models?'
     details_block.append('\n</details>\n\n')
     content.append('\n'.join(details_block))
 
-  readme = readme[:start_index] + [START_COMMENT] + content + [END_COMMENT] + readme[stop_index + 1 :]
+  readme = readme[:start_index] + [START_COMMENT] + content + [END_COMMENT] + readme[stop_index + 1:]
   with open(os.path.join(ROOT, 'README.md'), 'w') as f:
     f.writelines(readme)
 

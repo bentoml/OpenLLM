@@ -37,22 +37,13 @@ from openllm_core.utils import (
   get_debug_mode,
   get_quiet_mode,
   is_torch_available,
-  pkg,
   resolve_user_filepath,
   set_debug_mode,
   set_quiet_mode,
 )
 
 from . import termui
-from ._factory import (
-  FC,
-  _AnyCallable,
-  machine_option,
-  model_name_argument,
-  parse_config_options,
-  start_decorator,
-  optimization_decorator,
-)
+from ._factory import FC, _AnyCallable, machine_option, model_name_argument, start_decorator, optimization_decorator
 
 if t.TYPE_CHECKING:
   import torch
@@ -254,7 +245,7 @@ class OpenLLMCommandGroup(BentoMLCommandGroup):
         if not cmd.name:
           raise ValueError('name is required when aliases are available.')
         self._commands[cmd.name] = aliases
-        self._aliases.update({alias: cmd.name for alias in aliases})
+        self._aliases.update(dict.fromkeys(aliases, cmd.name))
       return cmd
 
     return decorator
@@ -564,7 +555,7 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
     threading.Thread(target=handle, args=(process.stderr, stop_event)),
   )
   stdout.start()
-  stderr.start()  # noqa: E702
+  stderr.start()
 
   try:
     process.wait()
@@ -580,11 +571,11 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
   finally:
     stop_event.set()
     stdout.join()
-    stderr.join()  # noqa: E702
+    stderr.join()
     if process.poll() is not None:
       process.kill()
     stdout.join()
-    stderr.join()  # noqa: E702
+    stderr.join()
 
   return process.returncode
 
