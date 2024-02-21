@@ -18,7 +18,9 @@ class Query(BaseModel):
 
 
 def gen_llm(model_name: str, model_id: str | None = None, **attrs: t.Any) -> OpenLLM:
-  return OpenLLM(model_name=model_name, model_id=model_id, embedded=False, **attrs)
+  lc_llm = OpenLLM(model_name=model_name, model_id=model_id, embedded=False, **attrs)
+  lc_llm.runner.download_model()
+  return lc_llm
 
 
 llm = gen_llm('llama', model_id='TheBloke/Llama-2-13B-chat-GPTQ', quantize='gptq')
@@ -47,7 +49,7 @@ SAMPLE_INPUT = Query(
   industry='SAAS',
   product_name='BentoML',
   keywords=['open source', 'developer tool', 'AI application platform', 'serverless', 'cost-efficient'],
-  llm_config=llm.config.model_dump(),
+  llm_config=llm.runner.config.model_dump(),
 )
 
 
