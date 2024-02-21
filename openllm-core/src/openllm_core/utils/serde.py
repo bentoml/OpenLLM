@@ -19,10 +19,16 @@ def datetime_structure_hook(dt_like: str | datetime | t.Any, _: t.Any) -> dateti
 
 
 converter.register_structure_hook_factory(
-  attr.has, lambda cls: make_dict_structure_fn(cls, converter, _cattrs_forbid_extra_keys=getattr(cls, '__forbid_extra_keys__', False))
+  attr.has,
+  lambda cls: make_dict_structure_fn(
+    cls, converter, _cattrs_forbid_extra_keys=getattr(cls, '__forbid_extra_keys__', False)
+  ),
 )
 converter.register_unstructure_hook_factory(
-  attr.has, lambda cls: make_dict_unstructure_fn(cls, converter, _cattrs_omit_if_default=getattr(cls, '__omit_if_default__', False))
+  attr.has,
+  lambda cls: make_dict_unstructure_fn(
+    cls, converter, _cattrs_omit_if_default=getattr(cls, '__omit_if_default__', False)
+  ),
 )
 converter.register_structure_hook(datetime, datetime_structure_hook)
 converter.register_unstructure_hook(datetime, lambda dt: dt.isoformat())

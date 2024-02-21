@@ -66,8 +66,15 @@ def test_config_derived_follow_attrs_protocol(gen_settings: ModelSettings):
   st.integers(max_value=283473),
   st.floats(min_value=0.0, max_value=1.0),
 )
-def test_complex_struct_dump(gen_settings: ModelSettings, field1: int, temperature: float, input_field1: int, input_temperature: float):
-  cl_ = make_llm_config('ComplexLLM', gen_settings, fields=(('field1', 'float', field1),), generation_fields=(('temperature', temperature),))
+def test_complex_struct_dump(
+  gen_settings: ModelSettings, field1: int, temperature: float, input_field1: int, input_temperature: float
+):
+  cl_ = make_llm_config(
+    'ComplexLLM',
+    gen_settings,
+    fields=(('field1', 'float', field1),),
+    generation_fields=(('temperature', temperature),),
+  )
   sent = cl_()
   assert sent.model_dump()['field1'] == field1
   assert sent.model_dump()['generation_config']['temperature'] == temperature
