@@ -73,7 +73,6 @@ detached = true
 [envs.ui.scripts]
 server = "openllm start {args:facebook/opt-250m} --working-dir {root:uri} --cors --debug"
 docs = "cd docs && pnpm dev"
-clojure = ["bash external/clojure/run-clojure-ui.sh"]
 [envs.ci]
 detached = true
 [envs.ci.scripts]
@@ -81,7 +80,4 @@ client-stubs = "bash openllm-client/generate-grpc-stubs"
 compile = "bash ./tools/compile.sh {args}"
 recompile = ["bash ./clean.sh", "compile"]
 edi = "bash local.sh"
-lock = [
-    "bash tools/lock-actions.sh",
-    "pushd external/clojure && pnpm i --frozen-lockfile",
-]
+lock = ["bash tools/lock-actions.sh"]
