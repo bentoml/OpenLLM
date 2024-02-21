@@ -1,0 +1,148 @@
+name: Compile PyPI package
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag for releases'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tags:
+        required: true
+        type: string
+    outputs:
+      sucess:
+        description: 'Whether the build is successful or not'
+        value: ${{ jobs.sucess-build.outputs.success }}
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'bazel/**'
+      - 'typings/**'
+      - '*.md'
+      - 'changelog.d/**'
+      - 'assets/**'
+env:
+  LINES: 120
+  COLUMNS: 120
+  HATCH_VERBOSE: 2
+  CIBW_BUILD_FRONTEND: build
+  CIBW_ENVIRONMENT_PASS_LINUX: >
+    HATCH_BUILD_HOOKS_ENABLE MYPYPATH
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+jobs:
+  get_commit_message:
+    name: Get commit message
+    runs-on: ubuntu-latest
+    if: "github.repository == 'bentoml/OpenLLM'" # Don't run on fork repository
+    outputs:
+      message: ${{ steps.commit_message.outputs.message }}
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
+        # Gets the correct commit message for pull request
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commit message
+        id: commit_message
+        run: |
+          set -xe
+          COMMIT_MSG=$(git log --no-merges -1 --oneline)
+          echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo github.ref ${{ github.ref }}
+  pure-wheels-sdist:
+    name: Pure wheels and sdist distribution (${{ matrix.directory }})
+    runs-on: ubuntu-latest
+    needs: get_commit_message
+    if: >-
+      contains(needs.get_commit_message.outputs.message, '[wheel build]') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '02 - Wheel Build')) || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/main')))
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['openllm-core', 'openllm-python', 'openllm-client']
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
+        with:
+          fetch-depth: 0
+          ref: '${{ inputs.tags }}'
+      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
+        with:
+          bentoml-version: 'main'
+          python-version-file: .python-version-default
+      - name: Build
+        run: hatch build
+        working-directory: ${{ matrix.directory }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        with:
+          name: python-artefacts
+          path: ${{ matrix.directory }}/dist/*
+          if-no-files-found: error
+  check-download-artefacts:
+    name: dry-run for downloading artefacts
+    if: github.event_name == 'pull_request'
+    needs: [pure-wheels-sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Python artifacts
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        with:
+          name: python-artefacts
+          path: dist
+      - name: dry ls
+        run: ls -rthlaR
+  push-nightly:
+    name: Push nightly wheels
+    if: ${{ !github.event.repository.fork && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    # needs: [pure-wheels-sdist, mypyc]
+    needs: [pure-wheels-sdist]
+    steps:
+      - name: Download Python artifacts
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        with:
+          name: python-artefacts
+          path: dist
+      - name: Publish nightly wheels to test.pypi.org
+        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # ratchet:pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+  sucess-push: # https://github.com/marketplace/actions/alls-green#why
+    if: github.event_name == 'push'
+    needs: [push-nightly, pure-wheels-sdist]
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.everygreen.outputs.success }}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
+        id: evergreen
+        with:
+          jobs: ${{ toJSON(needs) }}
+  sucess-pr: # https://github.com/marketplace/actions/alls-green#why
+    if: github.event_name == 'pull_request'
+    needs: [pure-wheels-sdist]
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.everygreen.outputs.success }}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
+        id: evergreen
+        with:
+          jobs: ${{ toJSON(needs) }}
