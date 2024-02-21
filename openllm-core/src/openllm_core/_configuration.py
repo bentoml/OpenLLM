@@ -320,6 +320,10 @@ _DEFAULT = ModelSettings(
 class LLMConfig(pydantic.BaseModel, abc.ABC):
   model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
+  if t.TYPE_CHECKING:
+    metadata_config: ModelSettings
+    generation_config: GenerationConfig
+
   _done_initialisation = False
 
   def __setattr__(self, attr: str, value: t.Any) -> None:

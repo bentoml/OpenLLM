@@ -1,60 +1,36 @@
 from __future__ import annotations
-import gc, types, typing as t, bentoml, openllm
-from openllm_core.exceptions import MissingDependencyError
+import gc, traceback, types, typing as t
+import torch, bentoml, openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
-from openllm_core._typing_compat import LiteralString, ParamSpec, overload, M, T
-from openllm_core.utils import ReprMixin, is_vllm_available, correct_closure
+from openllm_core.utils import ReprMixin, is_vllm_available
 
 if t.TYPE_CHECKING:
+  from openllm_core._typing_compat import M, T
   from ._runners import Runner
-
-P = ParamSpec('P')
-R = t.TypeVar('R')
 
 _registry = {}
 __all__ = ['runner']
 
 
-@overload
-def registry(cls: None = ..., /, *, alias: LiteralString = ...) -> type[Runner[M, T]]: ...
-
-
-@overload
-def registry(cls: type[Runner[M, T]], /) -> type[Runner[M, T]]: ...
-
-
-def registry(cls: type[Runner[M, T]] | None = None, *, alias: LiteralString | None = None) -> type[Runner[M, T]]:
-  def _gated_new(cls: type[Runner[M, T]], /, **_: t.Any) -> Runner[M, T]:
-    if not cls.__openllm_can_init__:
-      raise TypeError(f'Cannot instantiate {cls.__name__} directly.')
-    return object.__new__(cls)
-
-  def decorator(_cls: type[Runner[M, T]]) -> type[Runner[M, T]]:
+def registry(cls=None, *, alias=None):
+  def decorator(_cls):
     _registry[_cls.__name__[:-8].lower() if alias is None else alias] = _cls
-    cd = {'__openllm_can_init__': False, '__new__': _gated_new}
-    cd.update(dict(_cls.__dict__))
-    cls = type(_cls)(_cls.__name__, _cls.__bases__, cd)
-    return correct_closure(cls, _cls)
+    return _cls
 
-  return decorator(cls) if cls is not None else decorator
+  if cls is None:
+    return decorator
+  return decorator(cls)
 
 
-def runner(llm):
+def runner(llm: openllm.LLM[M, T]) -> Runner[M, T]:
   try:
     assert llm.bentomodel
   except (bentoml.exceptions.NotFound, AssertionError) as err:
     raise RuntimeError(f'Failed to locate {llm.bentomodel}: {err}') from err
 
-  def make_runnable_caller(method):
-    async def _runnable_to_sse(self, *args, **attrs):
-      async for it in method(self, *args, **attrs):
-        yield f'data: {it.model_dump_json()}\n\n'
-
-    return _runnable_to_sse
-
   return types.new_class(
-    f'{(classname := llm.config.__class__.__name__[:-6])}Runner',
-    (bentoml.Runner,),
+    llm.config.__class__.__name__[:-6] + 'Runner',
+    (bentoml.Runner,),  #
     exec_body=lambda ns: ns.update({
       'llm_type': llm.llm_type,
       'identifying_params': llm.identifying_params,  #
@@ -70,10 +46,7 @@ def runner(llm):
         (
           'runner_methods',
           {
-            method.name: {
-              'batchable': method.config.batchable,
-              'batch_dim': method.config.batch_dim if method.config.batchable else None,
-            }
+            method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None}
             for method in _.runner_methods
           },
         ),
@@ -82,139 +55,99 @@ def runner(llm):
         ('backend', llm.__llm_backend__),
         ('llm_tag', llm.tag),
       ),
+      'has_adapters': llm.has_adapters,
       'template': llm.config.template,
       'system_message': llm.config.system_message,
     }),
   )(
-    types.new_class(
-      f'{(backend_cls := _registry[llm.__llm_backend__]).__name__[:-8]}{classname}Runnable',
-      (bentoml.Runnable,),
-      exec_body=lambda ns: ns.update({
-        'SUPPORTED_RESOURCES': ('nvidia.com/gpu', 'amd.com/gpu', 'cpu'),
-        'SUPPORTS_CPU_MULTI_THREADING': True,
-        '__module__': __name__,
-        '__openllm_can_init__': True,
-        '__init__': backend_cls.__init__,
-        'llm': llm,
-        **{
-          name: bentoml.Runnable.method(batchable=False)(make_runnable_caller(api.func))
-          for name, api in vars(backend_cls).items()
-          if hasattr(api, 'func') and getattr(api.func, '__openllm_api_func__', False)
-        },
-      }),
-    ),
+    _registry[llm.__llm_backend__],
     name=f"llm-{llm.config['start_name']}-runner",
     models=[llm.bentomodel],
     scheduling_strategy=openllm.CascadingResourceStrategy,
-  )
-
-
-def bases(llm):
-  try:
-    assert llm.bentomodel
-  except (bentoml.exceptions.NotFound, AssertionError) as err:
-    raise RuntimeError(f'Failed to locate {llm.bentomodel}: {err}') from err
-
-  return types.new_class(
-    (backend_cls := _registry[llm.__llm_backend__]).__name__[:-8] + llm.config.__class__.__name__[:-6] + 'Runner',
-    (backend_cls,),
-    exec_body=lambda ns: ns.update({
-      'llm': llm,
-      'llm_tag': llm.tag,
-      'llm_config': llm.config,
-      'llm_bentomodel': llm.bentomodel,
-      'llm_type': llm.llm_type,
-      'backend': llm.__llm_backend__,
-      'identifying_params': llm.identifying_params,
-      '__module__': __name__,
-      '__openllm_can_init__': True,
-      '__repr__': ReprMixin.__repr__,
-      '__doc__': llm.config.__class__.__doc__ or f'Generated Runner for {llm.config["model_name"]}',
-      '__repr_keys__': property(lambda _: {'llm_config', 'llm_type', 'llm_tag', 'backend'}),
-      '__repr_args__': lambda _: (
-        ('llm_config', llm.config.model_dump(flatten=True)),
-        ('llm_type', llm.llm_type),
-        ('llm_tag', llm.tag),
-        ('backend', llm.__llm_backend__),
-      ),
-      'template': llm.config.template,
-      'system_message': llm.config.system_message,
-      'impl': backend_cls,
-    }),
+    runnable_init_params={'llm': llm},
   )
 
 
 @registry
-class vLLMRunnable:
-  llm: openllm.LLM
+class vLLMRunnable(bentoml.Runnable):
+  SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
+  SUPPORTS_CPU_MULTI_THREADING = True
 
-  def __init__(self) -> None:
+  def __init__(self, llm):
     if not is_vllm_available():
-      raise MissingDependencyError('vLLM is not installed. Do `pip install "openllm[vllm]"`.')
+      raise openllm.exceptions.OpenLLMException('vLLM is not installed. Do `pip install "openllm[vllm]"`.')
+    import vllm
 
-  @openllm.utils.api(output=GenerationOutput)
-  async def generate_iterator(
-    self,
-    prompt_token_ids: t.List[int],
-    request_id: str,
-    stop: t.Optional[t.Iterable[str]] = None,
-    adapter_name: t.Optional[str] = None,
-    **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
-    if stop is not None:
-      stop = [stop] if isinstance(stop, str) else list(stop)
-    sampling_params = self.llm.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)[-1]
-    async for request_output in self.llm.model.generate(None, sampling_params, request_id, prompt_token_ids):
-      yield GenerationOutput.from_vllm(request_output)
+    self.llm, self.config, self.tokenizer = llm, llm.config, llm.tokenizer
+    num_gpus, dev = 1, openllm.utils.device_count()
+    if dev >= 2:
+      num_gpus = min(dev // 2 * 2, dev)
+    quantise = llm.quantise if llm.quantise and llm.quantise in {'gptq', 'awq', 'squeezellm'} else None
+    dtype = torch.float16 if quantise == 'gptq' else llm._torch_dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
+    try:
+      self.model = vllm.AsyncLLMEngine.from_engine_args(
+        vllm.AsyncEngineArgs(
+          worker_use_ray=False,
+          engine_use_ray=False,  #
+          tokenizer_mode='auto',
+          tensor_parallel_size=num_gpus,  #
+          model=llm.bentomodel.path,
+          tokenizer=llm.bentomodel.path,  #
+          trust_remote_code=llm.trust_remote_code,
+          dtype=dtype,  #
+          max_model_len=llm._max_model_len,
+          gpu_memory_utilization=llm._gpu_memory_utilization,  #
+          quantization=quantise,
+        )
+      )
+    except Exception as err:
+      traceback.print_exc()
+      raise openllm.exceptions.OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
+
+  @bentoml.Runnable.method(batchable=False)
+  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
+    _, sampling_params = self.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)
+    async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
+      out = GenerationOutput.from_vllm(request_output).model_dump_json()
+      out = bentoml.io.SSE(out).marshal()
+      yield out
 
 
 @registry(alias='pt')
-class PyTorchRunnable:
-  llm: openllm.LLM
+class PyTorchRunnable(bentoml.Runnable):
+  SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
+  SUPPORTS_CPU_MULTI_THREADING = True
 
-  def __init__(self):
-    import torch
+  def __init__(self, llm):
+    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.model, llm.tokenizer
+    self.is_encoder_decoder = llm.model.config.is_encoder_decoder
+    if hasattr(llm.model, 'device'):
+      self.device = llm.model.device
+    else:
+      self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    self.is_encoder_decoder = self.llm.model.config.is_encoder_decoder
-    self.device = (
-      self.llm.model.device
-      if hasattr(self.llm.model, 'device')
-      else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    )
-
-  @openllm.utils.api(output=GenerationOutput)
-  async def generate_iterator(
-    self,
-    prompt_token_ids: t.List[int],
-    request_id: str,
-    stop: t.Optional[t.Iterable[str]] = None,
-    adapter_name: t.Optional[str] = None,
-    **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  @bentoml.Runnable.method(batchable=False)
+  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
     from ._generation import get_context_length, prepare_logits_processor
-    import torch
-
-    if stop is not None:
-      stop = [stop] if isinstance(stop, str) else list(stop)
 
     if adapter_name is not None:
-      self.llm.model.set_adapter(adapter_name)
+      self.model.set_adapter(adapter_name)
 
     max_new_tokens = attrs.pop('max_new_tokens', 256)
     context_length = attrs.pop('context_length', None)
     if context_length is None:
-      context_length = get_context_length(self.llm.model.config)
-    if self.llm.model.config.is_encoder_decoder:
+      context_length = get_context_length(self.model.config)
+    if self.model.config.is_encoder_decoder:
       max_src_len = context_length
     else:
       max_src_len = context_length - max_new_tokens - 1
     prompt_token_ids = prompt_token_ids[-max_src_len:]
 
-    stop_token_ids = [self.llm.tokenizer.encode(it) for it in stop] if stop else []
-    if self.llm.tokenizer.eos_token_id not in stop_token_ids:  # add eos token
-      stop_token_ids.append(self.llm.tokenizer.eos_token_id)
+    stop_token_ids = [self.tokenizer.encode(it) for it in stop]
+    if self.tokenizer.eos_token_id not in stop_token_ids:  # add eos token
+      stop_token_ids.append(self.tokenizer.eos_token_id)
 
-    config = self.llm.config.model_construct_env(max_new_tokens=max_new_tokens, **attrs)
+    config = self.config.model_construct_env(max_new_tokens=max_new_tokens, **attrs)
     logits_processor = prepare_logits_processor(config)
     cumulative_logprob = 0.0
 
@@ -225,10 +158,8 @@ class PyTorchRunnable:
       if self.is_encoder_decoder:
         if config['logprobs']:  # FIXME: logprobs is not supported
           raise NotImplementedError('Logprobs is yet to be supported with encoder-decoder models.')
-        encoder_output = self.llm.model.encoder(input_ids=torch.as_tensor([prompt_token_ids], device=self.device))[0]
-        start_ids = torch.as_tensor(
-          [[self.llm.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device
-        )
+        encoder_output = self.model.encoder(input_ids=torch.as_tensor([prompt_token_ids], device=self.device))[0]
+        start_ids = torch.as_tensor([[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device)
       else:
         start_ids = torch.as_tensor([prompt_token_ids], device=self.device)
 
@@ -242,23 +173,21 @@ class PyTorchRunnable:
       for i in range(config['max_new_tokens']):
         if i == 0:  # prefill
           if self.is_encoder_decoder:
-            out = self.llm.model.decoder(input_ids=start_ids, encoder_hidden_states=encoder_output, use_cache=True)
-            logits = self.llm.model.lm_head(out[0])
+            out = self.model.decoder(input_ids=start_ids, encoder_hidden_states=encoder_output, use_cache=True)
+            logits = self.model.lm_head(out[0])
           else:
-            out = self.llm.model(input_ids=start_ids, use_cache=True)
+            out = self.model(input_ids=start_ids, use_cache=True)
             logits = out.logits
         elif self.is_encoder_decoder:  # decoding
-          out = self.llm.model.decoder(
+          out = self.model.decoder(
             input_ids=torch.as_tensor([[token]], device=self.device),
             encoder_hidden_states=encoder_output,
             past_key_values=past_key_values,
             use_cache=True,
           )
-          logits = self.llm.model.lm_head(out[0])
+          logits = self.model.lm_head(out[0])
         else:
-          out = self.llm.model(
-            input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True
-          )
+          out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True)
           logits = out.logits
         past_key_values = out.past_key_values
         if logits_processor:
@@ -302,12 +231,7 @@ class PyTorchRunnable:
 
         tmp_output_ids, rfind_start = output_token_ids[input_len:], 0
         # XXX: Move this to API server
-        text = self.llm.tokenizer.decode(
-          tmp_output_ids,
-          skip_special_tokens=True,
-          spaces_between_special_tokens=False,
-          clean_up_tokenization_spaces=True,
-        )
+        text = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
 
         if len(stop) > 0:
           for it in stop:
@@ -319,7 +243,7 @@ class PyTorchRunnable:
         if config['logprobs']:
           sample_logprobs.append({token: token_logprobs})
 
-        yield GenerationOutput(
+        out = GenerationOutput(
           prompt='',
           finished=False,
           outputs=[
@@ -335,14 +259,15 @@ class PyTorchRunnable:
           prompt_token_ids=prompt_token_ids,
           prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
           request_id=request_id,
-        )
+        ).model_dump_json()
+        yield bentoml.io.SSE(out).marshal()
         if stopped:
           break
       else:
         finish_reason = 'length'
       if stopped:
         finish_reason = 'stop'
-      yield GenerationOutput(
+      out = GenerationOutput(
         prompt='',
         finished=True,
         outputs=[
@@ -358,7 +283,8 @@ class PyTorchRunnable:
         prompt_token_ids=prompt_token_ids,
         prompt_logprobs=prompt_logprobs if config['prompt_logprobs'] else None,
         request_id=request_id,
-      )
+      ).model_dump_json()
+      yield bentoml.io.SSE(out).marshal()
 
     # Clean
     del past_key_values, out
