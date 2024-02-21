@@ -30,7 +30,9 @@ class MistralConfig(openllm_core.LLMConfig):
       'mistralai/Mistral-7B-Instruct-v0.1',
       'mistralai/Mistral-7B-v0.1',
     ],
-    'fine_tune_strategies': ({'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},),
+    'fine_tune_strategies': (
+      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+    ),
   }
 
   class GenerationConfig:
@@ -47,7 +49,11 @@ class MistralConfig(openllm_core.LLMConfig):
   @property
   def template(self) -> str:
     return """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
-      start_inst=SINST_KEY, end_inst=EINST_KEY, start_key=BOS_TOKEN, system_message='{system_message}', instruction='{instruction}'
+      start_inst=SINST_KEY,
+      end_inst=EINST_KEY,
+      start_key=BOS_TOKEN,
+      system_message='{system_message}',
+      instruction='{instruction}',
     )
 
   # NOTE: https://docs.mistral.ai/usage/guardrailing/

@@ -12,7 +12,7 @@ from .._helpers import patch_correct_tag, save_model
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['import_model', 'get', 'load_model']
+__all__ = ['get', 'import_model', 'load_model']
 _object_setattr = object.__setattr__
 
 
@@ -44,7 +44,13 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
         f.write(orjson.dumps(config.quantization_config, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS).decode())
     if llm._local:  # possible local path
       model = infer_autoclass_from_llm(llm, config).from_pretrained(
-        llm.model_id, *decls, local_files_only=True, config=config, trust_remote_code=trust_remote_code, **hub_attrs, **attrs
+        llm.model_id,
+        *decls,
+        local_files_only=True,
+        config=config,
+        trust_remote_code=trust_remote_code,
+        **hub_attrs,
+        **attrs,
       )
       # for trust_remote_code to work
       bentomodel.enter_cloudpickle_context([importlib.import_module(model.__module__)], imported_modules)
@@ -68,7 +74,9 @@ def get(llm):
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
     if backend != llm.__llm_backend__:
-      raise OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
+      raise OpenLLMException(
+        f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'."
+      )
     patch_correct_tag(
       llm,
       transformers.AutoConfig.from_pretrained(model.path, trust_remote_code=llm.trust_remote_code),
@@ -124,7 +132,9 @@ def load_model(llm, *decls, **attrs):
       )
     except Exception as err:
       logger.debug("Failed to load model with 'use_flash_attention_2' (lookup for traceback):\n%s", err)
-      model = auto_class.from_pretrained(llm.bentomodel.path, device_map=device_map, trust_remote_code=llm.trust_remote_code, **attrs)
+      model = auto_class.from_pretrained(
+        llm.bentomodel.path, device_map=device_map, trust_remote_code=llm.trust_remote_code, **attrs
+      )
   else:
     try:
       model = auto_class.from_pretrained(
@@ -139,7 +149,12 @@ def load_model(llm, *decls, **attrs):
     except Exception as err:
       logger.debug("Failed to load model with 'use_flash_attention_2' (lookup for traceback):\n%s", err)
       model = auto_class.from_pretrained(
-        llm.bentomodel.path, *decls, config=config, trust_remote_code=llm.trust_remote_code, device_map=device_map, **attrs
+        llm.bentomodel.path,
+        *decls,
+        config=config,
+        trust_remote_code=llm.trust_remote_code,
+        device_map=device_map,
+        **attrs,
       )
   check_unintialised_params(model)
   return model

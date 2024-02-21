@@ -18,7 +18,13 @@ class FlanT5Config(openllm_core.LLMConfig):
     'backend': ('pt',),
     # NOTE: See https://www.philschmid.de/fine-tune-flan-t5. No specific template found, but seems to have the same dialogue style
     'default_id': 'google/flan-t5-large',
-    'model_ids': ['google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl'],
+    'model_ids': [
+      'google/flan-t5-small',
+      'google/flan-t5-base',
+      'google/flan-t5-large',
+      'google/flan-t5-xl',
+      'google/flan-t5-xxl',
+    ],
   }
 
   class GenerationConfig:
