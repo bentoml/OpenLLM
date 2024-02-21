@@ -38,7 +38,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.1.11,<1.2",
+    "bentoml[io]>=1.1.11,<1.3",
     "transformers[torch,tokenizers]>=4.36.0",
     "openllm-client>=0.4.44",
     "openllm-core>=0.4.44",
