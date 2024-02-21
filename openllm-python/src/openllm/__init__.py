@@ -1,5 +1,6 @@
 import logging as _logging, os as _os, pathlib as _pathlib, warnings as _warnings
 from openllm_cli import _sdk
+import _openllm_tiny as _tiny
 from . import utils as utils
 
 if utils.DEBUG:
@@ -31,10 +32,10 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     'protocol': ['openai'],
     'utils': ['api'],
     'entrypoints': ['mount_entrypoints'],
-    'serialisation': ['ggml', 'transformers', 'vllm', 'prepare_model'],
+    'serialisation': ['ggml', 'transformers', 'vllm'],
     '_llm': ['LLM'],
     '_deprecated': ['Runner'],
-    '_runners': ['runner', 'bases'],
+    '_runners': ['runner'],
     '_quantisation': ['infer_quantisation_config'],
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
   },
@@ -44,6 +45,7 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     'build': _sdk.build,  #
     'import_model': _sdk.import_model,
     'list_models': _sdk.list_models,  #
+    'prepare_model': _tiny.prepare_model,
   },
 )
 __all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

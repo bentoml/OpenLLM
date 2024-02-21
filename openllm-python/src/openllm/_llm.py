@@ -76,8 +76,15 @@ class LLM(t.Generic[M, T]):
   async def generate_iterator(
     self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
   ):
+    from bentoml._internal.runner.runner_handle import DummyRunnerHandle
+
     if adapter_name is not None and self.__llm_backend__ != 'pt':
       raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
+    if isinstance(self.runner._runner_handle, DummyRunnerHandle):
+      if os.getenv('BENTO_PATH') is not None:
+        raise RuntimeError('Runner client failed to set up correctly.')
+      else:
+        self.runner.init_local(quiet=True)
     config = self.config.model_construct_env(**attrs)
 
     stop_token_ids = stop_token_ids or []
@@ -89,14 +96,12 @@ class LLM(t.Generic[M, T]):
       stop_token_ids.append(config_eos)
     if self.tokenizer.eos_token_id not in stop_token_ids:
       stop_token_ids.append(self.tokenizer.eos_token_id)
-
     if stop is None:
       stop = set()
     elif isinstance(stop, str):
       stop = {stop}
     else:
       stop = set(stop)
-
     for tid in stop_token_ids:
       if tid:
         stop.add(self.tokenizer.decode(tid))
@@ -109,18 +114,18 @@ class LLM(t.Generic[M, T]):
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
     try:
-      generator = self.proxy(
-        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
+      generator = bentoml.io.SSE.from_iterator(
+        self.runner.generate_iterator.async_stream(
+          prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
+        )
       )
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
     try:
       async for out in generator:
-        if not self._eager:
-          generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
-        else:
-          generated = out.with_options(prompt=prompt)
+        out = out.data
+        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:
           i = output.index
