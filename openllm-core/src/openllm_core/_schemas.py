@@ -1,6 +1,6 @@
 from __future__ import annotations
-import typing as t
-import pydantic, inflection, orjson
+
+import pydantic, inflection, orjson, typing as t
 from ._configuration import LLMConfig
 from .utils import gen_random_uuid
 from ._typing_compat import Required, TypedDict, TypeGuard, Unpack, LiteralString
