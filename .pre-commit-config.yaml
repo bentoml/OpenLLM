@@ -3,6 +3,7 @@ ci:
   skip: [eslint, prettier, mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
+  autofix_prs: false
 default_language_version:
   python: python3.9 # NOTE: sync with .python-version-default
 exclude: '.*\.(css|js|svg)$'
