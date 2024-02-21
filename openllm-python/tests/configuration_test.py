@@ -25,7 +25,7 @@ def test_forbidden_access():
     },
   )
 
-  assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'metadata_config')
+  assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), '__config__')
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'GenerationConfig')
   assert pytest.raises(openllm.exceptions.ForbiddenAttributeError, cl_.__getattribute__, cl_(), 'SamplingParams')
   assert openllm.utils.lenient_issubclass(cl_.__openllm_generation_class__, GenerationConfig)
@@ -66,15 +66,8 @@ def test_config_derived_follow_attrs_protocol(gen_settings: ModelSettings):
   st.integers(max_value=283473),
   st.floats(min_value=0.0, max_value=1.0),
 )
-def test_complex_struct_dump(
-  gen_settings: ModelSettings, field1: int, temperature: float, input_field1: int, input_temperature: float
-):
-  cl_ = make_llm_config(
-    'ComplexLLM',
-    gen_settings,
-    fields=(('field1', 'float', field1),),
-    generation_fields=(('temperature', temperature),),
-  )
+def test_complex_struct_dump(gen_settings: ModelSettings, field1: int, temperature: float, input_field1: int, input_temperature: float):
+  cl_ = make_llm_config('ComplexLLM', gen_settings, fields=(('field1', 'float', field1),), generation_fields=(('temperature', temperature),))
   sent = cl_()
   assert sent.model_dump()['field1'] == field1
   assert sent.model_dump()['generation_config']['temperature'] == temperature
@@ -102,11 +95,7 @@ def test_struct_envvar():
   with patch_env(**{field_env_key('field1'): '4', field_env_key('temperature', suffix='generation'): '0.2'}):
 
     class EnvLLM(openllm.LLMConfig):
-      metadata_config = {
-        'default_id': 'asdfasdf',
-        'model_ids': ['asdf', 'asdfasdfads'],
-        'architecture': 'PreTrainedModel',
-      }
+      __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'}
       field1: int = 2
 
       class GenerationConfig:
@@ -123,11 +112,7 @@ def test_struct_envvar():
 
 def test_struct_provided_fields():
   class EnvLLM(openllm.LLMConfig):
-    metadata_config = {
-      'default_id': 'asdfasdf',
-      'model_ids': ['asdf', 'asdfasdfads'],
-      'architecture': 'PreTrainedModel',
-    }
+    __config__ = {'default_id': 'asdfasdf', 'model_ids': ['asdf', 'asdfasdfads'], 'architecture': 'PreTrainedModel'}
     field1: int = 2
 
     class GenerationConfig:

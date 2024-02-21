@@ -38,9 +38,7 @@ class Stream(t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self._client._process_response_data(
-          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
-        )
+        yield self._client._process_response_data(data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response)
 
 
 @attr.define(auto_attribs=True)
@@ -71,9 +69,7 @@ class AsyncStream(t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self._client._process_response_data(
-          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
-        )
+        yield self._client._process_response_data(data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response)
 
 
 @attr.define

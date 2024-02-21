@@ -84,7 +84,7 @@ def chunk(sample, chunk_length=2048):
 
   # Split by chunks of max_len.
   result = {
-    k: [t[i: i + chunk_length] for i in range(0, batch_chunk_length, chunk_length)]
+    k: [t[i : i + chunk_length] for i in range(0, batch_chunk_length, chunk_length)]
     for k, t in concatenated_examples.items()
   }
   # add remainder to global variable for next batch
