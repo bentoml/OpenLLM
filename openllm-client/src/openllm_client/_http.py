@@ -70,10 +70,14 @@ class HTTPClient(Client):
     return self.generate(prompt, **attrs)
 
   def health(self):
-    response = self._get('/readyz', response_cls=None, options={'return_raw_response': True, 'max_retries': self._max_retries})
+    response = self._get(
+      '/readyz', response_cls=None, options={'return_raw_response': True, 'max_retries': self._max_retries}
+    )
     return response.status_code == 200
 
-  def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
+  def generate(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> Response:
     if timeout is None:
       timeout = self._timeout
     if verify is None:
@@ -96,7 +100,9 @@ class HTTPClient(Client):
     for response_chunk in self.generate_iterator(prompt, llm_config, stop, adapter_name, timeout, verify, **attrs):
       yield StreamingResponse.from_response_chunk(response_chunk)
 
-  def generate_iterator(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> t.Iterator[Response]:
+  def generate_iterator(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> t.Iterator[Response]:
     if timeout is None:
       timeout = self._timeout
     if verify is None:
@@ -146,7 +152,9 @@ class AsyncHTTPClient(AsyncClient):
   @property
   async def _metadata(self) -> t.Awaitable[Metadata]:
     if self.__metadata is None:
-      self.__metadata = await self._post(f'/{self._api_version}/metadata', response_cls=Metadata, json={}, options={'max_retries': self._max_retries})
+      self.__metadata = await self._post(
+        f'/{self._api_version}/metadata', response_cls=Metadata, json={}, options={'max_retries': self._max_retries}
+      )
     return self.__metadata
 
   @property
@@ -159,10 +167,14 @@ class AsyncHTTPClient(AsyncClient):
     return await self.generate(prompt, **attrs)
 
   async def health(self):
-    response = await self._get('/readyz', response_cls=None, options={'return_raw_response': True, 'max_retries': self._max_retries})
+    response = await self._get(
+      '/readyz', response_cls=None, options={'return_raw_response': True, 'max_retries': self._max_retries}
+    )
     return response.status_code == 200
 
-  async def generate(self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs) -> Response:
+  async def generate(
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+  ) -> Response:
     if timeout is None:
       timeout = self._timeout
     if verify is None:
@@ -183,7 +195,9 @@ class AsyncHTTPClient(AsyncClient):
   async def generate_stream(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
   ) -> t.AsyncGenerator[StreamingResponse, t.Any]:
-    async for response_chunk in self.generate_iterator(prompt, llm_config, stop, adapter_name, timeout, verify, **attrs):
+    async for response_chunk in self.generate_iterator(
+      prompt, llm_config, stop, adapter_name, timeout, verify, **attrs
+    ):
       yield StreamingResponse.from_response_chunk(response_chunk)
 
   async def generate_iterator(
