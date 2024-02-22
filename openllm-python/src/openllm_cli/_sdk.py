@@ -48,7 +48,7 @@ def _start(
                           > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
                           > - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
                           > - ``conserved``: This will determine the number of available GPU resources, and only assign
-                          >                  one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is
+                          >                  one worker for the LLMRunner. For example, if there are 4 GPUs available, then ``conserved`` is
                           >                  equivalent to ``--workers-per-resource 0.25``.
     device: Assign GPU devices (if available) to this LLM. By default, this is set to ``None``. It also accepts 'all'
     argument to assign all available GPUs to this LLM.

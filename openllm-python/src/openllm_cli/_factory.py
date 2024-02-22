@@ -329,7 +329,7 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
 
       - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
 
-      - ``conserved``: This will determine the number of available GPU resources. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
+      - ``conserved``: This will determine the number of available GPU resources. For example, if there are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
       """
     + (
       """\n
