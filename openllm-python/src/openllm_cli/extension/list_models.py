@@ -33,12 +33,17 @@ def cli(model_name: str | None) -> DictStrAny:
   }
   if model_name is not None:
     ids_in_local_store = {
-      k: [i for i in v if 'model_name' in i.info.labels and i.info.labels['model_name'] == inflection.dasherize(model_name)]
+      k: [
+        i
+        for i in v
+        if 'model_name' in i.info.labels and i.info.labels['model_name'] == inflection.dasherize(model_name)
+      ]
       for k, v in ids_in_local_store.items()
     }
   ids_in_local_store = {k: v for k, v in ids_in_local_store.items() if v}
   local_models = {
-    k: [{'tag': str(i.tag), 'size': human_readable_size(openllm.utils.calc_dir_size(i.path))} for i in val] for k, val in ids_in_local_store.items()
+    k: [{'tag': str(i.tag), 'size': human_readable_size(openllm.utils.calc_dir_size(i.path))} for i in val]
+    for k, val in ids_in_local_store.items()
   }
   termui.echo(orjson.dumps(local_models, option=orjson.OPT_INDENT_2).decode(), fg='white')
   return local_models

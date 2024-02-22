@@ -1,6 +1,17 @@
 import importlib, importlib.metadata, importlib.util, os
 
-OPTIONAL_DEPENDENCIES = {'vllm', 'fine-tune', 'ggml', 'ctranslate', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
+OPTIONAL_DEPENDENCIES = {
+  'vllm',
+  'fine-tune',
+  'ggml',
+  'ctranslate',
+  'agents',
+  'openai',
+  'playground',
+  'gptq',
+  'grpc',
+  'awq',
+}
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_VLLM = os.getenv('USE_VLLM', 'AUTO').upper()

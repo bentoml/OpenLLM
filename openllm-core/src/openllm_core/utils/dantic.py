@@ -20,23 +20,23 @@ AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
 __all__ = [
+  'CUDA',
   'FC',
-  'attrs_to_options',
-  'Field',
-  'parse_type',
-  'is_typing',
-  'is_literal',
-  'ModuleType',
+  'BytesType',
   'EnumChoice',
+  'Field',
+  'JsonType',
   'LiteralChoice',
+  'ModuleType',
   'allows_multiple',
-  'is_mapping',
+  'attrs_to_options',
   'is_container',
+  'is_literal',
+  'is_mapping',
+  'is_typing',
   'parse_container_args',
   'parse_single_arg',
-  'CUDA',
-  'JsonType',
-  'BytesType',
+  'parse_type',
 ]
 
 
@@ -45,7 +45,12 @@ def __dir__() -> list[str]:
 
 
 def attrs_to_options(
-  name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False
+  name: str,
+  field: attr.Attribute[t.Any],
+  model_name: str,
+  typ: t.Any = None,
+  suffix_generation: bool = False,
+  suffix_sampling: bool = False,
 ) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata['env']

@@ -22,7 +22,9 @@ class PromptFormatter(string.Formatter):
       raise ValueError('Positional arguments are not supported')
     return super().vformat(format_string, args, kwargs)
 
-  def check_unused_args(self, used_args: set[int | str], args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]) -> None:
+  def check_unused_args(
+    self, used_args: set[int | str], args: t.Sequence[t.Any], kwargs: t.Mapping[str, t.Any]
+  ) -> None:
     extras = set(kwargs).difference(used_args)
     if extras:
       raise KeyError(f'Extra params passed: {extras}')
@@ -56,7 +58,9 @@ class PromptTemplate:
     try:
       return self.template.format(**prompt_variables)
     except KeyError as e:
-      raise RuntimeError(f"Missing variable '{e.args[0]}' (required: {self._input_variables}) in the prompt template.") from None
+      raise RuntimeError(
+        f"Missing variable '{e.args[0]}' (required: {self._input_variables}) in the prompt template."
+      ) from None
 
 
 @click.command('get_prompt', context_settings=termui.CONTEXT_SETTINGS)
@@ -124,15 +128,21 @@ def cli(
   if prompt_template_file and chat_template_file:
     ctx.fail('prompt-template-file and chat-template-file are mutually exclusive.')
 
-  acceptable = set(openllm.CONFIG_MAPPING_NAMES.keys()) | set(inflection.dasherize(name) for name in openllm.CONFIG_MAPPING_NAMES.keys())
+  acceptable = set(openllm.CONFIG_MAPPING_NAMES.keys()) | set(
+    inflection.dasherize(name) for name in openllm.CONFIG_MAPPING_NAMES.keys()
+  )
   if model_id in acceptable:
-    logger.warning('Using a default prompt from OpenLLM. Note that this prompt might not work for your intended usage.\n')
+    logger.warning(
+      'Using a default prompt from OpenLLM. Note that this prompt might not work for your intended usage.\n'
+    )
     config = openllm.AutoConfig.for_model(model_id)
     template = prompt_template_file.read() if prompt_template_file is not None else config.template
     system_message = system_message or config.system_message
 
     try:
-      formatted = PromptTemplate(template).with_options(system_message=system_message).format(instruction=prompt, **_memoized)
+      formatted = (
+        PromptTemplate(template).with_options(system_message=system_message).format(instruction=prompt, **_memoized)
+      )
     except RuntimeError as err:
       logger.debug('Exception caught while formatting prompt: %s', err)
       ctx.fail(str(err))
@@ -149,15 +159,21 @@ def cli(
       for architecture in config.architectures:
         if architecture in openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
           system_message = (
-            openllm.AutoConfig.infer_class_from_name(openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
+            openllm.AutoConfig.infer_class_from_name(
+              openllm.AutoConfig._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture]
+            )
             .model_construct_env()
             .system_message
           )
           break
       else:
-        ctx.fail(f'Failed to infer system message from model architecture: {config.architectures}. Please pass in --system-message')
+        ctx.fail(
+          f'Failed to infer system message from model architecture: {config.architectures}. Please pass in --system-message'
+        )
     messages = [{'role': 'system', 'content': system_message}, {'role': 'user', 'content': prompt}]
-    formatted = tokenizer.apply_chat_template(messages, chat_template=chat_template_file, add_generation_prompt=add_generation_prompt, tokenize=False)
+    formatted = tokenizer.apply_chat_template(
+      messages, chat_template=chat_template_file, add_generation_prompt=add_generation_prompt, tokenize=False
+    )
 
   termui.echo(orjson.dumps({'prompt': formatted}, option=orjson.OPT_INDENT_2).decode(), fg='white')
   ctx.exit(0)

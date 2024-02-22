@@ -38,7 +38,9 @@ class LlamaConfig(openllm_core.LLMConfig):
       'NousResearch/llama-2-13b-hf',
       'NousResearch/llama-2-7b-hf',
     ],
-    'fine_tune_strategies': ({'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},),
+    'fine_tune_strategies': (
+      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+    ),
   }
 
   class GenerationConfig:
@@ -54,7 +56,11 @@ class LlamaConfig(openllm_core.LLMConfig):
   @property
   def template(self) -> str:
     return '{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key}\n'.format(
-      start_key=SINST_KEY, sys_key=SYS_KEY, system_message='{system_message}', instruction='{instruction}', end_key=EINST_KEY
+      start_key=SINST_KEY,
+      sys_key=SYS_KEY,
+      system_message='{system_message}',
+      instruction='{instruction}',
+      end_key=EINST_KEY,
     )
 
   @property
