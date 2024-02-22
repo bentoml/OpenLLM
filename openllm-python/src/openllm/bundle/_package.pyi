@@ -13,7 +13,10 @@ from .._llm import LLM
 
 def build_editable(path: str, package: LiteralString) -> Optional[str]: ...
 def construct_python_options(
-  llm: LLM[M, T], llm_fs: FS, extra_dependencies: Optional[Tuple[str, ...]] = ..., adapter_map: Optional[Dict[str, str]] = ...
+  llm: LLM[M, T],
+  llm_fs: FS,
+  extra_dependencies: Optional[Tuple[str, ...]] = ...,
+  adapter_map: Optional[Dict[str, str]] = ...,
 ) -> PythonOptions: ...
 def construct_docker_options(
   llm: LLM[M, T],

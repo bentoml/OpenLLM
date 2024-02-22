@@ -6,7 +6,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_tokenizer(model_id_or_path, trust_remote_code, **attrs):
-  tokenizer = transformers.AutoTokenizer.from_pretrained(model_id_or_path, trust_remote_code=trust_remote_code, **attrs)
+  tokenizer = transformers.AutoTokenizer.from_pretrained(
+    model_id_or_path, trust_remote_code=trust_remote_code, **attrs
+  )
   if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
   return tokenizer
