@@ -321,8 +321,8 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
   if t.TYPE_CHECKING:
-    metadata_config: ModelSettings
-    generation_config: GenerationConfig
+    metadata_config: ModelSettings = pydantic.Field(default_factory=dict)
+    generation_config: GenerationConfig = pydantic.Field(default_factory=lambda: GenerationConfig.model_construct())
 
   _done_initialisation = False
 

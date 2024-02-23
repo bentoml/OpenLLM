@@ -29,6 +29,22 @@ def normalise_model_name(name):
   )
 
 
+@functools.lru_cache(maxsize=1)
+def has_gpus() -> bool:
+  try:
+    from cuda import cuda
+
+    err, *_ = cuda.cuInit(0)
+    if err != cuda.CUresult.CUDA_SUCCESS:
+      raise RuntimeError('Failed to initialise CUDA runtime binding.')
+    err, _ = cuda.cuDeviceGetCount()
+    if err != cuda.CUresult.CUDA_SUCCESS:
+      raise RuntimeError('Failed to get CUDA device count.')
+    return True
+  except (ImportError, RuntimeError):
+    return False
+
+
 def correct_closure(cls, ref):
   # The following is a fix for
   # <https://github.com/python-attrs/attrs/issues/102>.

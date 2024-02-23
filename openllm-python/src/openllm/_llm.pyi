@@ -1,17 +1,4 @@
-from typing import (
-  Any,
-  AsyncGenerator,
-  Dict,
-  Generic,
-  Iterable,
-  List,
-  Literal,
-  Optional,
-  Tuple,
-  TypedDict,
-  Union,
-  TypeVar,
-)
+from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Optional, Tuple, TypedDict, Union, TypeVar
 
 import attr
 import torch
@@ -25,7 +12,6 @@ from openllm_core._typing_compat import (
   AdapterMap,
   AdapterType,
   LiteralBackend,
-  LiteralDtype,
   LiteralQuantise,
   LiteralSerialisation,
   ParamSpec,
@@ -35,6 +21,7 @@ from openllm_core.utils import api
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner
+from _openllm_tiny._llm import Dtype
 
 InjectedModel = Union[PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM]
 P = ParamSpec('P')
@@ -47,7 +34,6 @@ class IdentifyingParams(TypedDict):
   model_id: str
 
 ResolvedAdapterMap = Dict[AdapterType, Dict[str, Tuple[PeftConfig, str]]]
-Dtype = Union[LiteralDtype, Literal['auto', 'half', 'float']]
 
 class LLMService:
   @api
@@ -106,18 +92,6 @@ class LLM(Generic[M, T]):
     adapter_name: Optional[str] = ...,
     **attrs: Any,
   ) -> AsyncGenerator[GenerationOutput, None]: ...
-  @classmethod
-  def from_model(
-    cls,
-    model: Model,
-    backend: Optional[LiteralBackend] = ...,
-    llm_config: Optional[LLMConfig] = ...,
-    max_model_len: Optional[int] = ...,
-    gpu_memory_utilization: float = ...,
-    trust_remote_code: bool = ...,
-    adapter_map: Optional[Dict[str, str]] = ...,
-    **attrs: Any,
-  ) -> LLM[M, T]: ...
   def __init__(
     self,
     model_id: str,

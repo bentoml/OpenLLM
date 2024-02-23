@@ -30,12 +30,13 @@ from . import (
   entrypoints as entrypoints,
   protocol as protocol,
 )
-from .serialisation import ggml as ggml, transformers as transformers, vllm as vllm, prepare_model as prepare_model
+from .serialisation import ggml as ggml, transformers as transformers, vllm as vllm
 from ._deprecated import Runner as Runner
-from ._runners import runner as runner, bases as bases
-from ._llm import LLM as LLM
+from ._runners import runner as runner
 from ._quantisation import infer_quantisation_config as infer_quantisation_config
 from ._strategies import CascadingResourceStrategy as CascadingResourceStrategy, get_resource as get_resource
 from .entrypoints import mount_entrypoints as mount_entrypoints
+from _openllm_tiny import prepare_model as prepare_model
+from _openllm_tiny import LLM as LLM
 
 COMPILED: bool = ...

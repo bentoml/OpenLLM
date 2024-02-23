@@ -1,5 +1,5 @@
 from __future__ import annotations
-import gc, traceback, types, typing as t
+import gc, types, typing as t
 import torch, bentoml, openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
 from openllm_core.utils import ReprMixin, is_vllm_available
@@ -79,37 +79,8 @@ class vLLMRunnable(bentoml.Runnable):
   def __init__(self, llm):
     if not is_vllm_available():
       raise openllm.exceptions.OpenLLMException('vLLM is not installed. Do `pip install "openllm[vllm]"`.')
-    import vllm
 
-    self.llm, self.config, self.tokenizer = llm, llm.config, llm.tokenizer
-    num_gpus, dev = 1, openllm.utils.device_count()
-    if dev >= 2:
-      num_gpus = min(dev // 2 * 2, dev)
-    quantise = llm.quantise if llm.quantise and llm.quantise in {'gptq', 'awq', 'squeezellm'} else None
-    dtype = (
-      torch.float16 if quantise == 'gptq' else llm._torch_dtype
-    )  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
-    try:
-      self.model = vllm.AsyncLLMEngine.from_engine_args(
-        vllm.AsyncEngineArgs(
-          worker_use_ray=False,
-          engine_use_ray=False,  #
-          tokenizer_mode='auto',
-          tensor_parallel_size=num_gpus,  #
-          model=llm.bentomodel.path,
-          tokenizer=llm.bentomodel.path,  #
-          trust_remote_code=llm.trust_remote_code,
-          dtype=dtype,  #
-          max_model_len=llm._max_model_len,
-          gpu_memory_utilization=llm._gpu_memory_utilization,  #
-          quantization=quantise,
-        )
-      )
-    except Exception as err:
-      traceback.print_exc()
-      raise openllm.exceptions.OpenLLMException(
-        f'Failed to initialise vLLMEngine due to the following error:\n{err}'
-      ) from err
+    self.llm, self.config, self.model = llm, llm.config, llm.model
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt, request_id, prompt_token_ids=None, stop=None, adapter_name=None, **attrs):
@@ -118,8 +89,7 @@ class vLLMRunnable(bentoml.Runnable):
       prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
     ):
       out = GenerationOutput.from_vllm(request_output).model_dump_json()
-      out = bentoml.io.SSE(out).marshal()
-      yield out
+      yield bentoml.io.SSE(out).marshal()
 
 
 @registry(alias='pt')

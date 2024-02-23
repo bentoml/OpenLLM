@@ -11,7 +11,7 @@ if t.TYPE_CHECKING:
   from collections import _odict_items, _odict_keys, _odict_values
 
   import openllm, openllm_core
-  from openllm_core._typing_compat import LiteralString, M, T
+  from openllm_core._typing_compat import LiteralString
 
   ConfigKeysView = _odict_keys[str, type[openllm_core.LLMConfig]]
   ConfigValuesView = _odict_values[str, type[openllm_core.LLMConfig]]
@@ -42,6 +42,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
   ])
 )
 CONFIG_TO_ALIAS_NAMES = OrderedDict({v: k for k, v in CONFIG_MAPPING_NAMES.items()})
+M = t.TypeVar('M')
+T = t.TypeVar('T')
 
 
 class _LazyConfigMapping(OrderedDictType, ReprMixin):
@@ -162,6 +164,8 @@ class AutoConfig:
       f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
     )
 
+  _architecture_mappings = {it().metadata_config['architecture']: k for k, it in CONFIG_MAPPING.items()}
+
   @classmethod
   def from_llm(cls, llm: openllm.LLM[M, T], **attrs: t.Any) -> openllm_core.LLMConfig:
     config_cls = llm.config.__class__.__name__
@@ -176,9 +180,9 @@ class AutoConfig:
     if not is_bentoml_available():
       raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
 
-    config_cls = bentomodel.info.metadata['_config_cls']
-    if config_cls in CONFIG_TO_ALIAS_NAMES:
-      return cls.for_model(CONFIG_TO_ALIAS_NAMES[config_cls]).model_construct_env(**attrs)
+    arch = bentomodel.info.metadata['architectures'][0]
+    if arch in cls._architecture_mappings:
+      return cls.for_model(cls._architecture_mappings[arch]).model_construct_env(**attrs)
     raise ValueError(
       f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )

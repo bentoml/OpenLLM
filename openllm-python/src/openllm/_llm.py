@@ -10,8 +10,6 @@ from openllm_core._typing_compat import (
   LiteralDtype,
   LiteralQuantise,
   LiteralSerialisation,
-  M,
-  T,
 )
 from openllm.serialisation import _make_tag_components
 from openllm_core.exceptions import MissingDependencyError
@@ -44,6 +42,9 @@ logger = logging.getLogger(__name__)
 _AdapterTuple: type[AdapterTuple] = codegen.make_attr_tuple_class('AdapterTuple', ['adapter_id', 'name', 'config'])
 ResolvedAdapterMap = t.Dict[AdapterType, t.Dict[str, t.Tuple['PeftConfig', str]]]
 CONFIG_FILE_NAME = 'config.json'
+
+M = t.TypeVar('M')
+T = t.TypeVar('T')
 
 
 @attr.define(slots=False, repr=False, init=False)
@@ -472,67 +473,44 @@ class LLM(t.Generic[M, T]):
   @property
   def model(self):
     if self.__llm_model__ is None:
-      model = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
-      # If OOM, then it is probably you don't have enough VRAM to run this model.
-      if self.__llm_backend__ == 'pt':
-        import torch
-
-        loaded_in_kbit = (
-          getattr(model, 'is_loaded_in_8bit', False)
-          or getattr(model, 'is_loaded_in_4bit', False)
-          or getattr(model, 'is_quantized', False)
-        )
-        if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
-          try:
-            model = model.to('cuda')
-          except Exception as err:
-            raise OpenLLMException(f'Failed to load model into GPU: {err}.\n') from err
-        if self.has_adapters:
-          logger.debug('Applying the following adapters: %s', self.adapter_map)
-          for adapter_dict in self.adapter_map.values():
-            for adapter_name, (peft_config, peft_model_id) in adapter_dict.items():
-              model.load_adapter(peft_model_id, adapter_name, peft_config=peft_config)
-      self.__llm_model__ = model
+      self.__llm_model__ = openllm.serialisation.load_model(self, *self._model_decls, **self._model_attrs)
     return self.__llm_model__
-
-  @functools.cached_property
-  def _architecture_mappings(self):
-    return {it().metadata_config['architecture']: k for k, it in openllm_core.CONFIG_MAPPING.items()}
 
   @property
   def config(self):
-    if self._local:
-      config_file = os.path.join(self.model_id, CONFIG_FILE_NAME)
-    else:
-      try:
-        config_file = self.bentomodel.path_of(CONFIG_FILE_NAME)
-      except OpenLLMException as err:
-        if not is_transformers_available():
-          raise MissingDependencyError(
-            "Requires 'transformers' to be available. Do 'pip install transformers'"
-          ) from err
-        from transformers.utils import cached_file
-
-        try:
-          config_file = cached_file(self.model_id, CONFIG_FILE_NAME)
-        except Exception as err:
-          raise ValueError(
-            "Failed to determine architecture from 'config.json'. If this is a gated model, make sure to pass in HUGGING_FACE_HUB_TOKEN"
-          ) from err
-    if not os.path.exists(config_file):
-      raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
-    with open(config_file, 'r', encoding='utf-8') as f:
-      loaded_config = orjson.loads(f.read())
-
-    if 'architectures' in loaded_config:
-      for architecture in loaded_config['architectures']:
-        if architecture in self._architecture_mappings:
-          self.__llm_config__ = openllm_core.AutoConfig.for_model(
-            self._architecture_mappings[architecture]
-          ).model_construct_env()
-          break
+    if self.__llm_config__ is None:
+      if self._local:
+        config_file = os.path.join(self.model_id, CONFIG_FILE_NAME)
       else:
-        raise ValueError(f"Failed to find architecture from 'config.json' (config_json_path={config_file})")
+        try:
+          config_file = self.bentomodel.path_of(CONFIG_FILE_NAME)
+        except OpenLLMException as err:
+          if not is_transformers_available():
+            raise MissingDependencyError(
+              "Requires 'transformers' to be available. Do 'pip install transformers'"
+            ) from err
+          from transformers.utils import cached_file
+
+          try:
+            config_file = cached_file(self.model_id, CONFIG_FILE_NAME)
+          except Exception as err:
+            raise ValueError(
+              "Failed to determine architecture from 'config.json'. If this is a gated model, make sure to pass in HUGGING_FACE_HUB_TOKEN"
+            ) from err
+      if not os.path.exists(config_file):
+        raise ValueError(f"Failed to find 'config.json' (config_json_path={config_file})")
+      with open(config_file, 'r', encoding='utf-8') as f:
+        loaded_config = orjson.loads(f.read())
+
+      if 'architectures' in loaded_config:
+        for architecture in loaded_config['architectures']:
+          if architecture in self._architecture_mappings:
+            self.__llm_config__ = openllm_core.AutoConfig.for_model(
+              self._architecture_mappings[architecture]
+            ).model_construct_env()
+            break
+        else:
+          raise ValueError(f"Failed to find architecture from 'config.json' (config_json_path={config_file})")
     return self.__llm_config__
 
 

@@ -16,7 +16,7 @@ TOKENIZER_ATTRS = {'padding_side': 'left', 'truncation_side': 'left'}
 
 
 @functools.lru_cache(maxsize=1)
-def _has_gpus() -> bool:
+def has_gpus() -> bool:
   try:
     from cuda import cuda
 
@@ -73,7 +73,7 @@ def import_model(
   **attrs,
 ):
   _base_attrs = {
-    'device_map': 'auto' if _has_gpus() else None,
+    'device_map': 'auto' if has_gpus() else None,
     'safe_serialization': _serialisation == 'safetensors',
     'torch_dtype': _torch_dtype(_dtype, _model_id, trust_remote_code),
   }

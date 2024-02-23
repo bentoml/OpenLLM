@@ -1,12 +1,11 @@
 from __future__ import annotations
-import importlib, logging, inspect, openllm, typing as t
+import importlib, logging, inspect, typing as t
 from openllm_core._typing_compat import ParamSpec, Concatenate, TypeGuard
 from openllm_core.exceptions import OpenLLMException
 from openllm_core.utils import (
   apply,
   first_not_none,
   generate_hash_from_file,
-  getenv,
   resolve_filepath,
   validate_is_path,
   normalise_model_name,
@@ -36,64 +35,6 @@ def _make_tag_components(model_id: str, model_version: t.Optional[str]) -> t.Tup
     model_id = resolve_filepath(model_id)
     model_version = first_not_none(model_version, default=generate_hash_from_file(model_id))
   return normalise_model_name(model_id), model_version
-
-
-def prepare_model(
-  model_id,
-  /,
-  *decls,
-  bentomodel_tag=None,
-  bentomodel_version=None,
-  quantize=None,
-  quantization_config=None,
-  backend=None,
-  dtype='auto',
-  serialisation='safetensors',
-  trust_remote_code=False,
-  low_cpu_mem_usage=True,
-  **attrs,
-):
-  try:
-    import bentoml
-  except ImportError:
-    raise OpenLLMException('BentoML is not installed. Make sure BentoML is installed correctly.') from None
-
-  _local = False
-  if validate_is_path(model_id):
-    model_id, _local = resolve_filepath(model_id), True
-  backend = getenv('backend', default=backend)
-  if backend is None:
-    backend = 'vllm'
-  dtype = getenv('dtype', default=dtype, var=['TORCH_DTYPE'])
-  if dtype is None:
-    logger.warning('Setting dtype to auto. Inferring from %s %s.', 'remote' if not _local else 'local', model_id)
-    dtype = 'auto'
-  quantize = getenv('quantize', default=quantize, var=['QUANITSE'])
-  attrs.update({'low_cpu_mem_usage': low_cpu_mem_usage})
-  if bentomodel_tag is None:
-    model_tag, model_version = _make_tag_components(model_id, bentomodel_version)
-    if bentomodel_version:
-      model_version = bentomodel_version
-    bentomodel_tag = bentoml.Tag.from_taglike(f'{model_tag}:{model_version}' if model_version else model_tag)
-  else:
-    bentomodel_tag = bentoml.Tag.from_taglike(bentomodel_tag)
-
-  try:
-    return bentoml.models.get(bentomodel_tag)
-  except bentoml.exceptions.NotFound:
-    return openllm.serialisation.import_model(
-      *decls,
-      _model_id=model_id,
-      _bentomodel_tag=bentomodel_tag,
-      _backend=backend,
-      _local=_local,
-      _quantization_config=quantization_config,
-      _quantize=quantize,
-      _dtype=dtype,
-      _serialisation=serialisation,
-      trust_remote_code=trust_remote_code,
-      **attrs,
-    )
 
 
 def load_tokenizer(llm, **tokenizer_attrs):
