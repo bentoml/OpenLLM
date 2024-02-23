@@ -461,7 +461,7 @@ def start_command(
     'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
     'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
     'OPENLLM_SERIALIZATION': serialisation,
-    'OPENLLM_CONFIG': config.model_dump_json(flatten=True).decode(),
+    'OPENLLM_CONFIG': config.model_dump_json(),
     'BACKEND': backend,
     'DTYPE': dtype,
     'TRUST_REMOTE_CODE': str(trust_remote_code),

@@ -250,11 +250,13 @@ async def chat_completions(req, llm):
       final_result = res
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
-    final_result = final_result.with_options(
-      outputs=[
-        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
-        for output in final_result.outputs
-      ]
+    final_result = final_result.model_copy(
+      update=dict(
+        outputs=[
+          output.model_copy(update=dict(text=''.join(texts[output.index]), token_ids=token_ids[output.index]))
+          for output in final_result.outputs
+        ]
+      )
     )
 
     role = get_role()
@@ -401,11 +403,13 @@ async def completions(req, llm):
       final_result = res
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
-    final_result = final_result.with_options(
-      outputs=[
-        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
-        for output in final_result.outputs
-      ]
+    final_result = final_result.model_copy(
+      update=dict(
+        outputs=[
+          output.model_copy(update=dict(text=''.join(texts[output.index]), token_ids=token_ids[output.index]))
+          for output in final_result.outputs
+        ]
+      )
     )
 
     choices = []

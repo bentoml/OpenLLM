@@ -488,6 +488,11 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       raise ForbiddenAttributeError(
         f"'{item}' is a reserved namespace for {self.__class__} and should not be access nor modified."
       )
+
+    # backward compatible
+    if item == 'max_new_tokens':
+      item = 'max_tokens'
+
     if self.model_extra and item in self.model_extra:
       return self.model_extra[item]
     elif item in self.metadata_config:
@@ -496,8 +501,13 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       return getattr(self, item)
     elif hasattr(self.generation_config, item):
       return getattr(self.generation_config, item)
-    else:
-      raise KeyError(item)
+    elif item == 'start_name':  # backward compatible
+      from .config.configuration_auto import CONFIG_TO_ALIAS_NAMES
+
+      if (cls_name := self.__class__.__name__) in CONFIG_TO_ALIAS_NAMES:
+        return CONFIG_TO_ALIAS_NAMES[cls_name]
+
+    raise KeyError(item)
 
   def __contains__(self, item: LiteralString) -> bool:
     try:
@@ -512,7 +522,6 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
 
   @classmethod
   def model_construct_env(cls, **attrs: t.Any) -> Self:  # All LLMConfig init should start from here.
-    attrs = {k: v for k, v in attrs.items() if v is not None}
     env_json_string = os.environ.get('OPENLLM_CONFIG', None)
 
     config_from_env: DictStrAny = {}
@@ -530,8 +539,8 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     elif 'llm_config' in attrs:  # NOTE: this is the new key
       generation_config = attrs.pop('llm_config')
 
-    config_from_env.update({**attrs, **generation_config})
-    return cls.model_construct(**config_from_env)
+    config_from_env.update({**generation_config, **attrs})
+    return cls.model_construct(generation_config=GenerationConfig.model_construct(**config_from_env))
 
   def inference_options(self, llm: openllm.LLM, backend: str | None = None) -> tuple[Self, t.Any]:
     backend = backend if backend is not None else llm.__llm_backend__

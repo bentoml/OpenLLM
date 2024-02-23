@@ -1,6 +1,6 @@
 from __future__ import annotations
 import functools, logging, os, warnings, typing as t
-import attr, inflection, orjson, bentoml, openllm, openllm_core
+import attr, orjson, bentoml, openllm, openllm_core
 from openllm_core._schemas import GenerationOutput
 from openllm_core._typing_compat import (
   AdapterMap,
@@ -13,16 +13,16 @@ from openllm_core._typing_compat import (
   M,
   T,
 )
+from openllm.serialisation import _make_tag_components
 from openllm_core.exceptions import MissingDependencyError
 from openllm_core.utils import (
   DEBUG,
-  apply,
   check_bool_env,
   codegen,
   first_not_none,
+  normalise_model_name,
   flatten_attrs,
   gen_random_uuid,
-  generate_hash_from_file,
   getenv,
   is_peft_available,
   is_transformers_available,
@@ -48,25 +48,42 @@ CONFIG_FILE_NAME = 'config.json'
 
 @attr.define(slots=False, repr=False, init=False)
 class LLM(t.Generic[M, T]):
-  async def generate(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
+  async def generate(
+    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
+  ):
     if adapter_name is not None and self.__llm_backend__ != 'pt':
       raise NotImplementedError(f'Adapter is not supported with {self.__llm_backend__}.')
+    if stop is not None:
+      attrs.update({'stop': stop})
+    if stop_token_ids is not None:
+      attrs.update({'stop_token_ids': stop_token_ids})
     config = self.config.model_construct_env(**attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for result in self.generate_iterator(
-      prompt, prompt_token_ids, stop, stop_token_ids, request_id, adapter_name, **config.model_dump(flatten=True)
+      prompt,
+      prompt_token_ids=prompt_token_ids,
+      request_id=request_id,
+      adapter_name=adapter_name,
+      **config.model_dump(),
     ):
       for output in result.outputs:
         texts[output.index].append(output.text)
         token_ids[output.index].extend(output.token_ids)
     if (final_result := result) is None:
       raise RuntimeError('No result is returned.')
-    return final_result.with_options(
-      prompt=prompt,
-      outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs],
+    return final_result.model_copy(
+      update=dict(
+        prompt=prompt,
+        outputs=[
+          output.model_copy(update=dict(text=''.join(texts[output.index]), token_ids=token_ids[output.index]))
+          for output in final_result.outputs
+        ],
+      )
     )
 
-  async def generate_iterator(self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs):
+  async def generate_iterator(
+    self, prompt, prompt_token_ids=None, stop=None, stop_token_ids=None, request_id=None, adapter_name=None, **attrs
+  ):
     from bentoml._internal.runner.runner_handle import DummyRunnerHandle
 
     if adapter_name is not None and self.__llm_backend__ != 'pt':
@@ -77,6 +94,7 @@ class LLM(t.Generic[M, T]):
         raise RuntimeError('Runner client failed to set up correctly.')
       else:
         self.runner.init_local(quiet=True)
+
     config = self.config.model_construct_env(**attrs)
 
     stop_token_ids = stop_token_ids or []
@@ -94,36 +112,32 @@ class LLM(t.Generic[M, T]):
       stop = {stop}
     else:
       stop = set(stop)
-    for tid in stop_token_ids:
-      if tid:
-        stop.add(self.tokenizer.decode(tid))
-
-    if prompt_token_ids is None:
-      if prompt is None:
-        raise ValueError('Either prompt or prompt_token_ids must be specified.')
-      prompt_token_ids = self.tokenizer.encode(prompt)
 
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
+
+    config = config.model_construct_env(stop=list(stop), stop_token_ids=stop_token_ids)
+
     try:
-      generator = self.runner.generate_iterator.async_stream(
-        prompt_token_ids, request_id, stop=list(stop), adapter_name=adapter_name, **config.model_dump(flatten=True)
+      generator = bentoml.io.SSE.from_iterator(
+        self.runner.generate_iterator.async_stream(
+          prompt, request_id, prompt_token_ids=prompt_token_ids, adapter_name=adapter_name, **config.model_dump()
+        )
       )
-      generator = bentoml.io.SSE.from_iterator(generator)
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
     try:
       async for out in generator:
         out = out.data
-        generated = GenerationOutput.from_runner(out).with_options(prompt=prompt)
+        generated = GenerationOutput.from_runner(out).model_copy(update=dict(prompt=prompt))
         delta_outputs = [None] * len(generated.outputs)
         for output in generated.outputs:
           i = output.index
           delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
           previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
-          delta_outputs[i] = output.with_options(text=delta_text, token_ids=delta_tokens)
-        yield generated.with_options(outputs=delta_outputs)
+          delta_outputs[i] = output.model_copy(update=dict(text=delta_text, token_ids=delta_tokens))
+        yield generated.model_copy(update=dict(outputs=delta_outputs))
     except Exception as err:
       raise RuntimeError(f'Exception caught during generation: {err}') from err
 
@@ -131,7 +145,9 @@ class LLM(t.Generic[M, T]):
   # The below are mainly for internal implementation that you don't have to worry about.
   _model_id: str
   _revision: t.Optional[str]  #
-  _quantization_config: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]]
+  _quantization_config: t.Optional[
+    t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]
+  ]
   _quantise: t.Optional[LiteralQuantise]
   _model_decls: t.Tuple[t.Any, ...]
   __model_attrs: t.Dict[str, t.Any]  #
@@ -147,7 +163,9 @@ class LLM(t.Generic[M, T]):
   __llm_torch_dtype__: 'torch.dtype' = None
   __llm_config__: t.Optional[LLMConfig] = None
   __llm_backend__: LiteralBackend = None
-  __llm_quantization_config__: t.Optional[t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]] = None
+  __llm_quantization_config__: t.Optional[
+    t.Union[transformers.BitsAndBytesConfig, transformers.GPTQConfig, transformers.AwqConfig]
+  ] = None
   __llm_runner__: t.Optional[Runner[M, T]] = None
   __llm_model__: t.Optional[M] = None
   __llm_tokenizer__: t.Optional[T] = None
@@ -178,7 +196,9 @@ class LLM(t.Generic[M, T]):
     torch_dtype = attrs.pop('torch_dtype', None)  # backward compatible
     if torch_dtype is not None:
       warnings.warn(
-        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.', DeprecationWarning, stacklevel=3
+        'The argument "torch_dtype" is deprecated and will be removed in the future. Please use "dtype" instead.',
+        DeprecationWarning,
+        stacklevel=3,
       )
       dtype = torch_dtype
     _local = False
@@ -196,7 +216,7 @@ class LLM(t.Generic[M, T]):
     # parsing tokenizer and model kwargs, as the hierarchy is param pass > default
     model_attrs, tokenizer_attrs = flatten_attrs(**attrs)
     if model_tag is None:
-      model_tag, model_version = self._make_tag_components(model_id, model_version, backend=backend)
+      model_tag, model_version = _make_tag_components(model_id, model_version)
       if model_version:
         model_tag = f'{model_tag}:{model_version}'
 
@@ -234,20 +254,12 @@ class LLM(t.Generic[M, T]):
 
   class _Quantise:
     @staticmethod
-    def pt(llm: LLM, quantise=None): return quantise
-    @staticmethod
-    def vllm(llm: LLM, quantise=None): return quantise
+    def pt(llm: LLM, quantise=None):
+      return quantise
 
-  @apply(lambda val: tuple(str.lower(i) if i else i for i in val))
-  def _make_tag_components(self, model_id: str, model_version: str | None, backend: str) -> tuple[str, str | None]:
-    model_id, *maybe_revision = model_id.rsplit(':')
-    if len(maybe_revision) > 0:
-      if model_version is not None:
-        logger.warning("revision is specified (%s). 'model_version=%s' will be ignored.", maybe_revision[0], model_version)
-      model_version = maybe_revision[0]
-    if validate_is_path(model_id):
-      model_id, model_version = resolve_filepath(model_id), first_not_none(model_version, default=generate_hash_from_file(model_id))
-    return f'{backend}-{normalise_model_name(model_id)}', model_version
+    @staticmethod
+    def vllm(llm: LLM, quantise=None):
+      return quantise
 
   @functools.cached_property
   def _has_gpus(self):
@@ -255,9 +267,11 @@ class LLM(t.Generic[M, T]):
       from cuda import cuda
 
       err, *_ = cuda.cuInit(0)
-      if err != cuda.CUresult.CUDA_SUCCESS: raise RuntimeError('Failed to initialise CUDA runtime binding.')
+      if err != cuda.CUresult.CUDA_SUCCESS:
+        raise RuntimeError('Failed to initialise CUDA runtime binding.')
       err, _ = cuda.cuDeviceGetCount()
-      if err != cuda.CUresult.CUDA_SUCCESS: raise RuntimeError('Failed to get CUDA device count.')
+      if err != cuda.CUresult.CUDA_SUCCESS:
+        raise RuntimeError('Failed to get CUDA device count.')
       return True
     except (ImportError, RuntimeError):
       return False
@@ -268,16 +282,13 @@ class LLM(t.Generic[M, T]):
 
     _map = _torch_dtype_mapping()
     if not isinstance(self.__llm_torch_dtype__, torch.dtype):
-      try:
-        hf_config = transformers.AutoConfig.from_pretrained(self.bentomodel.path, trust_remote_code=self.trust_remote_code)
-      except OpenLLMException:
-        hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
-      config_dtype = getattr(hf_config, 'torch_dtype', None)
-      if config_dtype is None:
-        config_dtype = torch.float32
+      hf_config = transformers.AutoConfig.from_pretrained(self.model_id, trust_remote_code=self.trust_remote_code)
+      config_dtype = getattr(hf_config, 'torch_dtype', torch.float32)
       if self.__llm_dtype__ == 'auto':
-        if config_dtype == torch.float32:
+        if torch.cuda.is_available() and config_dtype is torch.float32:
           torch_dtype = torch.float16
+        elif not torch.cuda.is_available():
+          torch_dtype = torch.float32
         else:
           torch_dtype = config_dtype
       else:
@@ -300,7 +311,9 @@ class LLM(t.Generic[M, T]):
     return {**self.import_kwargs[1], **self.__tokenizer_attrs}
 
   def _cascade_backend(self) -> LiteralBackend:
-    logger.warning('It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.')
+    logger.warning(
+      'It is recommended to specify the backend explicitly. Cascading backend might lead to unexpected behaviour.'
+    )
     if self._has_gpus and is_vllm_available():
       return 'vllm'
     else:
@@ -330,7 +343,10 @@ class LLM(t.Generic[M, T]):
 
   @property
   def import_kwargs(self):
-    return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {'padding_side': 'left', 'truncation_side': 'left'}
+    return {'device_map': 'auto' if self._has_gpus else None, 'torch_dtype': self._torch_dtype}, {
+      'padding_side': 'left',
+      'truncation_side': 'left',
+    }
 
   @property
   def trust_remote_code(self):
@@ -353,7 +369,7 @@ class LLM(t.Generic[M, T]):
 
   @property
   def bentomodel(self):
-    return openllm.serialisation.get(self)
+    return bentoml.models.get(self.tag)
 
   @property
   def quantization_config(self):
@@ -363,7 +379,9 @@ class LLM(t.Generic[M, T]):
       if self._quantization_config is not None:
         self.__llm_quantization_config__ = self._quantization_config
       elif self._quantise is not None:
-        self.__llm_quantization_config__, self._model_attrs = infer_quantisation_config(self, self._quantise, **self._model_attrs)
+        self.__llm_quantization_config__, self._model_attrs = infer_quantisation_config(
+          self, self._quantise, **self._model_attrs
+        )
       else:
         raise ValueError("Either 'quantization_config' or 'quantise' must be specified.")
     return self.__llm_quantization_config__
@@ -391,7 +409,7 @@ class LLM(t.Generic[M, T]):
   @property
   def identifying_params(self):
     return {
-      'configuration': self.config.model_dump_json().decode(),
+      'configuration': self.config.model_dump_json(),
       'model_ids': orjson.dumps(self.config['model_ids']).decode(),
       'model_id': self.model_id,
     }
@@ -418,7 +436,11 @@ class LLM(t.Generic[M, T]):
 
     model = get_peft_model(
       prepare_model_for_kbit_training(self.model, use_gradient_checkpointing=use_gradient_checking),
-      self.config['fine_tune_strategies'].get(adapter_type, self.config.make_fine_tune_config(adapter_type)).train().with_config(**attrs).build(),
+      self.config['fine_tune_strategies']
+      .get(adapter_type, self.config.make_fine_tune_config(adapter_type))
+      .train()
+      .with_config(**attrs)
+      .build(),
     )
     if DEBUG:
       model.print_trainable_parameters()
@@ -438,7 +460,10 @@ class LLM(t.Generic[M, T]):
     if self.__llm_adapter_map__ is None:
       _map: ResolvedAdapterMap = {k: {} for k in self._adapter_map}
       for adapter_type, adapter_tuple in self._adapter_map.items():
-        base = first_not_none(self.config['fine_tune_strategies'].get(adapter_type), default=self.config.make_fine_tune_config(adapter_type))
+        base = first_not_none(
+          self.config['fine_tune_strategies'].get(adapter_type),
+          default=self.config.make_fine_tune_config(adapter_type),
+        )
         for adapter in adapter_tuple:
           _map[adapter_type][adapter.name] = (base.with_config(**adapter.config).build(), adapter.adapter_id)
       self.__llm_adapter_map__ = _map
@@ -453,7 +478,9 @@ class LLM(t.Generic[M, T]):
         import torch
 
         loaded_in_kbit = (
-          getattr(model, 'is_loaded_in_8bit', False) or getattr(model, 'is_loaded_in_4bit', False) or getattr(model, 'is_quantized', False)
+          getattr(model, 'is_loaded_in_8bit', False)
+          or getattr(model, 'is_loaded_in_4bit', False)
+          or getattr(model, 'is_quantized', False)
         )
         if torch.cuda.is_available() and torch.cuda.device_count() == 1 and not loaded_in_kbit:
           try:
@@ -474,7 +501,6 @@ class LLM(t.Generic[M, T]):
 
   @property
   def config(self):
-    import transformers
     if self._local:
       config_file = os.path.join(self.model_id, CONFIG_FILE_NAME)
     else:
@@ -482,7 +508,9 @@ class LLM(t.Generic[M, T]):
         config_file = self.bentomodel.path_of(CONFIG_FILE_NAME)
       except OpenLLMException as err:
         if not is_transformers_available():
-          raise MissingDependencyError("Requires 'transformers' to be available. Do 'pip install transformers'") from err
+          raise MissingDependencyError(
+            "Requires 'transformers' to be available. Do 'pip install transformers'"
+          ) from err
         from transformers.utils import cached_file
 
         try:
@@ -499,7 +527,9 @@ class LLM(t.Generic[M, T]):
     if 'architectures' in loaded_config:
       for architecture in loaded_config['architectures']:
         if architecture in self._architecture_mappings:
-          self.__llm_config__ = openllm_core.AutoConfig.for_model(self._architecture_mappings[architecture]).model_construct_env(**self._model_attrs)
+          self.__llm_config__ = openllm_core.AutoConfig.for_model(
+            self._architecture_mappings[architecture]
+          ).model_construct_env()
           break
       else:
         raise ValueError(f"Failed to find architecture from 'config.json' (config_json_path={config_file})")
@@ -519,13 +549,11 @@ def _torch_dtype_mapping() -> dict[str, torch.dtype]:
   }
 
 
-def normalise_model_name(name: str) -> str:
-  return os.path.basename(resolve_filepath(name)) if validate_is_path(name) else inflection.dasherize(name.replace('/', '--'))
-
-
 def convert_peft_config_type(adapter_map: dict[str, str]) -> AdapterMap:
   if not is_peft_available():
-    raise RuntimeError("LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'")
+    raise RuntimeError(
+      "LoRA adapter requires 'peft' to be installed. Make sure to do 'pip install \"openllm[fine-tune]\"'"
+    )
   from huggingface_hub import hf_hub_download
 
   resolved: AdapterMap = {}

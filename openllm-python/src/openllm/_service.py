@@ -72,7 +72,7 @@ class LLMService:
       model_name=self.llm.config['model_name'],
       backend=self.llm.__llm_backend__,
       model_id=self.llm.model_id,
-      configuration=self.llm.config.model_dump_json().decode(),
+      configuration=self.llm.config.model_dump_json(),
     )
 
   @openllm.utils.api(route='/v1/helpers/messages')

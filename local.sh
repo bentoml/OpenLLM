@@ -5,6 +5,17 @@ set -e
 GIT_ROOT=$(git rev-parse --show-toplevel)
 cd "$GIT_ROOT" || exit 1
 
+# check if uv is installed
+if ! command -v uv > /dev/null 2>&1; then
+  echo "Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+# check if there is a $GIT_ROOT/.venv directory, if not, create it
+if [ ! -d "$GIT_ROOT/.venv" ]; then
+  uv venv
+fi
+
 print_usage() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
@@ -27,7 +38,7 @@ split_csv() {
 ensure_tomlkit() {
   if ! python -c "import tomlkit" > /dev/null 2>&1; then
     echo "Installing tomlkit..."
-    pip install tomlkit
+    uv pip install tomlkit
   fi
 }
 
@@ -98,19 +109,11 @@ else
   EXTENSIONS_STR=${EXTENSIONS_STR// /,} # Replace spaces with commas
 fi
 
-# check if uv is installed
-if ! command -v uv > /dev/null 2>&1; then
-  echo "Installing uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-fi
-
-# check if there is a $GIT_ROOT/.venv directory, if not, create it
-if [ ! -d "$GIT_ROOT/.venv" ]; then
-  uv venv
-fi
-
 uv pip install --editable "$GIT_ROOT/openllm-python$EXTENSIONS_STR"
-uv pip install --editable "$GIT_ROOT/openllm-core"
 uv pip install --editable "$GIT_ROOT/openllm-client"
+uv pip install --editable "$GIT_ROOT/openllm-core"
+
+echo "Instaling development dependencies..."
+uv pip install -r "$GIT_ROOT/tools/requirements.txt"
 
 bash "$GIT_ROOT/all.sh"

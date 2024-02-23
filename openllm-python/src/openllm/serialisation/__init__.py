@@ -157,7 +157,7 @@ def _make_dispatch_function(fn: str) -> t.Callable[Concatenate[LLM[M, T], P], Ty
 
 _extras = ['import_model', 'load_model']
 _import_structure = {'ggml', 'transformers', 'vllm', 'constants'}
-__all__ = ['prepare_model', 'load_tokenizer', *_extras, *_import_structure]
+__all__ = ['_make_tag_components', 'prepare_model', 'load_tokenizer', *_extras, *_import_structure]
 
 
 def __dir__() -> t.Sequence[str]:
