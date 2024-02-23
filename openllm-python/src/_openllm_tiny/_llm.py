@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect, orjson, bentoml, pydantic, openllm_core, traceback, openllm, functools, typing as t
-from openllm_core.utils import check_bool_env, normalise_model_name, LazyLoader, gen_random_uuid
+from openllm_core.utils import VersionInfo, check_bool_env, normalise_model_name, LazyLoader, gen_random_uuid
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput
 from _bentoml_sdk.service import ServiceConfig
@@ -15,7 +15,9 @@ Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
 
 class LLM(pydantic.BaseModel):
-  model_config = pydantic.ConfigDict(protected_namespaces=())
+  """openllm.LLM will understand how to run model efficiently depending on given hardware target choice."""
+
+  model_config = pydantic.ConfigDict(protected_namespaces=(), extra='allow')
 
   model_id: str
   tag: str
@@ -30,15 +32,15 @@ class LLM(pydantic.BaseModel):
   trust_remote_code: bool = pydantic.Field(default=False)
   service_config: t.Optional[ServiceConfig] = pydantic.Field(default_factory=dict)
 
-  def __init__(self, _internal: bool = False, **kwargs: t.Any) -> None:
+  _model: t.Any = pydantic.PrivateAttr()
+
+  def __init__(self, _: str = '', /, _internal: bool = False, **kwargs: t.Any) -> None:
     if not _internal:
       raise RuntimeError(
         'Cannot instantiate LLM directly in the new API. Make sure to use `openllm.LLM.from_model` instead.'
       )
     super().__init__(**kwargs)
 
-  def model_post_init(self, __context: t.Any) -> None:
-    self.bentomodel = bentoml.models.get(self.tag)
     path = self.bentomodel.path if self.local else self.model_id
 
     num_gpus, dev = 1, openllm.utils.device_count()
@@ -47,7 +49,7 @@ class LLM(pydantic.BaseModel):
     quantise = self.quantise if self.quantise and self.quantise in {'gptq', 'awq', 'squeezellm'} else None
     dtype = 'float16' if quantise == 'gptq' else self.dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
     try:
-      self.model = vllm.AsyncLLMEngine.from_engine_args(
+      self._model = vllm.AsyncLLMEngine.from_engine_args(
         vllm.AsyncEngineArgs(
           worker_use_ray=False,
           engine_use_ray=False,
@@ -68,6 +70,10 @@ class LLM(pydantic.BaseModel):
         f'Failed to initialise vLLMEngine due to the following error:\n{err}'
       ) from err
 
+  @property
+  def bentomodel(self) -> bentoml.Model:
+    return bentoml.models.get(self.tag)
+
   @classmethod
   def from_model(
     cls,
@@ -78,6 +84,13 @@ class LLM(pydantic.BaseModel):
     service_config: ServiceConfig | None = None,
   ) -> LLM:
     metadata = model.info.metadata
+
+    api_version = metadata.get('api_version')
+    if api_version is None or VersionInfo.from_version_string(api_version) < VersionInfo.from_version_string('0.5.0'):
+      raise RuntimeError(
+        'Model API version is too old. Please update the model. Make sure to run openllm prune -y --include-bentos'
+      )
+
     dtype = metadata['dtype']
     local = metadata['_local']
     model_id = metadata['model_id']
@@ -115,7 +128,7 @@ class LLM(pydantic.BaseModel):
 
   @functools.cached_property
   def tokenizer(self):
-    return self.model.tokenizer
+    return self._model.tokenizer
 
   async def generate_iterator(
     self,
@@ -156,7 +169,7 @@ class LLM(pydantic.BaseModel):
     })
 
     try:
-      generator = self.model.generate(
+      generator = self._model.generate(
         prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
       )
     except Exception as err:

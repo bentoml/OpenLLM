@@ -68,6 +68,7 @@ def prepare_model(
       'serialisation': serialisation,
       'architectures': config.architectures,
       'trust_remote_code': trust_remote_code,
+      'api_version': '0.5.0',
       **{
         f'{inflection.underscore(package)}_version': importlib.metadata.version(package)
         for package in {'openllm', 'openllm-core', 'openllm-client'}
