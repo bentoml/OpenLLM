@@ -154,7 +154,7 @@ PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.3.0']
+VLLM_DEPS = ['vllm==0.3.2']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls()['requirements']

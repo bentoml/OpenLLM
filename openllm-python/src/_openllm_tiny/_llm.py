@@ -15,8 +15,10 @@ Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
 
 class LLM(pydantic.BaseModel):
+  model_config = pydantic.ConfigDict(protected_namespaces=())
+
   model_id: str
-  tag: bentoml.Tag
+  tag: str
   revision: str
   local: bool
   serialisation: LiteralSerialisation
@@ -35,7 +37,7 @@ class LLM(pydantic.BaseModel):
       )
     super().__init__(**kwargs)
 
-  def model_post_init(self) -> None:
+  def model_post_init(self, __context: t.Any) -> None:
     self.bentomodel = bentoml.models.get(self.tag)
     path = self.bentomodel.path if self.local else self.model_id
 
@@ -86,7 +88,7 @@ class LLM(pydantic.BaseModel):
     return cls(
       _internal=True,
       model_id=model_id,
-      tag=model.tag,
+      tag=str(model.tag),
       local=local,
       quantise=metadata.get('quantize'),
       serialisation=metadata['serialisation'],
