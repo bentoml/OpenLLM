@@ -1,6 +1,6 @@
 import orjson, typing as t, openllm_core.utils as coreutils
 from openllm_core._typing_compat import LiteralSerialisation, LiteralQuantise
-from ._llm import Dtype
+from _openllm_tiny._llm import Dtype
 
 (
   model_id,
