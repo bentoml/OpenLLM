@@ -3,7 +3,7 @@ from __future__ import annotations
 import pydantic, inflection, orjson, typing as t
 from ._configuration import LLMConfig
 from .utils import gen_random_uuid
-from ._typing_compat import Required, TypedDict, TypeGuard, Unpack, LiteralString
+from ._typing_compat import Required, TypedDict, LiteralString
 
 if t.TYPE_CHECKING:
   import vllm
@@ -16,12 +16,11 @@ class MessageParam(TypedDict):
 
 class MessagesConverterInput(TypedDict):
   add_generation_prompt: bool
-  messages: t.List[t.Dict[str, t.Any]]
+  messages: t.List[MessageParam]
 
 
 class MetadataOutput(pydantic.BaseModel):
   model_config = pydantic.ConfigDict(protected_namespaces=())
-
   model_id: str
   timeout: int
   model_name: str
@@ -29,7 +28,7 @@ class MetadataOutput(pydantic.BaseModel):
   configuration: str
 
 
-class GenerationInputDict(TypedDict):
+class GenerationInputDict(TypedDict, total=False):
   prompt: t.Optional[str]
   prompt_token_ids: t.Optional[t.List[int]]
   llm_config: Required[t.Dict[str, t.Any]]
@@ -39,59 +38,75 @@ class GenerationInputDict(TypedDict):
   adapter_name: t.Optional[str]
 
 
-def stop_converter(data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
-  if data is None:
-    return None
-  if isinstance(data, str):
-    return [data]
-  else:
-    return list(data)
-
-
-def llm_converter(data: dict[str, t.Any] | LLMConfig, llm_config: type[LLMConfig]) -> TypeGuard[LLMConfig]:
-  if isinstance(data, LLMConfig):
-    return data
-  return llm_config(**data)
-
-
 class GenerationInput(pydantic.BaseModel):
   prompt: t.Optional[str] = pydantic.Field(default=None)
-  llm_config: t.Optional[LLMConfig] = pydantic.Field(default_factory=dict)
+  llm_config: LLMConfig = pydantic.Field(default_factory=dict)
   prompt_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
   stop: t.Optional[t.List[str]] = pydantic.Field(default=None)
   stop_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
   request_id: t.Optional[str] = pydantic.Field(default=None)
   adapter_name: t.Optional[str] = pydantic.Field(default=None)
 
+  _class_ref: t.ClassVar[type[LLMConfig]] = pydantic.PrivateAttr()
+
+  @pydantic.field_validator('llm_config')
   @classmethod
-  def from_dict(cls, **structured: Unpack[GenerationInputDict]) -> GenerationInput:
+  def llm_config_validator(cls, v: LLMConfig | dict[str, t.Any]) -> LLMConfig:
+    if isinstance(v, dict):
+      return cls._class_ref.model_construct_env(**v)
+    return v
+
+  @pydantic.field_validator('stop')
+  @classmethod
+  def stop_validator(cls, data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
+    if data is None:
+      return None
+    if isinstance(data, str):
+      return [data]
+    else:
+      return list(data)
+
+  @pydantic.model_serializer
+  def ser_model(self) -> dict[str, t.Any]:
+    flattened = self.llm_config.model_dump()
+    flattened.update({
+      'prompt': self.prompt,
+      'prompt_token_ids': self.prompt_token_ids,
+      'request_id': self.request_id,
+      'adapter_name': self.adapter_name,
+    })
+    if self.stop is not None:
+      flattened['stop'] = self.stop
+    if self.stop_token_ids is not None:
+      flattened['stop_token_ids'] = self.stop_token_ids
+    return flattened
+
+  def __init__(self, /, *, _internal: bool = False, **data: t.Any) -> None:
+    if not _internal:
+      raise RuntimeError(
+        f'Cannot instantiate GenerationInput directly. Use "{self.__class__.__qualname__}.from_dict" instead.'
+      )
+    super().__init__(**data)
+
+  @classmethod
+  def from_dict(cls, structured: GenerationInputDict) -> GenerationInput:
     if not hasattr(cls, '_class_ref'):
       raise ValueError(
         'Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_config".'
       )
+    filtered: dict[str, t.Any] = {k: v for k, v in structured.items() if v is not None}
+    llm_config: dict[str, t.Any] | None = filtered.pop('llm_config', None)
+    if llm_config is not None:
+      filtered['llm_config'] = cls._class_ref.model_construct_env(**llm_config)
 
-    return cls(
-      prompt=structured.get('prompt'),
-      prompt_token_ids=structured.get('prompt_token_ids'),
-      llm_config=llm_converter(structured.get('llm_config'), cls._class_ref),
-      stop=stop_converter(structured.get('stop')),
-      stop_token_ids=structured.get('stop_token_ids'),
-      request_id=structured.get('request_id'),
-      adapter_name=structured.get('adapter_name'),
-    )
-
-  if t.TYPE_CHECKING:
-    _class_ref: t.ClassVar[type[LLMConfig]]
+    return cls(_internal=True, **filtered)
 
   @classmethod
   def from_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
     klass = pydantic.create_model(
-      inflection.camelize(llm_config['model_name']) + 'GenerationInput',
-      __base__=(
-        cls,
-        pydantic.create_model(f'_{llm_config["model_name"]}_base', __config__={'extra': 'forbid', 'frozen': True}),
-      ),
-      llm_config=(LLMConfig, pydantic.Field(default=llm_config)),
+      inflection.camelize(llm_config['start_name']) + 'GenerationInput',
+      __base__=cls,
+      llm_config=(type(llm_config), llm_config),
     )
     klass._class_ref = llm_config.__class__
     return klass
@@ -121,26 +136,6 @@ class GenerationOutput(pydantic.BaseModel):
   prompt_token_ids: t.Optional[t.List[int]] = pydantic.Field(default=None)
   prompt_logprobs: t.Optional[PromptLogprobs] = pydantic.Field(default=None)
   request_id: str = pydantic.Field(default_factory=gen_random_uuid)
-
-  @classmethod
-  def examples(cls) -> dict[str, t.Any]:
-    return cls(
-      prompt='What is the meaning of life?',
-      finished=True,
-      outputs=[
-        CompletionChunk(
-          index=0,
-          text='\nLife is the process by which organisms, such as bacteria and cells, reproduce themselves and continue to exist.',
-          token_ids=[50118, 12116, 16, 5, 609, 30, 61, 28340, 6, 215, 25, 9436, 8, 4590, 6, 33942, 1235, 8, 535],
-          cumulative_logprob=0.0,
-          logprobs=None,
-          finish_reason='length',
-        )
-      ],
-      prompt_token_ids=[2, 2264, 16, 5, 3099, 9, 301, 116],
-      prompt_logprobs=None,
-      request_id=gen_random_uuid(),
-    ).model_dump()
 
   @staticmethod
   def _preprocess_sse_message(data: str) -> str:

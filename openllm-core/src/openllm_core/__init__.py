@@ -3,6 +3,7 @@ from ._configuration import GenerationConfig as GenerationConfig, LLMConfig as L
 from ._schemas import (
   GenerationInput as GenerationInput,
   GenerationOutput as GenerationOutput,
+  GenerationInputDict as GenerationInputDict,
   MetadataOutput as MetadataOutput,
   MessageParam as MessageParam,
 )

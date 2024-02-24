@@ -40,3 +40,9 @@ class Error(BaseException):
 
 class FineTuneStrategyNotSupportedError(OpenLLMException):
   """Raised when a fine-tune strategy is not supported for given LLM."""
+
+
+class ModelNotFound(OpenLLMException):
+  """Raised when a model is not found for given model_id."""
+
+  error_code = HTTPStatus.NOT_FOUND

@@ -1,6 +1,6 @@
 from typing import Optional, Any
 import bentoml
-from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralBackend
+from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation
 from ._llm import Dtype, LLM as LLM
 
 def prepare_model(
@@ -10,7 +10,6 @@ def prepare_model(
   bentomodel_tag: Optional[str] = ...,
   bentomodel_version: Optional[str] = ...,
   quantize: Optional[LiteralQuantise] = ...,
-  backend: Optional[LiteralBackend] = ...,
   dtype: Dtype = ...,
   serialisation: LiteralSerialisation = ...,
   trust_remote_code: bool = ...,

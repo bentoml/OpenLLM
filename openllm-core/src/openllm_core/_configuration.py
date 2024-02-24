@@ -3,18 +3,7 @@ import abc, inspect, logging, os, typing as t
 import inflection, orjson, pydantic
 from deepmerge.merger import Merger
 
-from ._typing_compat import (
-  DictStrAny,
-  ListStr,
-  LiteralBackend,
-  LiteralSerialisation,
-  LiteralString,
-  NotRequired,
-  Required,
-  Self,
-  TypedDict,
-  overload,
-)
+from ._typing_compat import DictStrAny, ListStr, LiteralSerialisation, NotRequired, Required, Self, TypedDict, overload
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
 from .utils import field_env_key, first_not_none, is_vllm_available, is_transformers_available
 
@@ -223,7 +212,6 @@ class GenerationConfig(pydantic.BaseModel):
     ge=0,
     description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.',
     alias='max_new_tokens',
-    alias_priority=1,
   )
   logprobs: t.Optional[int] = pydantic.Field(
     None, description='Number of log probabilities to return per output token.'
@@ -293,7 +281,6 @@ class ModelSettings(TypedDict, total=False):
   requirements: t.Optional[ListStr]
   # llm implementation specifics
   model_type: t.Literal['causal_lm', 'seq2seq_lm']
-  backend: t.Tuple[LiteralBackend, ...]
   timeout: int
 
   # the target generation_config class to be used.
@@ -304,7 +291,6 @@ _reserved_namespace = {'metadata_config'}
 
 _DEFAULT = ModelSettings(
   url='',  #
-  backend=('pt', 'vllm'),
   timeout=int(36e6),
   service_name='generated_service.py',  #
   model_type='causal_lm',
@@ -334,12 +320,13 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     super().__setattr__(attr, value)
 
   @classmethod
-  def __pydantic_init_subclass__(cls, *_: t.Any):
+  def __pydantic_init_subclass__(cls, **_: t.Any):
     if any(i not in cls.model_fields for i in ('metadata_config', 'generation_config')):
       raise TypeError(f'{cls.__name__} must have a `metadata_config` annd `generation_config` attribute.')
 
   def model_post_init(self, *_: t.Any):
-    self.metadata_config = ModelSettings(**{**_DEFAULT, **self.metadata_config})
+    _DEFAULT.update(self.metadata_config)
+    self.metadata_config = _DEFAULT
     self._done_initialisation = True
 
   # fmt: off
@@ -363,8 +350,6 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   def __getitem__(self, item: t.Literal['requirements']) -> t.Optional[ListStr]: ...
   @overload
   def __getitem__(self, item: t.Literal['model_type']) -> t.Literal['causal_lm', 'seq2seq_lm']: ...
-  @overload
-  def __getitem__(self, item: t.Literal['backend']) -> t.Tuple[LiteralBackend, ...]: ...
   @overload
   def __getitem__(self, item: t.Literal['timeout']) -> int: ...
   @overload
@@ -478,9 +463,15 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   def __getitem__(self, item: t.Literal['spaces_between_special_tokens']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['logits_processors']) -> t.Optional[t.List[LogitsProcessor]]: ...
+  @overload
+  def __getitem__(self, item: t.Literal['max_new_tokens']) -> int: ...
+  @overload
+  def __getitem__(self, item: t.Literal['start_name']) -> str: ...
+  @overload
+  def __getitem__(self, item: t.Literal['model_name']) -> str: ...
   # update-config-stubs.py: stop
   # fmt: on
-  def __getitem__(self, item: LiteralString | t.Any) -> t.Any:
+  def __getitem__(self, item: t.Any) -> t.Any:
     if item is None:
       raise TypeError(f"{self} doesn't understand how to index None.")
     item = inflection.underscore(item)
@@ -501,7 +492,7 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
       return getattr(self, item)
     elif hasattr(self.generation_config, item):
       return getattr(self.generation_config, item)
-    elif item == 'start_name':  # backward compatible
+    elif item in {'start_name', 'model_name'}:  # backward compatible
       from .config.configuration_auto import CONFIG_TO_ALIAS_NAMES
 
       if (cls_name := self.__class__.__name__) in CONFIG_TO_ALIAS_NAMES:
@@ -509,7 +500,7 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
 
     raise KeyError(item)
 
-  def __contains__(self, item: LiteralString) -> bool:
+  def __contains__(self, item: t.Any) -> bool:
     try:
       self[item]
       return True

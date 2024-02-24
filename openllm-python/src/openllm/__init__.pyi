@@ -28,7 +28,6 @@ from . import (
   serialisation as serialisation,
   utils as utils,
   entrypoints as entrypoints,
-  protocol as protocol,
 )
 from .serialisation import ggml as ggml, transformers as transformers, vllm as vllm
 from ._deprecated import Runner as Runner

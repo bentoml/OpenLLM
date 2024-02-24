@@ -162,7 +162,7 @@ def generate_hash_from_file(f, algorithm='sha1'):
   return str(getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest())
 
 
-def getenv(env, default=None, var=None):
+def getenv(env, default=None, var=None, return_type=t.Any):
   env_key = {env.upper(), f'OPENLLM_{env.upper()}'}
   if var is not None:
     env_key = set(var) | env_key
@@ -173,7 +173,7 @@ def getenv(env, default=None, var=None):
       logger.warning("Using '%s' environment is deprecated, use '%s' instead.", k.upper(), k[8:].upper())
     return _var
 
-  return first_not_none(*(callback(k) for k in env_key), default=default)
+  return t.cast(return_type, first_not_none(*(callback(k) for k in env_key), default=default))
 
 
 def field_env_key(key, suffix=None):

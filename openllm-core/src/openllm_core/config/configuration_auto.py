@@ -20,8 +20,27 @@ if t.TYPE_CHECKING:
 else:
   OrderedDictType = OrderedDict
 
+ModelType: t.TypeAlias = t.Literal[
+  'flan_t5',
+  'baichuan',
+  'chatglm',
+  'falcon',
+  'gpt_neox',
+  'dolly_v2',
+  'stablelm',
+  'llama',
+  'mpt',
+  'opt',
+  'phi',
+  'qwen',
+  'starcoder',
+  'mistral',
+  'mixtral',
+  'yi',
+]
+
 # NOTE: This is the entrypoint when adding new model config
-CONFIG_MAPPING_NAMES = OrderedDict(
+CONFIG_MAPPING_NAMES: OrderedDict[ModelType, str] = OrderedDict(
   sorted([
     ('flan_t5', 'FlanT5Config'),
     ('baichuan', 'BaichuanConfig'),
@@ -41,7 +60,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     ('yi', 'YiConfig'),
   ])
 )
-CONFIG_TO_ALIAS_NAMES = OrderedDict({v: k for k, v in CONFIG_MAPPING_NAMES.items()})
+CONFIG_TO_ALIAS_NAMES: OrderedDict[str, ModelType] = OrderedDict({v: k for k, v in CONFIG_MAPPING_NAMES.items()})
 M = t.TypeVar('M')
 T = t.TypeVar('T')
 
@@ -95,7 +114,7 @@ class _LazyConfigMapping(OrderedDictType, ReprMixin):
     self._extra_content[key] = value
 
 
-CONFIG_MAPPING: dict[LiteralString, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
+CONFIG_MAPPING: dict[ModelType, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 CONFIG_FILE_NAME = 'config.json'
 
 

@@ -240,40 +240,6 @@ You can specify any of the following Baichuan models via `openllm start`:
 - [baichuan-inc/baichuan2-13b-base](https://huggingface.co/baichuan-inc/baichuan2-13b-base)
 - [baichuan-inc/baichuan2-13b-chat](https://huggingface.co/baichuan-inc/baichuan2-13b-chat)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan2-7b-base --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan2-7b-base --backend pt
-```
-
 </details>
 
 <details>
@@ -320,40 +286,6 @@ You can specify any of the following ChatGLM models via `openllm start`:
 - [thudm/chatglm2-6b-int4](https://huggingface.co/thudm/chatglm2-6b-int4)
 - [thudm/chatglm3-6b](https://huggingface.co/thudm/chatglm3-6b)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b --backend pt
-```
-
 </details>
 
 <details>
@@ -366,7 +298,7 @@ TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b --backend pt
 Run the following command to quickly spin up a DollyV2 server:
 
 ```bash
-openllm start databricks/dolly-v2-3b
+TRUST_REMOTE_CODE=True openllm start databricks/dolly-v2-3b
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -389,40 +321,6 @@ You can specify any of the following DollyV2 models via `openllm start`:
 - [databricks/dolly-v2-7b](https://huggingface.co/databricks/dolly-v2-7b)
 - [databricks/dolly-v2-12b](https://huggingface.co/databricks/dolly-v2-12b)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start databricks/dolly-v2-3b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start databricks/dolly-v2-3b --backend pt
-```
-
 </details>
 
 <details>
@@ -443,7 +341,7 @@ openllm start databricks/dolly-v2-3b --backend pt
 Run the following command to quickly spin up a Falcon server:
 
 ```bash
-openllm start tiiuae/falcon-7b
+TRUST_REMOTE_CODE=True openllm start tiiuae/falcon-7b
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -467,40 +365,6 @@ You can specify any of the following Falcon models via `openllm start`:
 - [tiiuae/falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)
 - [tiiuae/falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start tiiuae/falcon-7b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start tiiuae/falcon-7b --backend pt
-```
-
 </details>
 
 <details>
@@ -513,7 +377,7 @@ openllm start tiiuae/falcon-7b --backend pt
 Run the following command to quickly spin up a FlanT5 server:
 
 ```bash
-openllm start google/flan-t5-large
+TRUST_REMOTE_CODE=True openllm start google/flan-t5-large
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -538,23 +402,6 @@ You can specify any of the following FlanT5 models via `openllm start`:
 - [google/flan-t5-xl](https://huggingface.co/google/flan-t5-xl)
 - [google/flan-t5-xxl](https://huggingface.co/google/flan-t5-xxl)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- PyTorch:
-
-
-```bash
-openllm start google/flan-t5-small --backend pt
-```
-
 </details>
 
 <details>
@@ -567,7 +414,7 @@ openllm start google/flan-t5-small --backend pt
 Run the following command to quickly spin up a GPTNeoX server:
 
 ```bash
-openllm start eleutherai/gpt-neox-20b
+TRUST_REMOTE_CODE=True openllm start eleutherai/gpt-neox-20b
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -588,40 +435,6 @@ You can specify any of the following GPTNeoX models via `openllm start`:
 
 - [eleutherai/gpt-neox-20b](https://huggingface.co/eleutherai/gpt-neox-20b)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start eleutherai/gpt-neox-20b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start eleutherai/gpt-neox-20b --backend pt
-```
-
 </details>
 
 <details>
@@ -631,10 +444,18 @@ openllm start eleutherai/gpt-neox-20b --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** Llama requires to install with:
+> ```bash
+> pip install "openllm[llama]"
+> ```
+
+
 Run the following command to quickly spin up a Llama server:
 
 ```bash
-openllm start NousResearch/llama-2-7b-hf
+TRUST_REMOTE_CODE=True openllm start NousResearch/llama-2-7b-hf
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -666,40 +487,6 @@ You can specify any of the following Llama models via `openllm start`:
 - [NousResearch/llama-2-13b-hf](https://huggingface.co/NousResearch/llama-2-13b-hf)
 - [NousResearch/llama-2-7b-hf](https://huggingface.co/NousResearch/llama-2-7b-hf)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start meta-llama/Llama-2-70b-chat-hf --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start meta-llama/Llama-2-70b-chat-hf --backend pt
-```
-
 </details>
 
 <details>
@@ -709,10 +496,18 @@ openllm start meta-llama/Llama-2-70b-chat-hf --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** Mistral requires to install with:
+> ```bash
+> pip install "openllm[mistral]"
+> ```
+
+
 Run the following command to quickly spin up a Mistral server:
 
 ```bash
-openllm start mistralai/Mistral-7B-Instruct-v0.1
+TRUST_REMOTE_CODE=True openllm start mistralai/Mistral-7B-Instruct-v0.1
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -737,40 +532,6 @@ You can specify any of the following Mistral models via `openllm start`:
 - [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 - [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start HuggingFaceH4/zephyr-7b-alpha --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
-```
-
 </details>
 
 <details>
@@ -780,10 +541,18 @@ openllm start HuggingFaceH4/zephyr-7b-alpha --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** Mixtral requires to install with:
+> ```bash
+> pip install "openllm[mixtral]"
+> ```
+
+
 Run the following command to quickly spin up a Mixtral server:
 
 ```bash
-openllm start mistralai/Mixtral-8x7B-Instruct-v0.1
+TRUST_REMOTE_CODE=True openllm start mistralai/Mixtral-8x7B-Instruct-v0.1
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -804,40 +573,6 @@ You can specify any of the following Mixtral models via `openllm start`:
 
 - [mistralai/Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1)
 - [mistralai/Mixtral-8x7B-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1)
-
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --backend pt
-```
 
 </details>
 
@@ -886,40 +621,6 @@ You can specify any of the following MPT models via `openllm start`:
 - [mosaicml/mpt-30b-instruct](https://huggingface.co/mosaicml/mpt-30b-instruct)
 - [mosaicml/mpt-30b-chat](https://huggingface.co/mosaicml/mpt-30b-chat)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
-```
-
 </details>
 
 <details>
@@ -928,6 +629,14 @@ TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** OPT requires to install with:
+> ```bash
+> pip install "openllm[opt]"
+> ```
+
 
 Run the following command to quickly spin up a OPT server:
 
@@ -958,40 +667,6 @@ You can specify any of the following OPT models via `openllm start`:
 - [facebook/opt-6.7b](https://huggingface.co/facebook/opt-6.7b)
 - [facebook/opt-66b](https://huggingface.co/facebook/opt-66b)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start facebook/opt-125m --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start facebook/opt-125m --backend pt
-```
-
 </details>
 
 <details>
@@ -1000,6 +675,14 @@ openllm start facebook/opt-125m --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** Phi requires to install with:
+> ```bash
+> pip install "openllm[phi]"
+> ```
+
 
 Run the following command to quickly spin up a Phi server:
 
@@ -1025,40 +708,6 @@ You can specify any of the following Phi models via `openllm start`:
 
 - [microsoft/phi-2](https://huggingface.co/microsoft/phi-2)
 - [microsoft/phi-1_5](https://huggingface.co/microsoft/phi-1_5)
-
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend pt
-```
 
 </details>
 
@@ -1106,40 +755,6 @@ You can specify any of the following Qwen models via `openllm start`:
 - [qwen/Qwen-14B-Chat-Int8](https://huggingface.co/qwen/Qwen-14B-Chat-Int8)
 - [qwen/Qwen-14B-Chat-Int4](https://huggingface.co/qwen/Qwen-14B-Chat-Int4)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start qwen/Qwen-7B-Chat --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start qwen/Qwen-7B-Chat --backend pt
-```
-
 </details>
 
 <details>
@@ -1149,10 +764,18 @@ TRUST_REMOTE_CODE=True openllm start qwen/Qwen-7B-Chat --backend pt
 
 ### Quickstart
 
+
+
+> **Note:** StableLM requires to install with:
+> ```bash
+> pip install "openllm[stablelm]"
+> ```
+
+
 Run the following command to quickly spin up a StableLM server:
 
 ```bash
-openllm start stabilityai/stablelm-tuned-alpha-3b
+TRUST_REMOTE_CODE=True openllm start stabilityai/stablelm-tuned-alpha-3b
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -1176,40 +799,6 @@ You can specify any of the following StableLM models via `openllm start`:
 - [stabilityai/stablelm-base-alpha-3b](https://huggingface.co/stabilityai/stablelm-base-alpha-3b)
 - [stabilityai/stablelm-base-alpha-7b](https://huggingface.co/stabilityai/stablelm-base-alpha-7b)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start stabilityai/stablelm-tuned-alpha-3b --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start stabilityai/stablelm-tuned-alpha-3b --backend pt
-```
-
 </details>
 
 <details>
@@ -1230,7 +819,7 @@ openllm start stabilityai/stablelm-tuned-alpha-3b --backend pt
 Run the following command to quickly spin up a StarCoder server:
 
 ```bash
-openllm start bigcode/starcoder
+TRUST_REMOTE_CODE=True openllm start bigcode/starcoder
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -1252,40 +841,6 @@ You can specify any of the following StarCoder models via `openllm start`:
 - [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
 - [bigcode/starcoderbase](https://huggingface.co/bigcode/starcoderbase)
 
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-openllm start bigcode/starcoder --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-openllm start bigcode/starcoder --backend pt
-```
-
 </details>
 
 <details>
@@ -1294,6 +849,14 @@ openllm start bigcode/starcoder --backend pt
 
 
 ### Quickstart
+
+
+
+> **Note:** Yi requires to install with:
+> ```bash
+> pip install "openllm[yi]"
+> ```
+
 
 Run the following command to quickly spin up a Yi server:
 
@@ -1321,40 +884,6 @@ You can specify any of the following Yi models via `openllm start`:
 - [01-ai/Yi-34B](https://huggingface.co/01-ai/Yi-34B)
 - [01-ai/Yi-6B-200K](https://huggingface.co/01-ai/Yi-6B-200K)
 - [01-ai/Yi-34B-200K](https://huggingface.co/01-ai/Yi-34B-200K)
-
-### Supported backends
-
-OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
-
-
-
-> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
-
-
-
-- vLLM (Recommended):
-
-
-To install vLLM, run `pip install "openllm[vllm]"`
-
-```bash
-TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B --backend vllm
-```
-
-
-> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
-
-
-
-> **Note:** Currently, adapters are yet to be supported with vLLM.
-
-
-- PyTorch:
-
-
-```bash
-TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B --backend pt
-```
 
 </details>
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import inspect, orjson, bentoml, pydantic, openllm_core, traceback, openllm, functools, typing as t
+import inspect, orjson, dataclasses, bentoml, pydantic, openllm_core, traceback, openllm, functools, typing as t
 from openllm_core.utils import VersionInfo, check_bool_env, normalise_model_name, LazyLoader, gen_random_uuid
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput
@@ -27,12 +27,20 @@ class LLM(pydantic.BaseModel):
   config: openllm_core.LLMConfig
   dtype: Dtype
   quantise: t.Optional[LiteralQuantise] = pydantic.Field(default=None)
-  max_model_len: t.Optional[int] = pydantic.Field(default=None)
-  gpu_memory_utilization: float = pydantic.Field(default=0.9)
   trust_remote_code: bool = pydantic.Field(default=False)
+  engine_args: t.Dict[str, t.Any] = pydantic.Field(default_factory=dict)
   service_config: t.Optional[ServiceConfig] = pydantic.Field(default_factory=dict)
 
   _model: t.Any = pydantic.PrivateAttr()
+
+  @pydantic.field_validator('engine_args')
+  @classmethod
+  def check_engine_args(cls, v: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
+    fields = dataclasses.fields(vllm.AsyncEngineArgs)
+    invalid_args = {k: v for k, v in v.items() if k not in {f.name for f in fields}}
+    if len(invalid_args) > 0:
+      raise ValueError(f'Invalid engine args: {list(invalid_args)}')
+    return v
 
   def __init__(self, _: str = '', /, _internal: bool = False, **kwargs: t.Any) -> None:
     if not _internal:
@@ -48,22 +56,21 @@ class LLM(pydantic.BaseModel):
       num_gpus = min(dev // 2 * 2, dev)
     quantise = self.quantise if self.quantise and self.quantise in {'gptq', 'awq', 'squeezellm'} else None
     dtype = 'float16' if quantise == 'gptq' else self.dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
+
+    self.engine_args.setdefault('gpu_memory_utilization', 0.9)
+    self.engine_args.update({
+      'worker_use_ray': False,
+      'engine_use_ray': False,
+      'tokenizer_mode': 'auto',
+      'tensor_parallel_size': num_gpus,
+      'model': path,
+      'tokenizer': path,
+      'trust_remote_code': self.trust_remote_code,
+      'dtype': dtype,
+      'quantization': quantise,
+    })
     try:
-      self._model = vllm.AsyncLLMEngine.from_engine_args(
-        vllm.AsyncEngineArgs(
-          worker_use_ray=False,
-          engine_use_ray=False,
-          tokenizer_mode='auto',
-          tensor_parallel_size=num_gpus,
-          model=path,
-          tokenizer=path,
-          trust_remote_code=self.trust_remote_code,
-          dtype=dtype,
-          max_model_len=self.max_model_len,
-          gpu_memory_utilization=self.gpu_memory_utilization,
-          quantization=quantise,
-        )
-      )
+      self._model = vllm.AsyncLLMEngine.from_engine_args(vllm.AsyncEngineArgs(**self.engine_args))
     except Exception as err:
       traceback.print_exc()
       raise openllm.exceptions.OpenLLMException(
@@ -79,13 +86,12 @@ class LLM(pydantic.BaseModel):
     cls,
     model: bentoml.Model,
     llm_config: openllm_core.LLMConfig | None = None,
-    max_model_len: int | None = None,
-    gpu_memory_utilization: float = 0.9,
     service_config: ServiceConfig | None = None,
+    **engine_args: t.Any,
   ) -> LLM:
     metadata = model.info.metadata
 
-    api_version = metadata.get('api_version')
+    api_version: str | None = metadata.get('api_version')
     if api_version is None or VersionInfo.from_version_string(api_version) < VersionInfo.from_version_string('0.5.0'):
       raise RuntimeError(
         'Model API version is too old. Please update the model. Make sure to run openllm prune -y --include-bentos'
@@ -98,6 +104,7 @@ class LLM(pydantic.BaseModel):
 
     if llm_config is None:
       llm_config = openllm_core.AutoConfig.from_bentomodel(model)
+
     return cls(
       _internal=True,
       model_id=model_id,
@@ -108,8 +115,7 @@ class LLM(pydantic.BaseModel):
       config=llm_config,
       dtype=dtype,
       revision=metadata['_revision'],
-      max_model_len=max_model_len,
-      gpu_memory_utilization=gpu_memory_utilization,
+      engine_args=engine_args,
       trust_remote_code=trust_remote_code,
       service_config=service_config,
     )
