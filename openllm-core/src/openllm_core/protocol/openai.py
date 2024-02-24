@@ -127,7 +127,7 @@ class ChatCompletionResponseChoice(pydantic.BaseModel):
   finish_reason: t.Optional[FinishReason] = None
 
 
-class ChatCompletionResponse:
+class ChatCompletionResponse(pydantic.BaseModel):
   choices: t.List[ChatCompletionResponseChoice]
   model: str
   object: str = pydantic.Field(default='chat.completion')
@@ -136,7 +136,7 @@ class ChatCompletionResponse:
   usage: UsageInfo = pydantic.Field(default_factory=lambda: UsageInfo())
 
 
-class ChatCompletionStreamResponse:
+class ChatCompletionStreamResponse(pydantic.BaseModel):
   choices: t.List[ChatCompletionResponseStreamChoice]
   model: str
   object: str = pydantic.Field(default='chat.completion.chunk')

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import inspect
 import types
@@ -8,6 +10,9 @@ from starlette.routing import Host, Mount, Route
 from starlette.schemas import EndpointInfo, SchemaGenerator
 
 from openllm_core.utils import first_not_none
+
+if t.TYPE_CHECKING:
+  import pydantic
 
 OPENAPI_VERSION, API_VERSION = '3.0.2', '1.0'
 # NOTE: OpenAI schema
@@ -550,13 +555,13 @@ def get_generator(title, components=None, tags=None, inject=True):
   return OpenLLMSchemaGenerator(base_schema)
 
 
-def component_schema_generator(attr_cls, description=None):
+def component_schema_generator(attr_cls: pydantic.BaseModel, description=None):
   schema = {'type': 'object', 'required': [], 'properties': {}, 'title': attr_cls.__name__}
   schema['description'] = first_not_none(
     getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}'
   )
-  for field in attr.fields(attr.resolve_types(attr_cls)):
-    attr_type = field.type
+  for name, field in attr_cls.model_fields.items():
+    attr_type = field.annotation
     origin_type = t.get_origin(attr_type)
     args_type = t.get_args(attr_type)
 
@@ -588,8 +593,8 @@ def component_schema_generator(attr_cls, description=None):
     if field.default is not attr.NOTHING and not isinstance(field.default, attr.Factory):
       prop_schema['default'] = field.default
     if field.default is attr.NOTHING and not isinstance(attr_type, type(t.Optional)):
-      schema['required'].append(field.name)
-    schema['properties'][field.name] = prop_schema
+      schema['required'].append(name)
+    schema['properties'][name] = prop_schema
     locals().pop('prop_schema', None)
 
   return schema

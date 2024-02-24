@@ -16,6 +16,8 @@ if [ ! -d "$GIT_ROOT/.venv" ]; then
   uv venv
 fi
 
+. "$GIT_ROOT/.venv/bin/activate"
+
 print_usage() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"

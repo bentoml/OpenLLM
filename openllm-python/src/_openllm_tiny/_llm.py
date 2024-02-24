@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-import inspect, orjson, dataclasses, bentoml, pydantic, openllm_core, traceback, openllm, functools, typing as t
-from openllm_core.utils import VersionInfo, check_bool_env, normalise_model_name, LazyLoader, gen_random_uuid
+import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, traceback, openllm, typing as t
+from openllm_core.utils import VersionInfo, check_bool_env, normalise_model_name, gen_random_uuid
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput
 from _bentoml_sdk.service import ServiceConfig
 
-if t.TYPE_CHECKING:
-  import vllm
-else:
-  vllm = LazyLoader('vllm', globals(), 'vllm')
-
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
 
-class LLM(pydantic.BaseModel):
-  """openllm.LLM will understand how to run model efficiently depending on given hardware target choice."""
+def check_engine_args(_, attr, v: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
+  from vllm import AsyncEngineArgs
 
-  model_config = pydantic.ConfigDict(protected_namespaces=(), extra='allow')
+  fields = dataclasses.fields(AsyncEngineArgs)
+  invalid_args = {k: v for k, v in v.items() if k not in {f.name for f in fields}}
+  if len(invalid_args) > 0:
+    raise ValueError(f'Invalid engine args: {list(invalid_args)}')
+  return v
 
+
+@attr.define(init=False)
+class LLM:
   model_id: str
   tag: str
   revision: str
@@ -26,30 +28,22 @@ class LLM(pydantic.BaseModel):
   serialisation: LiteralSerialisation
   config: openllm_core.LLMConfig
   dtype: Dtype
-  quantise: t.Optional[LiteralQuantise] = pydantic.Field(default=None)
-  trust_remote_code: bool = pydantic.Field(default=False)
-  engine_args: t.Dict[str, t.Any] = pydantic.Field(default_factory=dict)
-  service_config: t.Optional[ServiceConfig] = pydantic.Field(default_factory=dict)
+  quantise: t.Optional[LiteralQuantise] = attr.field(default=None)
+  trust_remote_code: bool = attr.field(default=False)
+  engine_args: t.Dict[str, t.Any] = attr.field(factory=dict, validator=check_engine_args)
+  service_config: t.Optional[ServiceConfig] = attr.field(factory=dict)
 
-  _model: t.Any = pydantic.PrivateAttr()
-
-  @pydantic.field_validator('engine_args')
-  @classmethod
-  def check_engine_args(cls, v: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
-    fields = dataclasses.fields(vllm.AsyncEngineArgs)
-    invalid_args = {k: v for k, v in v.items() if k not in {f.name for f in fields}}
-    if len(invalid_args) > 0:
-      raise ValueError(f'Invalid engine args: {list(invalid_args)}')
-    return v
+  _model: t.Any = attr.field(init=False)
+  _path: str = attr.field(init=False)
 
   def __init__(self, _: str = '', /, _internal: bool = False, **kwargs: t.Any) -> None:
     if not _internal:
       raise RuntimeError(
         'Cannot instantiate LLM directly in the new API. Make sure to use `openllm.LLM.from_model` instead.'
       )
-    super().__init__(**kwargs)
+    self.__attrs_init__(**kwargs)
 
-    path = self.bentomodel.path if self.local else self.model_id
+    self._path = self.bentomodel.path if self.local else self.model_id
 
     num_gpus, dev = 1, openllm.utils.device_count()
     if dev >= 2:
@@ -63,14 +57,16 @@ class LLM(pydantic.BaseModel):
       'engine_use_ray': False,
       'tokenizer_mode': 'auto',
       'tensor_parallel_size': num_gpus,
-      'model': path,
-      'tokenizer': path,
+      'model': self._path,
+      'tokenizer': self._path,
       'trust_remote_code': self.trust_remote_code,
       'dtype': dtype,
       'quantization': quantise,
     })
     try:
-      self._model = vllm.AsyncLLMEngine.from_engine_args(vllm.AsyncEngineArgs(**self.engine_args))
+      from vllm import AsyncEngineArgs, AsyncLLMEngine
+
+      self._model = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.engine_args))
     except Exception as err:
       traceback.print_exc()
       raise openllm.exceptions.OpenLLMException(
@@ -134,7 +130,9 @@ class LLM(pydantic.BaseModel):
 
   @functools.cached_property
   def tokenizer(self):
-    return self._model.tokenizer
+    import transformers
+
+    return transformers.AutoTokenizer.from_pretrained(self._path, trust_remote_code=self.trust_remote_code)
 
   async def generate_iterator(
     self,
@@ -146,6 +144,8 @@ class LLM(pydantic.BaseModel):
     adapter_name: str | None = None,
     **attrs: t.Any,
   ) -> t.AsyncGenerator[GenerationOutput, None]:
+    from vllm import SamplingParams
+
     config = self.config.model_construct_env(**attrs)
 
     stop_token_ids = stop_token_ids or []
@@ -167,11 +167,11 @@ class LLM(pydantic.BaseModel):
     request_id = gen_random_uuid() if request_id is None else request_id
     previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
 
-    config = config.model_construct_env(stop=list(stop), stop_token_ids=stop_token_ids)
+    config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids))
     top_p = 1.0 if config['temperature'] <= 1e-5 else config['top_p']
     generation_config = config.generation_config.model_copy(update={'top_p': top_p})
-    sampling_params = vllm.SamplingParams(**{
-      k: getattr(generation_config, k) for k in set(inspect.signature(vllm.SamplingParams).parameters.keys())
+    sampling_params = SamplingParams(**{
+      k: getattr(generation_config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())
     })
 
     try:
