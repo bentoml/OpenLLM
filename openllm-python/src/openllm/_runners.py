@@ -46,7 +46,10 @@ def runner(llm: openllm.LLM[M, T]) -> Runner[M, T]:
         (
           'runner_methods',
           {
-            method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None}
+            method.name: {
+              'batchable': method.config.batchable,
+              'batch_dim': method.config.batch_dim if method.config.batchable else None,
+            }
             for method in _.runner_methods
           },
         ),
@@ -111,6 +114,7 @@ class CTranslateRunnable(bentoml.Runnable):
       ).model_dump_json()
       yield bentoml.io.SSE(out).marshal()
 
+
 @registry
 class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
@@ -126,7 +130,9 @@ class vLLMRunnable(bentoml.Runnable):
     if dev >= 2:
       num_gpus = min(dev // 2 * 2, dev)
     quantise = llm.quantise if llm.quantise and llm.quantise in {'gptq', 'awq', 'squeezellm'} else None
-    dtype = torch.float16 if quantise == 'gptq' else llm._torch_dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
+    dtype = (
+      torch.float16 if quantise == 'gptq' else llm._torch_dtype
+    )  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
     try:
       self.model = vllm.AsyncLLMEngine.from_engine_args(
         vllm.AsyncEngineArgs(
@@ -145,7 +151,9 @@ class vLLMRunnable(bentoml.Runnable):
       )
     except Exception as err:
       traceback.print_exc()
-      raise openllm.exceptions.OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
+      raise openllm.exceptions.OpenLLMException(
+        f'Failed to initialise vLLMEngine due to the following error:\n{err}'
+      ) from err
 
   @bentoml.Runnable.method(batchable=False)
   async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
@@ -202,7 +210,9 @@ class PyTorchRunnable(bentoml.Runnable):
         if config['logprobs']:  # FIXME: logprobs is not supported
           raise NotImplementedError('Logprobs is yet to be supported with encoder-decoder models.')
         encoder_output = self.model.encoder(input_ids=torch.as_tensor([prompt_token_ids], device=self.device))[0]
-        start_ids = torch.as_tensor([[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device)
+        start_ids = torch.as_tensor(
+          [[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device
+        )
       else:
         start_ids = torch.as_tensor([prompt_token_ids], device=self.device)
 
@@ -230,7 +240,9 @@ class PyTorchRunnable(bentoml.Runnable):
           )
           logits = self.model.lm_head(out[0])
         else:
-          out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True)
+          out = self.model(
+            input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True
+          )
           logits = out.logits
         past_key_values = out.past_key_values
         if logits_processor:
@@ -274,7 +286,12 @@ class PyTorchRunnable(bentoml.Runnable):
 
         tmp_output_ids, rfind_start = output_token_ids[input_len:], 0
         # XXX: Move this to API server
-        text = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
+        text = self.tokenizer.decode(
+          tmp_output_ids,
+          skip_special_tokens=True,
+          spaces_between_special_tokens=False,
+          clean_up_tokenization_spaces=True,
+        )
 
         if len(stop) > 0:
           for it in stop:
