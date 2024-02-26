@@ -11,5 +11,7 @@ def mount_entrypoints(svc, llm):
   return svc
 
 
-__lazy = LazyModule(__name__, globals()['__file__'], _import_structure, extra_objects={'mount_entrypoints': mount_entrypoints})
+__lazy = LazyModule(
+  __name__, globals()['__file__'], _import_structure, extra_objects={'mount_entrypoints': mount_entrypoints}
+)
 __all__, __dir__, __getattr__ = __lazy.__all__, __lazy.__dir__, __lazy.__getattr__

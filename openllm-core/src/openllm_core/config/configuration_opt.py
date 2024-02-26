@@ -20,9 +20,23 @@ class OPTConfig(openllm_core.LLMConfig):
     'url': 'https://huggingface.co/docs/transformers/model_doc/opt',
     'default_id': 'facebook/opt-1.3b',
     'architecture': 'OPTForCausalLM',
-    'model_ids': ['facebook/opt-125m', 'facebook/opt-350m', 'facebook/opt-1.3b', 'facebook/opt-2.7b', 'facebook/opt-6.7b', 'facebook/opt-66b'],
+    'model_ids': [
+      'facebook/opt-125m',
+      'facebook/opt-350m',
+      'facebook/opt-1.3b',
+      'facebook/opt-2.7b',
+      'facebook/opt-6.7b',
+      'facebook/opt-66b',
+    ],
     'fine_tune_strategies': (
-      {'adapter_type': 'lora', 'r': 16, 'lora_alpha': 32, 'target_modules': ['q_proj', 'v_proj'], 'lora_dropout': 0.05, 'bias': 'none'},
+      {
+        'adapter_type': 'lora',
+        'r': 16,
+        'lora_alpha': 32,
+        'target_modules': ['q_proj', 'v_proj'],
+        'lora_dropout': 0.05,
+        'bias': 'none',
+      },
     ),
   }
 

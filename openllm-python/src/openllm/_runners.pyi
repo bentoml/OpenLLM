@@ -1,4 +1,19 @@
-from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Protocol, Tuple, Type, TypeVar, Union, final
+from typing import (
+  Any,
+  AsyncGenerator,
+  Dict,
+  Generic,
+  Iterable,
+  List,
+  Literal,
+  Optional,
+  Protocol,
+  Tuple,
+  Type,
+  TypeVar,
+  Union,
+  final,
+)
 
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
@@ -74,7 +89,11 @@ class Runner(Protocol[Mo, To]):
   class generate_iterator(RunnerMethod[List[int], AsyncGenerator[str, None]]):
     @staticmethod
     def async_stream(
-      prompt_token_ids: List[int], request_id: str, stop: Optional[Union[Iterable[str], str]] = ..., adapter_name: Optional[str] = ..., **attrs: Any
+      prompt_token_ids: List[int],
+      request_id: str,
+      stop: Optional[Union[Iterable[str], str]] = ...,
+      adapter_name: Optional[str] = ...,
+      **attrs: Any,
     ) -> AsyncGenerator[str, None]: ...
 
   def __init__(
