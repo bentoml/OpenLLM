@@ -12,7 +12,6 @@ out to us if you have any question!
 - [Developer Guide](#developer-guide)
   - [Table of Contents](#table-of-contents)
   - [Setting Up Your Development Environment](#setting-up-your-development-environment)
-  - [Project Structure](#project-structure)
   - [Development Workflow](#development-workflow)
   - [Using a custom fork](#using-a-custom-fork)
   - [Writing Tests](#writing-tests)
@@ -25,7 +24,7 @@ Before you can start developing, you'll need to set up your environment:
 > [!IMPORTANT]
 > We recommend using the Python version from `.python-version-default` file within the project root
 > to avoid any version mismatch. You can use [pyenv](https://github.com/pyenv/pyenv) to manage your python version.
-> Note that `hatch run setup` will symlink the python version from `.python-version-default` to `.python-version` in the project root.
+> Note that `bash local.sh` will symlink the python version from `.python-version-default` to `.python-version` in the project root.
 > Therefore any tools that understand `.python-version` will use the correct Python version.
 
 > [!NOTE]
@@ -54,53 +53,17 @@ Before you can start developing, you'll need to set up your environment:
    git branch --set-upstream-to=upstream/main
    ```
 
-6. Install [hatch](https://github.com/pypa/hatch):
+6. Run setup script:
 
    ```bash
-   pip install hatch pre-commit
+   bash local.sh
    ```
 
-7. Run the following to setup all pre-commit hooks:
+7. Activate virtualenv:
 
    ```bash
-   hatch run setup
+   source .venv/bin/activate
    ```
-
-8. Enter a project's environment with.
-
-   ```bash
-   hatch shell
-   ```
-
-   This will automatically enter a virtual environment and update the relevant
-   dependencies.
-
-> [!NOTE]
-> If you don't want to work with hatch, you can use the editable workflow with running `bash local.sh`
-
-## Project Structure
-
-Here's a high-level overview of our project structure:
-
-```prolog
-openllm/
-├── ADDING_NEW_MODEL.md  # How to add a new model
-├── CHANGELOG.md         # Generated changelog
-├── CITATION.cff         # Citation File Format
-├── DEVELOPMENT.md       # The project's Developer Guide
-├── Formula              # Homebrew Formula
-├── LICENSE.md           # Use terms and conditions
-├── README.md            # The project's README file
-├── STYLE.md             # The project's Style Guide
-├── cz.py                # code-golf commitizen
-├── examples             # Usage demonstration scripts
-├── openllm-node         # openll node library
-├── openllm-python       # openllm python library
-│   └── src
-│       └── openllm      # openllm core implementation
-├── pyproject.toml       # Python Project Specification File (PEP 518)
-└── tools                # Utilities Script
-```
 
 ## Development Workflow
 
@@ -203,6 +166,7 @@ After you change or update any CI related under `.github`, run `bash tools/lock-
 See this [docs](/.github/INFRA.md) for more information on OpenLLM's CI/CD workflow.
 
 ## Typing
+
 For all internal functions, it is recommended to provide type hint. For all public function definitions, it is recommended to create a stubs file `.pyi` to separate supported external API to increase code visibility. See [openllm-client's `__init__.pyi`](/openllm-client/src/openllm_client/__init__.pyi) for example.
 
 If an internal helpers or any functions, utilities that is prefixed with `_`, then it is recommended to provide inline annotations. See [STYLE.md](./STYLE.md) to learn more about style and typing philosophy.

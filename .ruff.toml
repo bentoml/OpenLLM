@@ -15,7 +15,10 @@ typing-modules = [
     "openllm_core._typing_compat",
     "openllm_client._typing_compat",
 ]
-ignore = ["RUF012"]
+ignore = [
+    "RUF012",
+    "ANN",    # Mypy is better at this
+]
 select = [
     "F",
     "G",    # flake8-logging-format

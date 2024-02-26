@@ -11,9 +11,16 @@ if ! command -v uv > /dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
+# Check if .python-version file exists from GIT_ROOT, otherwise symlink from .python-version-default to .python-version
+if [ ! -f "$GIT_ROOT/.python-version" ]; then
+  echo "Symlinking .python-version-default to .python-version"
+  ln -s "$GIT_ROOT/.python-version-default" "$GIT_ROOT/.python-version"
+fi
+
 # check if there is a $GIT_ROOT/.venv directory, if not, create it
 if [ ! -d "$GIT_ROOT/.venv" ]; then
-  uv venv
+  # get the python version from $GIT_ROOT/.python-version-default
+  uv venv -p $(cat "$GIT_ROOT/.python-version-default") "$GIT_ROOT/.venv"
 fi
 
 . "$GIT_ROOT/.venv/bin/activate"
@@ -37,16 +44,16 @@ split_csv() {
 }
 
 # Function to ensure tomlkit is installen# Function to ensure tomlkit is installed
-ensure_tomlkit() {
+ensure_base() {
   if ! python -c "import tomlkit" > /dev/null 2>&1; then
     echo "Installing tomlkit..."
-    uv pip install tomlkit
+    uv pip install tomlkit pre-commit
   fi
 }
 
 # Function to validate extensions
 validate_extensions() {
-  ensure_tomlkit
+  ensure_base
   local valid_extensions
   valid_extensions=$(python -c "
 import tomlkit
@@ -95,12 +102,6 @@ done
 
 validate_extensions
 
-# Check if .python-version file exists from GIT_ROOT, otherwise symlink from .python-version-default to .python-version
-if [ ! -f "$GIT_ROOT/.python-version" ]; then
-  echo "Symlinking .python-version-default to .python-version"
-  ln -s "$GIT_ROOT/.python-version-default" "$GIT_ROOT/.python-version"
-fi
-
 # Check if the EXTENSIONS array is empty
 if [ ${#EXTENSIONS[@]} -eq 0 ]; then
   echo "No extensions specified"
@@ -117,5 +118,7 @@ uv pip install --editable "$GIT_ROOT/openllm-core"
 
 echo "Instaling development dependencies..."
 uv pip install -r "$GIT_ROOT/tools/requirements.txt"
+
+pre-commit install
 
 bash "$GIT_ROOT/all.sh"

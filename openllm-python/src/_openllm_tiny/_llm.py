@@ -9,7 +9,7 @@ from _bentoml_sdk.service import ServiceConfig
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
 
-def check_engine_args(_, attr, v: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
+def check_engine_args(_, attr: attr.Attribute[dict[str, t.Any]], v: dict[str, t.Any]) -> dict[str, t.Any]:
   from vllm import AsyncEngineArgs
 
   fields = dataclasses.fields(AsyncEngineArgs)

@@ -2,7 +2,7 @@
 build-backend = "hatchling.build"
 requires = [
     "hatchling==1.18.0",
-    "hatch-vcs==0.3.0",
+    "hatch-vcs==0.4.0",
     "hatch-fancy-pypi-readme==23.1.0",
 ]
 
@@ -58,6 +58,7 @@ keywords = [
     "Transformers",
 ]
 dependencies = [
+    "attrs>=23.2.0",
     "pydantic>2",
     "orjson",
     "inflection",
