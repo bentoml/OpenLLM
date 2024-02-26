@@ -119,7 +119,7 @@ openai = ["openai[datalib]>=1", "tiktoken"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm==0.2.7", "ray==2.6.0"]
+vllm = ["vllm==0.3.2", "ray==2.6.0"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"
