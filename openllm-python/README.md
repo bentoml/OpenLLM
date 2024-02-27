@@ -45,7 +45,7 @@ Key features include:
 
 🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
-⛓️ **Freedom to build**: First-class support for LangChain, BentoML, OpenAI endpoints, and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
+⛓️ **Freedom to build**: First-class support for LangChain, BentoML, LlamaIndex, OpenAI endpoints, and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
 🎯 **Streamline deployment**: Automatically generate your LLM server Docker images or deploy as serverless endpoints via
 [☁️ BentoCloud](https://l.bentoml.com/bento-cloud), which effortlessly manages GPU resources, scales according to traffic, and ensures cost-effectiveness.
@@ -620,6 +620,73 @@ openllm start eleutherai/gpt-neox-20b --backend vllm
 
 ```bash
 openllm start eleutherai/gpt-neox-20b --backend pt
+```
+
+</details>
+
+<details>
+
+<summary>Jais</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Jais server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Jais variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=jais) to see more Jais-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Jais models via `openllm start`:
+
+
+- [core42/jais-30b-chat-v3](https://huggingface.co/core42/jais-30b-chat-v3)
+
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3 --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3 --backend pt
 ```
 
 </details>

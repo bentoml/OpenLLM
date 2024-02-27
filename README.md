@@ -626,6 +626,73 @@ openllm start eleutherai/gpt-neox-20b --backend pt
 
 <details>
 
+<summary>Jais</summary>
+
+
+### Quickstart
+
+Run the following command to quickly spin up a Jais server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Jais variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=jais) to see more Jais-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Jais models via `openllm start`:
+
+
+- [core42/jais-30b-chat-v3](https://huggingface.co/core42/jais-30b-chat-v3)
+
+### Supported backends
+
+OpenLLM will support vLLM and PyTorch as default backend. By default, it will use vLLM if vLLM is available, otherwise fallback to PyTorch.
+
+
+
+> **Important:** We recommend user to explicitly specify `--backend` to choose the desired backend to run the model. If you have access to a GPU, always use `--backend vllm`.
+
+
+
+- vLLM (Recommended):
+
+
+To install vLLM, run `pip install "openllm[vllm]"`
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3 --backend vllm
+```
+
+
+> **Important:** Using vLLM requires a GPU that has architecture newer than 8.0 to get the best performance for serving. It is recommended that for all serving usecase in production, you should choose vLLM for serving.
+
+
+
+> **Note:** Currently, adapters are yet to be supported with vLLM.
+
+
+- PyTorch:
+
+
+```bash
+TRUST_REMOTE_CODE=True openllm start core42/jais-30b-chat-v3 --backend pt
+```
+
+</details>
+
+<details>
+
 <summary>Llama</summary>
 
 
@@ -1004,7 +1071,7 @@ openllm start facebook/opt-125m --backend pt
 Run the following command to quickly spin up a Phi server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -1023,7 +1090,6 @@ openllm query 'What are large language models?'
 You can specify any of the following Phi models via `openllm start`:
 
 
-- [microsoft/phi-2](https://huggingface.co/microsoft/phi-2)
 - [microsoft/phi-1_5](https://huggingface.co/microsoft/phi-1_5)
 
 ### Supported backends
@@ -1042,7 +1108,7 @@ OpenLLM will support vLLM and PyTorch as default backend. By default, it will us
 To install vLLM, run `pip install "openllm[vllm]"`
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend vllm
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend vllm
 ```
 
 
@@ -1057,7 +1123,7 @@ TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend vllm
 
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --backend pt
+TRUST_REMOTE_CODE=True openllm start microsoft/phi-1_5 --backend pt
 ```
 
 </details>
