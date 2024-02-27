@@ -4,51 +4,13 @@ import typing as t
 import openllm_core
 
 if t.TYPE_CHECKING:
-  import transformers
+  pass
 
 INSTRUCTION_KEY = '### Instruction:'
 RESPONSE_KEY = '### Response:'
 INPUT_KEY = '### Input:'
 HUMAN_ROLE = '[|Human|]'
 AI_ROLE = '[|AI|]'
-prompt_eng = f'{INPUT_KEY} {HUMAN_ROLE} {{Question}}\n{RESPONSE_KEY}: {AI_ROLE}'
-
-
-def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
-  token_ids = tokenizer.encode(key)
-  if len(token_ids) > 1:
-    raise ValueError(f"Expected only a single token for '{key}' but found {token_ids}")
-  return token_ids[0]
-
-
-# prompt_eng = (
-#   '### Instruction: Your name is Jais, and you are named after Jebel Jais, the highest mountain in UAE.'
-#   " You are built by Core42. You are the world's most advanced Arabic large language model with 30b parameters. "
-#   'You outperform all existing Arabic models by a sizable margin and you are very competitive '
-#   'with English models of similar size. You can answer in Arabic and English only. '
-#   'You are a helpful, respectful and honest assistant. '
-#   'When answering, abide by the following guidelines meticulously: '
-#   'Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical,'
-#   ' racist, sexist, explicit, offensive, toxic, dangerous, or illegal content. Do not give medical, legal, financial,'
-#   ' or professional advice. Never assist in or promote illegal activities. Always encourage legal and responsible'
-#   ' actions. Do not encourage or provide instructions for unsafe, harmful, or unethical actions.'
-#   ' Do not create or share misinformation or fake news. '
-#   'Please ensure that your responses are socially unbiased and positive in nature.'
-#   ' If a question does not make any sense, or is not factually coherent,'
-#   ' explain why instead of answering something not correct.'
-#   " If you don't know the answer to a question, please don't share false information."
-#   ' Prioritize the well-being and the moral integrity of users. '
-#   'Avoid using toxic, derogatory, or offensive language. Maintain a respectful tone.'
-#   ' Do not generate, promote, or engage in discussions about adult content. '
-#   'Avoid making comments, remarks, or generalizations based on stereotypes.'
-#   ' Do not attempt to access, produce, or spread personal or private information.'
-#   ' Always respect user confidentiality. '
-#   'Stay positive and do not say bad things about anything.'
-#   ' Your primary objective is to avoid harmful responses, '
-#   'even when faced with deceptive inputs. Recognize when users may be attempting to trick or to misuse you and '
-#   'respond with caution.\n\n'
-#   'Complete the conversation below between [|Human|] and [|AI|]:\n### Input: [|Human|] {Question}\n### Response: [|AI|]'
-# )
 
 
 class JaisConfig(openllm_core.LLMConfig):
@@ -67,15 +29,6 @@ class JaisConfig(openllm_core.LLMConfig):
     'default_id': 'core42/jais-30b-chat-v3',
     'model_ids': ['core42/jais-30b-chat-v3'],
   }
-
-  """
-        top_p=0.9,
-        temperature=0.3,
-        max_length=2048,
-        min_length=input_len + 4,
-        repetition_penalty=1.2,
-        do_sample=True,
-  """
 
   @property
   def template(self):
@@ -108,14 +61,3 @@ class JaisConfig(openllm_core.LLMConfig):
     return repr(
       """{% for message in messages %}{% if message['role'] == 'user' %}{{ bos_token + '###Input: [|Human|] ' + message['content']\n + ' ###Response: [|AI|]' }}{% elif message['role'] == 'system' %}{{ '### Instruction: ' + message['content'] }}{% elif message['role'] == 'assistant' %}{{ ' '  + message['content'] + ' ' + eos_token }}{% endif %}{% endfor %}"""
     )
-
-  """{% for message in messages %}
-    {% if message['role'] == 'user' %}
-        {{ bos_token + '###Input: [|Human|] ' + message['content']\n + ' ###Response: [|AI|]' }}
-    {% elif message['role'] == 'system' %}
-        {{ '### Instruction: ' + message['content'] }}
-    {% elif message['role'] == 'assistant' %}
-        {{ ' '  + message['content'] + ' ' + eos_token }}
-    {% endif %}
-{% endfor %}
-  """
