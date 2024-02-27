@@ -556,7 +556,7 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
     threading.Thread(target=handle, args=(process.stderr, stop_event)),
   )
   stdout.start()
-  stderr.start()  # noqa: E702
+  stderr.start()
 
   try:
     process.wait()
@@ -572,11 +572,11 @@ def run_server(args, env, return_process=False) -> subprocess.Popen[bytes] | int
   finally:
     stop_event.set()
     stdout.join()
-    stderr.join()  # noqa: E702
+    stderr.join()
     if process.poll() is not None:
       process.kill()
     stdout.join()
-    stderr.join()  # noqa: E702
+    stderr.join()
 
   return process.returncode
 
