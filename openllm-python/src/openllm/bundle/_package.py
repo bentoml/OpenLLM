@@ -38,8 +38,12 @@ def build_editable(path, package='openllm'):
 def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=None):
   from . import RefResolver
 
-  openllm_package = 'openllm[vllm]' if llm.__llm_backend__.lower() == "vllm" else "openllm"
-  packages = ['scipy', 'bentoml[tracing]>=1.1.11,<1.2', f'{openllm_package}>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
+  openllm_package = 'openllm[vllm]' if llm.__llm_backend__.lower() == 'vllm' else 'openllm'
+  packages = [
+    'scipy',
+    'bentoml[tracing]>=1.1.11,<1.2',
+    f'{openllm_package}>={RefResolver.from_strategy("release").version}',
+  ]  # apparently bnb misses this one
   if adapter_map is not None:
     packages += ['openllm[fine-tune]']
   if extra_dependencies is not None:
@@ -57,7 +61,18 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
 def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template, serialisation):
   from openllm_cli.entrypoint import process_environ
 
-  environ = process_environ(llm.config, llm.config['timeout'], 1.0, None, True, llm.model_id, None, llm._serialisation, llm, use_current_env=False)
+  environ = process_environ(
+    llm.config,
+    llm.config['timeout'],
+    1.0,
+    None,
+    True,
+    llm.model_id,
+    None,
+    llm._serialisation,
+    llm,
+    use_current_env=False,
+  )
   # XXX: We need to quote this so that the envvar in container recognize as valid json
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
@@ -86,7 +101,10 @@ def create_bento(
     'start_name': llm.config['start_name'],
     'base_name_or_path': llm.model_id,
     'bundler': 'openllm.bundle',
-    **{f'{package.replace("-","_")}_version': importlib.metadata.version(package) for package in {'openllm', 'openllm-core', 'openllm-client'}},
+    **{
+      f'{package.replace("-", "_")}_version': importlib.metadata.version(package)
+      for package in {'openllm', 'openllm-core', 'openllm-client'}
+    },
   })
   if adapter_map:
     labels.update(adapter_map)

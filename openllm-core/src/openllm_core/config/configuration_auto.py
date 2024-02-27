@@ -30,6 +30,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     ('gpt_neox', 'GPTNeoXConfig'),
     ('dolly_v2', 'DollyV2Config'),
     ('stablelm', 'StableLMConfig'),
+    ('jais', 'JaisConfig'),
     ('llama', 'LlamaConfig'),
     ('mpt', 'MPTConfig'),
     ('opt', 'OPTConfig'),
@@ -97,7 +98,12 @@ class _LazyConfigMapping(OrderedDictType, ReprMixin):
 
 CONFIG_MAPPING: dict[LiteralString, type[openllm_core.LLMConfig]] = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 # The below handle special alias when we call underscore to the name directly without processing camelcase first.
-CONFIG_NAME_ALIASES: dict[str, str] = {'chat_glm': 'chatglm', 'stable_lm': 'stablelm', 'star_coder': 'starcoder', 'gpt_neo_x': 'gpt_neox'}
+CONFIG_NAME_ALIASES: dict[str, str] = {
+  'chat_glm': 'chatglm',
+  'stable_lm': 'stablelm',
+  'star_coder': 'starcoder',
+  'gpt_neo_x': 'gpt_neox',
+}
 CONFIG_FILE_NAME = 'config.json'
 
 
@@ -124,6 +130,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['gpt_neox'], **attrs: t.Any) -> openllm_core.config.GPTNeoXConfig: ...
+  @t.overload
+  @classmethod
+  def for_model(cls, model_name: t.Literal['jais'], **attrs: t.Any) -> openllm_core.config.JaisConfig: ...
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['llama'], **attrs: t.Any) -> openllm_core.config.LlamaConfig: ...
@@ -155,13 +164,13 @@ class AutoConfig:
   @classmethod
   def for_model(cls, model_name: t.Literal['yi'], **attrs: t.Any) -> openllm_core.config.YiConfig: ...
   # update-config-stubs.py: auto stubs stop
-
-  @classmethod
   def for_model(cls, model_name: str, **attrs: t.Any) -> openllm_core.LLMConfig:
     model_name = inflection.underscore(model_name)
     if model_name in CONFIG_MAPPING:
       return CONFIG_MAPPING[model_name].model_construct_env(**attrs)
-    raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
+    raise ValueError(
+      f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+    )
 
   @classmethod
   def infer_class_from_name(cls, name: str) -> type[openllm_core.LLMConfig]:
@@ -170,7 +179,9 @@ class AutoConfig:
       model_name = CONFIG_NAME_ALIASES[model_name]
     if model_name in CONFIG_MAPPING:
       return CONFIG_MAPPING[model_name]
-    raise ValueError(f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}.")
+    raise ValueError(
+      f"Unrecognized configuration class for {model_name}. Model name should be one of {', '.join(CONFIG_MAPPING.keys())}."
+    )
 
   _cached_mapping = None
 
@@ -191,7 +202,9 @@ class AutoConfig:
         config_file = llm.bentomodel.path_of(CONFIG_FILE_NAME)
       except OpenLLMException as err:
         if not is_transformers_available():
-          raise MissingDependencyError("Requires 'transformers' to be available. Do 'pip install transformers'") from err
+          raise MissingDependencyError(
+            "Requires 'transformers' to be available. Do 'pip install transformers'"
+          ) from err
         from transformers.utils import cached_file
 
         try:
@@ -208,4 +221,6 @@ class AutoConfig:
       for architecture in loaded_config['architectures']:
         if architecture in cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE():
           return cls.infer_class_from_name(cls._CONFIG_MAPPING_NAMES_TO_ARCHITECTURE()[architecture])
-    raise ValueError(f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm.")
+    raise ValueError(
+      f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
+    )
