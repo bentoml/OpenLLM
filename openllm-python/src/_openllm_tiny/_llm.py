@@ -33,8 +33,10 @@ class LLM:
   engine_args: t.Dict[str, t.Any] = attr.field(factory=dict, validator=check_engine_args)
   service_config: t.Optional[ServiceConfig] = attr.field(factory=dict)
 
-  _model: t.Any = attr.field(init=False)
-  _path: str = attr.field(init=False)
+  _path: str = attr.field(
+    init=False,
+    default=attr.Factory(lambda self: self.bentomodel.path if self.local else self.model_id, takes_self=True),
+  )
 
   def __init__(self, _: str = '', /, _internal: bool = False, **kwargs: t.Any) -> None:
     if not _internal:
@@ -43,8 +45,11 @@ class LLM:
       )
     self.__attrs_init__(**kwargs)
 
-    self._path = self.bentomodel.path if self.local else self.model_id
+  def __attrs_post_init__(self):
+    assert self._model  # Ensure the model is initialised.
 
+  @functools.cached_property
+  def _model(self):
     if is_vllm_available():
       num_gpus, dev = 1, openllm.utils.device_count()
       if dev >= 2:
@@ -67,7 +72,7 @@ class LLM:
       try:
         from vllm import AsyncEngineArgs, AsyncLLMEngine
 
-        self._model = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.engine_args))
+        return AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.engine_args))
       except Exception as err:
         traceback.print_exc()
         raise openllm.exceptions.OpenLLMException(
