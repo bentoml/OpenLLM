@@ -148,7 +148,7 @@ _TRANSFORMERS_CONSTRAINTS = '4.36.0'
 
 FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
 GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
-OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
+OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken', 'fastapi']
 AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']

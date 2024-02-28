@@ -1,46 +1,21 @@
 from __future__ import annotations
+
 from http import HTTPStatus
+import traceback
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
-from openllm_core._typing_compat import Annotated
+from openllm_core._typing_compat import Annotated, Unpack
+from openllm_core.exceptions import ModelNotFound
 from openllm_core._schemas import MessageParam, MessagesConverterInput
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 from openllm_core.protocol.openai import LogProbs, ModelCard, ModelList
-from starlette.routing import Route
 
-from openllm.entrypoints._openapi import get_generator
-from openllm_core.protocol.openai import (
-  ChatCompletionRequest,
-  ChatCompletionResponse,
-  ChatCompletionStreamResponse,
-  CompletionRequest,
-  CompletionResponse,
-  CompletionStreamResponse,
-  ErrorResponse,
-)
+from openllm_core.protocol.openai import ChatCompletionRequest, ChatCompletionResponse
+from _openllm_tiny._helpers import create_typeddict_from_model
 
-schemas = get_generator(
-  'openai',
-  components=[
-    ErrorResponse,
-    ModelList,
-    ChatCompletionResponse,
-    ChatCompletionRequest,
-    ChatCompletionStreamResponse,
-    CompletionRequest,
-    CompletionResponse,
-    CompletionStreamResponse,
-  ],
-  tags=[
-    {
-      'name': 'OpenAI',
-      'description': 'OpenAI Compatible API support',
-      'externalDocs': 'https://platform.openai.com/docs/api-reference/completions/object',
-    }
-  ],
-)
+try:
+  from fastapi import FastAPI
+except ImportError:
+  raise ImportError("Make sure to install openllm with 'pip install openllm[openai]'")
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +29,7 @@ bentomodel = openllm.prepare_model(
   trust_remote_code=svars.trust_remote_code,
 )
 llm_config = core.AutoConfig.from_bentomodel(bentomodel)
-Generation = core.GenerationInput.from_config(llm_config)
+GenerationInput = core.GenerationInput.from_config(llm_config)
 
 
 def create_logprobs(
@@ -75,7 +50,7 @@ def create_logprobs(
     token_logprob = None
     if step_top_logprobs is not None:
       token_logprob = step_top_logprobs[token_id]
-    token = llm.tokenizer.convert_ids_to_tokens(token_id)
+    token = llm._tokenizer.convert_ids_to_tokens(token_id)
     logprobs.tokens.append(token)
     logprobs.token_logprobs.append(token_logprob)
     if len(logprobs.text_offset) == 0:
@@ -85,7 +60,7 @@ def create_logprobs(
     last_token_len = len(token)
     if num_output_top_logprobs:
       logprobs.top_logprobs.append(
-        {llm.tokenizer.convert_ids_to_tokens(i): p for i, p in step_top_logprobs.items()}
+        {llm._tokenizer.convert_ids_to_tokens(i): p for i, p in step_top_logprobs.items()}
         if step_top_logprobs
         else None
       )
@@ -112,7 +87,7 @@ class LLMService:
       prompt='What is the meaning of life?', llm_config=dict(max_tokens=28, top_p=0.25), stop=['philosopher']
     ),
   ) -> core.GenerationOutput:
-    return await self.llm.generate(**Generation.from_dict(parameters).model_dump())
+    return await self.llm.generate(**GenerationInput.from_dict(parameters).model_dump())
 
   @core.utils.api(route='/v1/generate_stream')
   async def generate_stream_v1(
@@ -121,7 +96,7 @@ class LLMService:
       prompt='What is the meaning of life?', llm_config=dict(max_tokens=28, top_p=0.25), stop=['philosopher']
     ),
   ) -> t.AsyncGenerator[str, None]:
-    async for generated in self.llm.generate_iterator(**Generation.from_dict(parameters).model_dump()):
+    async for generated in self.llm.generate_iterator(**GenerationInput.from_dict(parameters).model_dump()):
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 
@@ -147,34 +122,56 @@ class LLMService:
       ],
     ),
   ) -> str:
-    return self.llm.tokenizer.apply_chat_template(
+    return self.llm._tokenizer.apply_chat_template(
       message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
     )
 
-  # OpenAI Compatible endpoints
-  # @core.utils.api(route='/v1/chat/completions', input=ChatCompletionRequest)
-  # async def chat_completions_v1(
-  #   self, request: ChatCompletionRequest
-  # ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
-  #   logger.debug('Received chat completion request: %s', request)
-  #   if request.model != self.llm.model_id:
-  #     raise ModelNotFound(
-  #       f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see available models.\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request."
-  #     )
+  @core.utils.api(route='/v1/chat/completions', input=ChatCompletionRequest)
+  async def chat_completions_v1(
+    self, **request: Unpack[ChatCompletionRequestTypedDict]
+  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
+    try:
+      request = ChatCompletionRequest.model_construct(**request)
+    except Exception:
+      traceback.print_exc()
+      raise
+
+    if request.model != self.llm.model_id:
+      raise ModelNotFound(
+        f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see available models.\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request."
+      )
 
 
-llm_type = t.cast(str, bentomodel.info.metadata['model_id'])
+ChatCompletionRequestTypedDict = create_typeddict_from_model(ChatCompletionRequest)
+
+app = FastAPI(debug=True, description='OpenAI Compatible API support')
 
 
 # GET /v1/models
-def list_models(_: Request) -> JSONResponse:
-  return JSONResponse(
-    ModelList(data=[ModelCard(id=core.utils.normalise_model_name(llm_type))]), status_code=HTTPStatus.OK.value
+@app.get(
+  '/v1/models',
+  tags=['OpenAI'],
+  status_code=HTTPStatus.OK,
+  summary='Describes a model offering that can be used with the API.',
+  operation_id='openai__list_models',
+)
+def list_models() -> ModelList:
+  """
+  List and describe the various models available in the API.
+
+  You can refer to the available supported models with `openllm models` for more information.
+  """
+  return ModelList(
+    data=[
+      ModelCard(
+        root=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+        id=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+      )
+    ]
   )
 
 
-app = Starlette(debug=True, routes=[Route('/models', list_models, methods=['GET'])])
-LLMService.mount_asgi_app(app, '/v1')
+LLMService.mount_asgi_app(app)
 
 if __name__ == '__main__':
   LLMService.serve_http(reload=core.utils.check_bool_env('RELOAD', False))

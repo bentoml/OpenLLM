@@ -43,17 +43,9 @@ split_csv() {
   done
 }
 
-# Function to ensure tomlkit is installen# Function to ensure tomlkit is installed
-ensure_base() {
-  if ! python -c "import tomlkit" > /dev/null 2>&1; then
-    echo "Installing tomlkit..."
-    uv pip install tomlkit pre-commit
-  fi
-}
-
 # Function to validate extensions
 validate_extensions() {
-  ensure_base
+  uv pip install tomlkit pre-commit mypy
   local valid_extensions
   valid_extensions=$(python -c "
 import tomlkit

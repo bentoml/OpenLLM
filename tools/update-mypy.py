@@ -9,6 +9,7 @@ _MYPY_CONFIG = {
   'python_version': '3.9',
   'show_error_codes': 'true',
   'strict': 'true',
+  'plugins': 'pydantic.mypy',
   'ignore_missing_imports': 'true',
   'warn_unreachable': 'true',
   'explicit_package_bases': 'true',
@@ -20,7 +21,7 @@ def pyi_in_subdir(directory: str, git_root: str) -> List[str]:
   pyi_files = []
   for root, _, files in os.walk(directory):
     for file in files:
-      if file.endswith('.pyi') or file == '_typing_compat.py':
+      if file.endswith('.pyi') or file == '_typing_compat.py' or '_openllm_tiny' in file:
         full_path = os.path.join(root, file)
         # Convert to relative path with respect to the git root
         relative_path = os.path.relpath(full_path, git_root)
@@ -31,7 +32,9 @@ def pyi_in_subdir(directory: str, git_root: str) -> List[str]:
 def find_pyi_files(git_root: str) -> List[str]:
   # List all subdirectories
   subdirectories = [
-    os.path.join(git_root, name) for name in os.listdir(git_root) if os.path.isdir(os.path.join(git_root, name)) and name not in ['venv', '.git', '.venv']
+    os.path.join(git_root, name)
+    for name in os.listdir(git_root)
+    if os.path.isdir(os.path.join(git_root, name)) and name not in ['venv', '.git', '.venv']
   ]
 
   # Use a thread pool to execute searches concurrently

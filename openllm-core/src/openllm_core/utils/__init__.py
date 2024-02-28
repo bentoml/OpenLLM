@@ -1,5 +1,5 @@
 from __future__ import annotations
-import functools, hashlib, logging, logging.config, inflection, os, sys, types, uuid, typing as t
+import functools, hashlib, logging, logging.config, pydantic, inflection, os, sys, types, uuid, typing as t
 from pathlib import Path as _Path
 from . import import_utils as iutils, pkg
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
@@ -15,6 +15,9 @@ from ._constants import (
   SHOW_CODEGEN as SHOW_CODEGEN,
   MYPY as MYPY,
 )
+
+if t.TYPE_CHECKING:
+  from _bentoml_sdk import IODescriptor
 
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
@@ -98,6 +101,17 @@ def lenient_issubclass(cls, class_or_tuple):
     raise
 
 
+def io_descriptor(model) -> type[IODescriptor] | None:
+  if model is None:
+    return model
+  try:
+    from _bentoml_sdk import IODescriptor
+  except ImportError:
+    raise RuntimeError('Requires "bentoml>1.2" to use `openllm_core.utils.io_descriptor`') from None
+
+  return pydantic.create_model(f'{model.__class__.__name__}IODescriptor', __base__=(model, IODescriptor))
+
+
 def api(
   func=None,
   *,
@@ -120,8 +134,8 @@ def api(
       func,
       route=route,
       name=name,
-      input_spec=input,
-      output_spec=output,
+      input_spec=io_descriptor(input),
+      output_spec=io_descriptor(output),
       batchable=batchable,
       batch_dim=batch_dim,
       max_batch_size=max_batch_size,

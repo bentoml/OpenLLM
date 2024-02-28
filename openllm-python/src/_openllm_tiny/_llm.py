@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, traceback, openllm, typing as t
-from openllm_core.utils import VersionInfo, check_bool_env, normalise_model_name, gen_random_uuid
+from openllm_core.utils import VersionInfo, check_bool_env, is_vllm_available, normalise_model_name, gen_random_uuid
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
-from openllm_core._schemas import GenerationOutput
+from openllm_core._schemas import GenerationOutput, GenerationInput
 from _bentoml_sdk.service import ServiceConfig
 
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
@@ -45,33 +45,36 @@ class LLM:
 
     self._path = self.bentomodel.path if self.local else self.model_id
 
-    num_gpus, dev = 1, openllm.utils.device_count()
-    if dev >= 2:
-      num_gpus = min(dev // 2 * 2, dev)
-    quantise = self.quantise if self.quantise and self.quantise in {'gptq', 'awq', 'squeezellm'} else None
-    dtype = 'float16' if quantise == 'gptq' else self.dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
+    if is_vllm_available():
+      num_gpus, dev = 1, openllm.utils.device_count()
+      if dev >= 2:
+        num_gpus = min(dev // 2 * 2, dev)
+      quantise = self.quantise if self.quantise and self.quantise in {'gptq', 'awq', 'squeezellm'} else None
+      dtype = 'float16' if quantise == 'gptq' else self.dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
 
-    self.engine_args.setdefault('gpu_memory_utilization', 0.9)
-    self.engine_args.update({
-      'worker_use_ray': False,
-      'engine_use_ray': False,
-      'tokenizer_mode': 'auto',
-      'tensor_parallel_size': num_gpus,
-      'model': self._path,
-      'tokenizer': self._path,
-      'trust_remote_code': self.trust_remote_code,
-      'dtype': dtype,
-      'quantization': quantise,
-    })
-    try:
-      from vllm import AsyncEngineArgs, AsyncLLMEngine
+      self.engine_args.setdefault('gpu_memory_utilization', 0.9)
+      self.engine_args.update({
+        'worker_use_ray': False,
+        'engine_use_ray': False,
+        'tokenizer_mode': 'auto',
+        'tensor_parallel_size': num_gpus,
+        'model': self._path,
+        'tokenizer': self._path,
+        'trust_remote_code': self.trust_remote_code,
+        'dtype': dtype,
+        'quantization': quantise,
+      })
+      try:
+        from vllm import AsyncEngineArgs, AsyncLLMEngine
 
-      self._model = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.engine_args))
-    except Exception as err:
-      traceback.print_exc()
-      raise openllm.exceptions.OpenLLMException(
-        f'Failed to initialise vLLMEngine due to the following error:\n{err}'
-      ) from err
+        self._model = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.engine_args))
+      except Exception as err:
+        traceback.print_exc()
+        raise openllm.exceptions.OpenLLMException(
+          f'Failed to initialise vLLMEngine due to the following error:\n{err}'
+        ) from err
+    else:
+      raise RuntimeError('Currently, OpenLLM is only supported running with a GPU and vLLM backend.')
 
   @property
   def bentomodel(self) -> bentoml.Model:
@@ -129,7 +132,7 @@ class LLM:
     }
 
   @functools.cached_property
-  def tokenizer(self):
+  def _tokenizerr(self):
     import transformers
 
     return transformers.AutoTokenizer.from_pretrained(self._path, trust_remote_code=self.trust_remote_code)
@@ -146,7 +149,7 @@ class LLM:
   ) -> t.AsyncGenerator[GenerationOutput, None]:
     from vllm import SamplingParams
 
-    config = self.config.model_construct_env(**attrs)
+    config = self.config.model_copy(update=attrs)
 
     stop_token_ids = stop_token_ids or []
     eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
@@ -155,8 +158,8 @@ class LLM:
     stop_token_ids.extend(eos_token_id or [])
     if (config_eos := config['eos_token_id']) and config_eos not in stop_token_ids:
       stop_token_ids.append(config_eos)
-    if self.tokenizer.eos_token_id not in stop_token_ids:
-      stop_token_ids.append(self.tokenizer.eos_token_id)
+    if self._tokenizer.eos_token_id not in stop_token_ids:
+      stop_token_ids.append(self._tokenizer.eos_token_id)
     if stop is None:
       stop = set()
     elif isinstance(stop, str):
@@ -202,13 +205,15 @@ class LLM:
     stop_token_ids: list[int] | None = None,
     request_id: str | None = None,
     adapter_name: str | None = None,
+    *,
+    _generated: GenerationInput | None = None,
     **attrs: t.Any,
   ) -> GenerationOutput:
     if stop is not None:
       attrs.update({'stop': stop})
     if stop_token_ids is not None:
       attrs.update({'stop_token_ids': stop_token_ids})
-    config = self.config.model_construct_env(**attrs)
+    config = self.config.model_copy(update=attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for result in self.generate_iterator(
       prompt,

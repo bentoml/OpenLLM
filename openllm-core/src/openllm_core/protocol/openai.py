@@ -150,6 +150,24 @@ class ModelCard(pydantic.BaseModel):
   object: str = 'model'
   created: int = pydantic.Field(default_factory=lambda: int(time.monotonic()))
   owned_by: str = 'na'
+  root: t.Optional[str] = None
+  parent: t.Optional[str] = None
+  permission: t.List[ModelPermission] = pydantic.Field(default_factory=lambda: [ModelPermission()])
+
+
+class ModelPermission(pydantic.BaseModel):
+  id: str = pydantic.Field(default_factory=lambda: gen_random_uuid('modelperm'))
+  object: str = 'model_permission'
+  created: int = pydantic.Field(default_factory=lambda: int(time.monotonic()))
+  allow_create_engine: bool = False
+  allow_sampling: bool = True
+  allow_logprobs: bool = True
+  allow_search_indices: bool = False
+  allow_view: bool = True
+  allow_fine_tuning: bool = False
+  organization: str = '*'
+  group: t.Optional[str] = None
+  is_blocking: str = False
 
 
 class ModelList(pydantic.BaseModel):
