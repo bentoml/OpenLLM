@@ -4,18 +4,17 @@ from http import HTTPStatus
 import traceback
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
-from openllm_core._typing_compat import Annotated, Unpack
+from openllm_core._typing_compat import Unpack, Annotated
 from openllm_core.exceptions import ModelNotFound
 from openllm_core._schemas import MessageParam, MessagesConverterInput
 from openllm_core.protocol.openai import LogProbs, ModelCard, ModelList
 
 from openllm_core.protocol.openai import ChatCompletionRequest, ChatCompletionResponse
-from _openllm_tiny._helpers import create_typeddict_from_model
 
 try:
   from fastapi import FastAPI
 except ImportError:
-  raise ImportError("Make sure to install openllm with 'pip install openllm[openai]'")
+  raise ImportError("Make sure to install openllm with 'pip install openllm[openai]'") from None
 
 logger = logging.getLogger(__name__)
 
@@ -80,22 +79,12 @@ class LLMService:
       trust_remote_code=svars.trust_remote_code,
     )
 
-  @core.utils.api(route='/v1/generate')
-  async def generate_v1(
-    self,
-    parameters: Annotated[t.Dict[str, t.Any], core.GenerationInputDict] = core.GenerationInputDict(
-      prompt='What is the meaning of life?', llm_config=dict(max_tokens=28, top_p=0.25), stop=['philosopher']
-    ),
-  ) -> core.GenerationOutput:
+  @core.utils.api(route='/v1/generate', input=GenerationInput)
+  async def generate_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> core.GenerationOutput:
     return await self.llm.generate(**GenerationInput.from_dict(parameters).model_dump())
 
-  @core.utils.api(route='/v1/generate_stream')
-  async def generate_stream_v1(
-    self,
-    parameters: Annotated[t.Dict[str, t.Any], core.GenerationInputDict] = core.GenerationInputDict(
-      prompt='What is the meaning of life?', llm_config=dict(max_tokens=28, top_p=0.25), stop=['philosopher']
-    ),
-  ) -> t.AsyncGenerator[str, None]:
+  @core.utils.api(route='/v1/generate_stream', input=GenerationInput)
+  async def generate_stream_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> t.AsyncGenerator[str, None]:
     async for generated in self.llm.generate_iterator(**GenerationInput.from_dict(parameters).model_dump()):
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
@@ -127,9 +116,7 @@ class LLMService:
     )
 
   @core.utils.api(route='/v1/chat/completions', input=ChatCompletionRequest)
-  async def chat_completions_v1(
-    self, **request: Unpack[ChatCompletionRequestTypedDict]
-  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
+  async def chat_completions_v1(self, **request) -> t.AsyncGenerator[ChatCompletionResponse, None]:
     try:
       request = ChatCompletionRequest.model_construct(**request)
     except Exception:
@@ -142,15 +129,13 @@ class LLMService:
       )
 
 
-ChatCompletionRequestTypedDict = create_typeddict_from_model(ChatCompletionRequest)
-
 app = FastAPI(debug=True, description='OpenAI Compatible API support')
 
 
 # GET /v1/models
 @app.get(
   '/v1/models',
-  tags=['OpenAI'],
+  tags=['Service APIs'],
   status_code=HTTPStatus.OK,
   summary='Describes a model offering that can be used with the API.',
   operation_id='openai__list_models',

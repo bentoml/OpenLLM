@@ -49,7 +49,8 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
 __all__, __dir__ = __lazy.__all__, __lazy.__dir__
 
 _NEW_API = ['prepare_model']
-_NEW_IMPL = ['LLM']
+_BREAKING_INTERNAL = ['_service', '_service_vars']
+_NEW_IMPL = ['LLM', *_BREAKING_INTERNAL]
 
 if (_BENTOML_VERSION := utils.pkg.pkg_version_info('bentoml')) > (1, 2):
   import _openllm_tiny as _tiny
@@ -60,6 +61,10 @@ else:
 def __getattr__(name: str) -> _t.Any:
   if name in _NEW_IMPL:
     if utils.getenv('IMPLEMENTATION', default='new_impl') == 'deprecated' or _tiny is None:
+      if name in _BREAKING_INTERNAL:
+        raise ImportError(
+          f'"{name}" is an internal implementation and considered breaking with older OpenLLM. Please migrate your code if you depend on this.'
+        )
       _warnings.warn(
         f'"{name}" is considered deprecated implementation and will be removed in the future. Make sure to upgrade to OpenLLM 0.5.x',
         DeprecationWarning,

@@ -107,8 +107,8 @@ class GenerationInput(pydantic.BaseModel):
       inflection.camelize(llm_config['start_name']) + 'GenerationInput',
       __base__=cls,
       llm_config=(type(llm_config), llm_config),
+      _class_ref=(llm_config.__class__, pydantic.PrivateAttr(default=llm_config.__class__)),
     )
-    klass._class_ref = llm_config.__class__
     return klass
 
 

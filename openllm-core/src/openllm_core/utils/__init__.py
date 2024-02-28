@@ -105,11 +105,11 @@ def io_descriptor(model) -> type[IODescriptor] | None:
   if model is None:
     return model
   try:
-    from _bentoml_sdk import IODescriptor
-  except ImportError:
-    raise RuntimeError('Requires "bentoml>1.2" to use `openllm_core.utils.io_descriptor`') from None
+    from _bentoml_sdk.io_models import IOMixin
+  except ImportError as err:
+    raise RuntimeError('Requires "bentoml>1.2" to use `openllm_core.utils.io_descriptor`') from err
 
-  return pydantic.create_model(f'{model.__class__.__name__}IODescriptor', __base__=(model, IODescriptor))
+  return pydantic.create_model(f'{model.__class__.__name__}IODescriptor', __base__=(IOMixin, model))
 
 
 def api(
