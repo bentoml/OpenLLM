@@ -9,7 +9,9 @@ if t.TYPE_CHECKING:
 INSTRUCTION_KEY = '### Instruction:'
 RESPONSE_KEY = '### Response:'
 END_KEY = '### End'
-INTRO_BLURB = 'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
+INTRO_BLURB = (
+  'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
+)
 
 
 def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
