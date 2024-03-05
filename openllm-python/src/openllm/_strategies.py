@@ -113,13 +113,15 @@ class _ResourceMixin:
         # So we need to use the ctypes bindings directly.
         # we don't want to use CLI because parsing is a pain.
         # TODO: Use tinygrad/gpuctypes
-        sys.path.append('/opt/rocm/libexec/rocm_smi')
+        rocm_path = os.environ.get('ROCM_PATH', '/opt/rocm')
+        sys.path.append(rocm_path + '/libexec/rocm_smi',)
         try:
           from ctypes import byref, c_uint32
 
           # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
           from rsmiBindings import rocmsmi, rsmi_status_t
 
+          ret = rocmsmi.rsmi_init(0)
           device_count = c_uint32(0)
           ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
           if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
@@ -129,7 +131,7 @@ class _ResourceMixin:
         except (ModuleNotFoundError, ImportError):
           return []
         finally:
-          sys.path.remove('/opt/rocm/libexec/rocm_smi')
+          sys.path.remove(rocm_path + '/libexec/rocm_smi')
       else:
         try:
           from cuda import cuda
