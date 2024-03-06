@@ -11,6 +11,7 @@ if t.TYPE_CHECKING:
   from openllm_core._typing_compat import LiteralBackend
 
 _MODELING_MAPPING = {'flan_t5': 'google/flan-t5-small', 'opt': 'facebook/opt-125m', 'baichuan': 'baichuan-inc/Baichuan-7B'}
+_TRUST_REMOTE_MAPPING = {'flan_t5': False, 'opt': False, 'baichuan': True}
 _PROMPT_MAPPING = {'qa': 'Answer the following yes/no question by reasoning step-by-step. Can you write a whole Haiku in a single tweet?'}
 
 
@@ -19,7 +20,7 @@ def parametrise_local_llm(model: str) -> t.Generator[tuple[str, openllm.LLM[t.An
     pytest.skip(f"'{model}' is not yet supported in framework testing.")
   backends: tuple[LiteralBackend, ...] = ('pt',)
   for backend, prompt in itertools.product(backends, _PROMPT_MAPPING.keys()):
-    yield prompt, openllm.LLM(_MODELING_MAPPING[model], backend=backend)
+    yield prompt, openllm.LLM(_MODELING_MAPPING[model], backend=backend, trust_remote_code=_TRUST_REMOTE_MAPPING[model])
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
