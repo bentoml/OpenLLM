@@ -7,6 +7,7 @@ import pytest
 import bentoml
 from openllm import _strategies as strategy
 from openllm._strategies import CascadingResourceStrategy, NvidiaGpuResource, get_resource
+from bentoml._internal.resource import system_resources
 
 if t.TYPE_CHECKING:
   from _pytest.monkeypatch import MonkeyPatch
@@ -67,6 +68,7 @@ def test_nvidia_gpu_parse_literal(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.skipif(os.getenv('GITHUB_ACTIONS') is not None, reason='skip GPUs test on CI')
+@pytest.mark.skipif(get_resource(system_resources(), 'nvidia.com/gpu') is not None, reason='for AMD GPU, validate is not supported yet')
 def test_nvidia_gpu_validate(monkeypatch: pytest.MonkeyPatch):
   with monkeypatch.context() as mcls:
     # to make this tests works with system that has GPU
