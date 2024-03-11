@@ -9,10 +9,16 @@ else:
   # configuration for bitsandbytes before import
   _os.environ['BITSANDBYTES_NOWELCOME'] = _os.environ.get('BITSANDBYTES_NOWELCOME', '1')
   # NOTE: The following warnings from bitsandbytes, and probably not that important for users to see when DEBUG is False
-  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization')
-  _warnings.filterwarnings('ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization')
+  _warnings.filterwarnings(
+    'ignore', message='MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization'
+  )
+  _warnings.filterwarnings(
+    'ignore', message='MatMul8bitLt: inputs will be cast from torch.bfloat16 to float16 during quantization'
+  )
   _warnings.filterwarnings('ignore', message='The installed version of bitsandbytes was compiled without GPU support.')
-  _warnings.filterwarnings('ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated')
+  _warnings.filterwarnings(
+    'ignore', message='Neither GITHUB_TOKEN nor GITHUB_JWT_TOKEN found: running as unauthenticated'
+  )
 COMPILED = _pathlib.Path(__file__).suffix in ('.pyd', '.so')
 __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once mypy_extensions can recognize __spec__
   __name__,

@@ -19,7 +19,9 @@ def Runner(
   if llm_config is None:
     llm_config = openllm.AutoConfig.for_model(model_name)
   if not ensure_available:
-    logger.warning("'ensure_available=False' won't have any effect as LLM will always check to download the model on initialisation.")
+    logger.warning(
+      "'ensure_available=False' won't have any effect as LLM will always check to download the model on initialisation."
+    )
   model_id = attrs.get('model_id', os.getenv('OPENLLM_MODEL_ID', llm_config['default_id']))
   warnings.warn(
     f"""\
@@ -40,8 +42,13 @@ def Runner(
   attrs.update({
     'model_id': model_id,
     'quantize': getenv('QUANTIZE', var=['QUANTISE'], default=attrs.get('quantize', None)),  #
-    'serialisation': getenv('serialization', default=attrs.get('serialisation', llm_config['serialisation']), var=['SERIALISATION']),
+    'serialisation': getenv(
+      'serialization', default=attrs.get('serialisation', llm_config['serialisation']), var=['SERIALISATION']
+    ),
   })
   return openllm.LLM(
-    backend=first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'), llm_config=llm_config, embedded=init_local, **attrs
+    backend=first_not_none(backend, default='vllm' if is_vllm_available() else 'pt'),
+    llm_config=llm_config,
+    embedded=init_local,
+    **attrs,
   ).runner
