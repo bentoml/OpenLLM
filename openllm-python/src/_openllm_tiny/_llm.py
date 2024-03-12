@@ -137,7 +137,7 @@ class LLM:
     }
 
   @functools.cached_property
-  def _tokenizerr(self):
+  def _tokenizer(self):
     import transformers
 
     return transformers.AutoTokenizer.from_pretrained(self._path, trust_remote_code=self.trust_remote_code)

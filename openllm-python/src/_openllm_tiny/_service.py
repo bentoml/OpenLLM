@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-import traceback
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
 from openllm_core._typing_compat import Unpack, Annotated
-from openllm_core.exceptions import ModelNotFound
 from openllm_core._schemas import MessageParam, MessagesConverterInput
-from openllm_core.protocol.openai import LogProbs, ModelCard, ModelList
-
-from openllm_core.protocol.openai import ChatCompletionRequest, ChatCompletionResponse
+from openllm_core.protocol.openai import (
+  CompletionRequest,
+  ModelCard,
+  ModelList,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+)
+from _openllm_tiny._helpers import OpenAI
 
 try:
   from fastapi import FastAPI
@@ -29,41 +32,6 @@ bentomodel = openllm.prepare_model(
 )
 llm_config = core.AutoConfig.from_bentomodel(bentomodel)
 GenerationInput = core.GenerationInput.from_config(llm_config)
-
-
-def create_logprobs(
-  token_ids: list[int],
-  top_logprobs: list[dict[int, float] | None] | None = None,  #
-  num_output_top_logprobs: int | None = None,
-  initial_text_offset: int = 0,
-  *,
-  llm: openllm.LLM,
-) -> LogProbs:
-  # Create OpenAI-style logprobs.
-  logprobs = LogProbs()
-  last_token_len = 0
-  if num_output_top_logprobs:
-    logprobs.top_logprobs = []
-  for i, token_id in enumerate(token_ids):
-    step_top_logprobs = top_logprobs[i]
-    token_logprob = None
-    if step_top_logprobs is not None:
-      token_logprob = step_top_logprobs[token_id]
-    token = llm._tokenizer.convert_ids_to_tokens(token_id)
-    logprobs.tokens.append(token)
-    logprobs.token_logprobs.append(token_logprob)
-    if len(logprobs.text_offset) == 0:
-      logprobs.text_offset.append(initial_text_offset)
-    else:
-      logprobs.text_offset.append(logprobs.text_offset[-1] + last_token_len)
-    last_token_len = len(token)
-    if num_output_top_logprobs:
-      logprobs.top_logprobs.append(
-        {llm._tokenizer.convert_ids_to_tokens(i): p for i, p in step_top_logprobs.items()}
-        if step_top_logprobs
-        else None
-      )
-  return logprobs
 
 
 @bentoml.service(name=f"llm-{llm_config['start_name']}-service", **svars.services_config)
@@ -117,16 +85,15 @@ class LLMService:
 
   @core.utils.api(route='/v1/chat/completions', input=ChatCompletionRequest)
   async def chat_completions_v1(self, **request) -> t.AsyncGenerator[ChatCompletionResponse, None]:
-    try:
-      request = ChatCompletionRequest.model_construct(**request)
-    except Exception:
-      traceback.print_exc()
-      raise
+    generator = await OpenAI.chat_completions(self.llm, **request)
+    async for response in generator:
+      yield response
 
-    if request.model != self.llm.model_id:
-      raise ModelNotFound(
-        f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see available models.\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request."
-      )
+  @core.utils.api(route='/v1/completions', input=CompletionRequest)
+  async def completions_v1(self, **request) -> core.CompletionResponse:
+    generator = await OpenAI.completions(self.llm, **request)
+    async for response in generator:
+      yield response
 
 
 app = FastAPI(debug=True, description='OpenAI Compatible API support')

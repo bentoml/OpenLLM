@@ -1,7 +1,16 @@
 from __future__ import annotations
+from http import HTTPStatus
 import time, pydantic, typing as t
 from .._schemas import FinishReason
 from ..utils import gen_random_uuid
+
+from openllm_core.exceptions import OpenLLMException
+
+
+class NotSupportedError(OpenLLMException):
+  """Raised when a feature is not supported."""
+
+  error_code = HTTPStatus.BAD_REQUEST
 
 
 class ErrorResponse(pydantic.BaseModel):
