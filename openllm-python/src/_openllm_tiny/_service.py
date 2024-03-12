@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+import inspect
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
-from openllm_core._typing_compat import Unpack, Annotated
+from openllm_core._typing_compat import Annotated
 from openllm_core._schemas import MessageParam, MessagesConverterInput
 from openllm_core.protocol.openai import (
-  CompletionRequest,
   ModelCard,
   ModelList,
+  CompletionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
 )
@@ -47,12 +48,12 @@ class LLMService:
       trust_remote_code=svars.trust_remote_code,
     )
 
-  @core.utils.api(route='/v1/generate', input=GenerationInput)
-  async def generate_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> core.GenerationOutput:
+  @core.utils.api(route='/v1/generate')
+  async def generate_v1(self, **parameters: t.Any) -> core.GenerationOutput:
     return await self.llm.generate(**GenerationInput.from_dict(parameters).model_dump())
 
-  @core.utils.api(route='/v1/generate_stream', input=GenerationInput)
-  async def generate_stream_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> t.AsyncGenerator[str, None]:
+  @core.utils.api(route='/v1/generate_stream')
+  async def generate_stream_v1(self, **parameters: t.Any) -> t.AsyncGenerator[str, None]:
     async for generated in self.llm.generate_iterator(**GenerationInput.from_dict(parameters).model_dump()):
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
@@ -83,17 +84,68 @@ class LLMService:
       message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
     )
 
-  @core.utils.api(route='/v1/chat/completions', input=ChatCompletionRequest)
-  async def chat_completions_v1(self, **request) -> t.AsyncGenerator[ChatCompletionResponse, None]:
-    generator = await OpenAI.chat_completions(self.llm, **request)
-    async for response in generator:
-      yield response
+  @core.utils.api(route='/v1/chat/completions')
+  async def chat_completions_v1(
+    self,
+    messages: t.List[Annotated[t.Dict[str, str], MessageParam]] = [
+      MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
+      MessageParam(role='user', content='Hi there!'),
+      MessageParam(role='assistant', content='Yes?'),
+    ],
+    model: t.Optional[str] = None,
+    functions: t.Optional[t.List[t.Dict[str, str]]] = None,
+    function_calls: t.Optional[t.List[t.Dict[str, str]]] = None,
+    temperature: t.Optional[float] = None,
+    top_p: t.Optional[float] = None,
+    n: t.Optional[int] = None,
+    stream: t.Optional[bool] = False,
+    stop: t.Optional[t.Union[str, t.List[str]]] = None,
+    max_tokens: t.Optional[int] = None,
+    presence_penalty: t.Optional[float] = None,
+    frequency_penalty: t.Optional[float] = None,
+    echo: t.Optional[bool] = False,
+    logit_bias: t.Optional[t.Dict[str, float]] = None,
+    user: t.Optional[str] = None,
+    # supported by vLLM and us
+    top_k: t.Optional[int] = None,
+    best_of: t.Optional[int] = 1,
+    # Additional features to support chat_template
+    chat_template: t.Optional[str] = None,
+    add_generation_prompt: bool = True,
+  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
+    request = ChatCompletionRequest.model_construct(
+      messages=messages,
+      model=model,
+      functions=functions,
+      function_calls=function_calls,
+      temperature=temperature,
+      top_p=top_p,
+      n=n,
+      stream=stream,
+      stop=stop,
+      max_tokens=max_tokens,
+      presence_penalty=presence_penalty,
+      frequency_penalty=frequency_penalty,
+      echo=echo,
+      logit_bias=logit_bias,
+      user=user,
+      top_k=top_k,
+      best_of=best_of,
+      chat_template=chat_template,
+      add_generation_prompt=add_generation_prompt,
+    )
+    breakpoint()
+    generator = await OpenAI.chat_completions(self.llm, request)
+    if inspect.isasyncgen(generator):
+      async for response in generator:
+        yield response  # fmt: skip
+    yield generator
 
-  @core.utils.api(route='/v1/completions', input=CompletionRequest)
-  async def completions_v1(self, **request) -> core.CompletionResponse:
+  @core.utils.api(route='/v1/completions')
+  async def completions_v1(self, **request: t.Any) -> CompletionResponse:
     generator = await OpenAI.completions(self.llm, **request)
     async for response in generator:
-      yield response
+      yield response  # fmt: skip
 
 
 app = FastAPI(debug=True, description='OpenAI Compatible API support')

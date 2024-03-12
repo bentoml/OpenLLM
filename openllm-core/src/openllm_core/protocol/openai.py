@@ -127,6 +127,7 @@ class ChatMessage(pydantic.BaseModel):
 class ChatCompletionResponseStreamChoice(pydantic.BaseModel):
   index: int
   delta: Delta
+  logprobs: t.Optional[LogProbs] = None
   finish_reason: t.Optional[FinishReason] = None
 
 

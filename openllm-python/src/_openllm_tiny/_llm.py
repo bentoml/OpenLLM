@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, traceback, openllm, typing as t
+
 from openllm_core.utils import VersionInfo, check_bool_env, is_vllm_available, normalise_model_name, gen_random_uuid
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput, GenerationInput
 from _bentoml_sdk.service import ServiceConfig
 
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
+
+if t.TYPE_CHECKING:
+  from vllm import RequestOutput
 
 
 def check_engine_args(_, attr: attr.Attribute[dict[str, t.Any]], v: dict[str, t.Any]) -> dict[str, t.Any]:
@@ -151,7 +155,7 @@ class LLM:
     request_id: str | None = None,
     adapter_name: str | None = None,
     **attrs: t.Any,
-  ) -> t.AsyncGenerator[GenerationOutput, None]:
+  ) -> t.AsyncGenerator[RequestOutput, None]:
     from vllm import SamplingParams
 
     config = self.config.model_copy(update=attrs)
@@ -173,7 +177,6 @@ class LLM:
       stop = set(stop)
 
     request_id = gen_random_uuid() if request_id is None else request_id
-    previous_texts, previous_num_tokens = [''] * config['n'], [0] * config['n']
 
     config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids))
     top_p = 1.0 if config['temperature'] <= 1e-5 else config['top_p']
@@ -183,24 +186,11 @@ class LLM:
     })
 
     try:
-      generator = self._model.generate(
+      return self._model.generate(
         prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
       )
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
-
-    try:
-      async for request_output in generator:
-        generated = GenerationOutput.from_vllm(request_output).model_copy(update=dict(prompt=prompt))
-        delta_outputs = [None] * len(generated.outputs)
-        for output in generated.outputs:
-          i = output.index
-          delta_tokens, delta_text = output.token_ids[previous_num_tokens[i] :], output.text[len(previous_texts[i]) :]
-          previous_texts[i], previous_num_tokens[i] = output.text, len(output.token_ids)
-          delta_outputs[i] = output.model_copy(update=dict(text=delta_text, token_ids=delta_tokens))
-        yield generated.model_copy(update=dict(outputs=delta_outputs))
-    except Exception as err:
-      raise RuntimeError(f'Exception caught during generation: {err}') from err
 
   async def generate(
     self,
@@ -232,7 +222,7 @@ class LLM:
         token_ids[output.index].extend(output.token_ids)
     if (final_result := result) is None:
       raise RuntimeError('No result is returned.')
-    return final_result.model_copy(
+    return GenerationOutput.from_vllm(final_result).model_copy(
       update=dict(
         prompt=prompt,
         outputs=[
