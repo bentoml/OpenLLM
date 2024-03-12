@@ -12,7 +12,7 @@ from starlette.routing import Route
 from openllm_core.utils import converter, gen_random_uuid
 
 from ._openapi import add_schema_definitions, append_schemas, apply_schema, get_generator
-from ..protocol.openai import (
+from openllm_core.protocol.openai import (
   ChatCompletionRequest,
   ChatCompletionResponse,
   ChatCompletionResponseChoice,

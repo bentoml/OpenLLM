@@ -34,7 +34,10 @@ bentomodel = openllm.prepare_model(
 llm_config = core.AutoConfig.from_bentomodel(bentomodel)
 GenerationInput = core.GenerationInput.from_config(llm_config)
 
+app = FastAPI(debug=True, description='OpenAI Compatible API support')
 
+
+@bentoml.mount_asgi_app(app, path='/v1')
 @bentoml.service(name=f"llm-{llm_config['start_name']}-service", **svars.services_config)
 class LLMService:
   bentomodel = bentomodel
@@ -84,95 +87,60 @@ class LLMService:
       message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
     )
 
-  @core.utils.api(route='/v1/chat/completions')
-  async def chat_completions_v1(
-    self,
-    messages: t.List[Annotated[t.Dict[str, str], MessageParam]] = [
-      MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
-      MessageParam(role='user', content='Hi there!'),
-      MessageParam(role='assistant', content='Yes?'),
-    ],
-    model: t.Optional[str] = None,
-    functions: t.Optional[t.List[t.Dict[str, str]]] = None,
-    function_calls: t.Optional[t.List[t.Dict[str, str]]] = None,
-    temperature: t.Optional[float] = None,
-    top_p: t.Optional[float] = None,
-    n: t.Optional[int] = None,
-    stream: t.Optional[bool] = False,
-    stop: t.Optional[t.Union[str, t.List[str]]] = None,
-    max_tokens: t.Optional[int] = None,
-    presence_penalty: t.Optional[float] = None,
-    frequency_penalty: t.Optional[float] = None,
-    echo: t.Optional[bool] = False,
-    logit_bias: t.Optional[t.Dict[str, float]] = None,
-    user: t.Optional[str] = None,
-    # supported by vLLM and us
-    top_k: t.Optional[int] = None,
-    best_of: t.Optional[int] = 1,
-    # Additional features to support chat_template
-    chat_template: t.Optional[str] = None,
-    add_generation_prompt: bool = True,
-  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
-    request = ChatCompletionRequest.model_construct(
-      messages=messages,
-      model=model,
-      functions=functions,
-      function_calls=function_calls,
-      temperature=temperature,
-      top_p=top_p,
-      n=n,
-      stream=stream,
-      stop=stop,
-      max_tokens=max_tokens,
-      presence_penalty=presence_penalty,
-      frequency_penalty=frequency_penalty,
-      echo=echo,
-      logit_bias=logit_bias,
-      user=user,
-      top_k=top_k,
-      best_of=best_of,
-      chat_template=chat_template,
-      add_generation_prompt=add_generation_prompt,
-    )
-    breakpoint()
-    generator = await OpenAI.chat_completions(self.llm, request)
-    if inspect.isasyncgen(generator):
-      async for response in generator:
-        yield response  # fmt: skip
-    yield generator
-
   @core.utils.api(route='/v1/completions')
   async def completions_v1(self, **request: t.Any) -> CompletionResponse:
     generator = await OpenAI.completions(self.llm, **request)
     async for response in generator:
-      yield response  # fmt: skip
+      yield response
 
-
-app = FastAPI(debug=True, description='OpenAI Compatible API support')
-
-
-# GET /v1/models
-@app.get(
-  '/v1/models',
-  tags=['Service APIs'],
-  status_code=HTTPStatus.OK,
-  summary='Describes a model offering that can be used with the API.',
-  operation_id='openai__list_models',
-)
-def list_models() -> ModelList:
-  """
-  List and describe the various models available in the API.
-
-  You can refer to the available supported models with `openllm models` for more information.
-  """
-  return ModelList(
-    data=[
-      ModelCard(
-        root=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
-        id=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
-      )
-    ]
+  @app.post(
+    '/v1/chat/completions',
+    tags=['OpenAI'],
+    status_code=HTTPStatus.OK,
+    summary='Given a list of messages comprising a conversation, the model will return a response.',
+    operation_id='openai__chat_completions',
   )
+  async def chat_completions_v1(
+    self,
+    request: ChatCompletionRequest = ChatCompletionRequest(
+      messages=[
+        MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
+        MessageParam(role='user', content='Hi there!'),
+        MessageParam(role='assistant', content='Yes?'),
+      ],
+      model=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+      n=1,
+      stream=True,
+    ),
+  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
+    generator = await OpenAI.chat_completions(self.llm, request)
+    if inspect.isasyncgen(generator):
+      async for response in generator:
+        yield response
+    yield generator
+
+  # GET /v1/models
+  @app.get(
+    '/v1/models',
+    tags=['OpenAI'],
+    status_code=HTTPStatus.OK,
+    summary='Describes a model offering that can be used with the API.',
+    operation_id='openai__list_models',
+  )
+  def list_models(self) -> ModelList:
+    """
+    List and describe the various models available in the API.
+
+    You can refer to the available supported models with `openllm models` for more information.
+    """
+    return ModelList(
+      data=[
+        ModelCard(
+          root=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+          id=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+        )
+      ]
+    )
 
 
 LLMService.mount_asgi_app(app)
