@@ -47,23 +47,38 @@ class ChatCompletionRequest(pydantic.BaseModel):
   model: str = pydantic.Field(default=None)
   functions: t.List[t.Dict[str, str]] = pydantic.Field(default_factory=list)
   function_calls: t.List[t.Dict[str, str]] = pydantic.Field(default_factory=list)
-  temperature: t.Optional[float] = pydantic.Field(default=None)
-  top_p: t.Optional[float] = pydantic.Field(default=None)
-  n: t.Optional[int] = pydantic.Field(default=None)
-  stream: t.Optional[bool] = pydantic.Field(default=False)
-  stop: t.Optional[t.Union[str, t.List[str]]] = pydantic.Field(default=None)
-  max_tokens: t.Optional[int] = pydantic.Field(default=None)
-  presence_penalty: t.Optional[float] = pydantic.Field(default=None)
-  frequency_penalty: t.Optional[float] = pydantic.Field(default=None)
-  echo: t.Optional[bool] = pydantic.Field(default=False)
-  logit_bias: t.Optional[t.Dict[str, float]] = pydantic.Field(default=None)
-  user: t.Optional[str] = pydantic.Field(default=None)
-  # supported by vLLM and us
-  top_k: t.Optional[int] = pydantic.Field(default=None)
-  best_of: t.Optional[int] = pydantic.Field(default=1)
-  # Additional features to support chat_template
+  temperature: t.Optional[float] = 0.7
+  top_p: t.Optional[float] = 1.0
+  n: t.Optional[int] = 1
+  max_tokens: t.Optional[int] = None
+  seed: t.Optional[int] = None
+  stop: t.Optional[t.Union[str, t.List[str]]] = pydantic.Field(default_factory=list)
+  stream: t.Optional[bool] = False
+  logprobs: t.Optional[bool] = False
+  top_logprobs: t.Optional[int] = None
+  presence_penalty: t.Optional[float] = 0.0
+  frequency_penalty: t.Optional[float] = 0.0
+  logit_bias: t.Optional[t.Dict[str, float]] = None
+  user: t.Optional[str] = None
+  # Additional parameters supported by vLLM
+  best_of: t.Optional[int] = None
+  top_k: t.Optional[int] = -1
+  ignore_eos: t.Optional[bool] = False
+  use_beam_search: t.Optional[bool] = False
+  early_stopping: t.Optional[bool] = False
+  stop_token_ids: t.Optional[t.List[int]] = pydantic.Field(default_factory=list)
+  skip_special_tokens: t.Optional[bool] = True
+  spaces_between_special_tokens: t.Optional[bool] = True
   chat_template: str = pydantic.Field(default=None)
-  add_generation_prompt: bool = pydantic.Field(default=True)
+  add_generation_prompt: t.Optional[bool] = True
+  echo: t.Optional[bool] = False
+  repetition_penalty: t.Optional[float] = 1.0
+  min_p: t.Optional[float] = 0.0
+  include_stop_str_in_output: t.Optional[bool] = False
+  length_penalty: t.Optional[float] = 1.0
+  guided_json: t.Optional[t.Union[str, t.Dict[str, t.Any], pydantic.BaseModel]] = None
+  guided_regex: t.Optional[str] = None
+  guided_choice: t.Optional[t.List[str]] = None
 
 
 class LogProbs(pydantic.BaseModel):

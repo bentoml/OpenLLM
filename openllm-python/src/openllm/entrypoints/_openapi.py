@@ -191,9 +191,7 @@ COMPLETIONS_SCHEMA = """\
 consumes:
   - application/json
 description: >-
-  Given a prompt, the model will return one or more predicted completions, and
-  can also return the probabilities of alternative tokens at each position. We
-  recommend most users use our Chat completions API.
+  Given a prompt, the model will return one or more predicted completions, and can also return the probabilities of alternative tokens at each position. We recommend most users use our Chat completions API.
 operationId: openai__completions
 produces:
   - application/json

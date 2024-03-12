@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-import inspect
+from starlette.requests import Request
+from starlette.responses import JSONResponse, StreamingResponse
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
 from openllm_core._typing_compat import Annotated
 from openllm_core._schemas import MessageParam, MessagesConverterInput
-from openllm_core.protocol.openai import (
-  ModelCard,
-  ModelList,
-  CompletionResponse,
-  ChatCompletionRequest,
-  ChatCompletionResponse,
-)
-from _openllm_tiny._helpers import OpenAI
+from openllm_core.protocol.openai import ModelCard, ModelList, ChatCompletionRequest
+from _openllm_tiny._helpers import OpenAI, Error
 
 try:
   from fastapi import FastAPI
@@ -34,10 +29,10 @@ bentomodel = openllm.prepare_model(
 llm_config = core.AutoConfig.from_bentomodel(bentomodel)
 GenerationInput = core.GenerationInput.from_config(llm_config)
 
-app = FastAPI(debug=True, description='OpenAI Compatible API support')
+app_v1 = FastAPI(debug=True, description='OpenAI Compatible API support')
 
 
-@bentoml.mount_asgi_app(app, path='/v1')
+@bentoml.mount_asgi_app(app_v1)
 @bentoml.service(name=f"llm-{llm_config['start_name']}-service", **svars.services_config)
 class LLMService:
   bentomodel = bentomodel
@@ -50,6 +45,7 @@ class LLMService:
       gpu_memory_utilization=svars.gpu_memory_utilization,
       trust_remote_code=svars.trust_remote_code,
     )
+    self.openai = OpenAI(self.llm)
 
   @core.utils.api(route='/v1/generate')
   async def generate_v1(self, **parameters: t.Any) -> core.GenerationOutput:
@@ -87,13 +83,7 @@ class LLMService:
       message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
     )
 
-  @core.utils.api(route='/v1/completions')
-  async def completions_v1(self, **request: t.Any) -> CompletionResponse:
-    generator = await OpenAI.completions(self.llm, **request)
-    async for response in generator:
-      yield response
-
-  @app.post(
+  @app_v1.post(
     '/v1/chat/completions',
     tags=['OpenAI'],
     status_code=HTTPStatus.OK,
@@ -102,6 +92,7 @@ class LLMService:
   )
   async def chat_completions_v1(
     self,
+    raw_request: Request,
     request: ChatCompletionRequest = ChatCompletionRequest(
       messages=[
         MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
@@ -112,15 +103,16 @@ class LLMService:
       n=1,
       stream=True,
     ),
-  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
-    generator = await OpenAI.chat_completions(self.llm, request)
-    if inspect.isasyncgen(generator):
-      async for response in generator:
-        yield response
-    yield generator
+  ):
+    generator = await self.openai.chat_completions(request, raw_request)
+    if isinstance(generator, Error):
+      return JSONResponse(content=generator.model_dump(), status_code=generator.error.code)
+    if request.stream is True:
+      return StreamingResponse(generator, media_type='text/event-stream')
+    return JSONResponse(content=generator.model_dump())
 
   # GET /v1/models
-  @app.get(
+  @app_v1.get(
     '/v1/models',
     tags=['OpenAI'],
     status_code=HTTPStatus.OK,
@@ -143,7 +135,7 @@ class LLMService:
     )
 
 
-LLMService.mount_asgi_app(app)
+LLMService.mount_asgi_app(app_v1)
 
 if __name__ == '__main__':
   LLMService.serve_http(reload=core.utils.check_bool_env('RELOAD', False))

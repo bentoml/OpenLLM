@@ -486,12 +486,12 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
 
     if self.model_extra and item in self.model_extra:
       return self.model_extra[item]
+    elif hasattr(self.generation_config, item):
+      return getattr(self.generation_config, item)
     elif item in self.metadata_config:
       return self.metadata_config[item]
     elif hasattr(self, item):
       return getattr(self, item)
-    elif hasattr(self.generation_config, item):
-      return getattr(self.generation_config, item)
     elif item in {'start_name', 'model_name'}:  # backward compatible
       from .config.configuration_auto import CONFIG_TO_ALIAS_NAMES
 

@@ -19,7 +19,7 @@ class _Metadata(TypedDict):
   quantize: NotRequired[str]
 
 class _Info(ModelInfo):
-  metadata: _Metadata
+  metadata: _Metadata  # type: ignore[assignment]
 
 class _Model(bentoml.Model):
   info: _Info

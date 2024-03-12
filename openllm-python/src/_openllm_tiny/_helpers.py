@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from starlette.requests import Request
+
 import openllm, traceback, logging, time, pydantic, typing as t
 from openllm_core.exceptions import ModelNotFound, OpenLLMException, ValidationError
 from openllm_core.utils import gen_random_uuid
@@ -37,19 +39,21 @@ def error_response(exception: type[OpenLLMException], message: str) -> ErrorResp
 
 
 class OpenAI:
-  @staticmethod
+  def __init__(self, llm: openllm.LLM):
+    self.llm = llm
+
   async def chat_completions(
-    self: openllm.LLM, request: ChatCompletionRequest
+    self, request: ChatCompletionRequest, raw_request: Request
   ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
     if request.logit_bias is not None and len(request.logit_bias) > 0:
-      return OpenAI.create_error_response("'logit_bias' is not supported .", NotSupportedError)
+      return self.create_error_response("'logit_bias' is not supported .", NotSupportedError)
 
-    error = await OpenAI._check_model(self, request)
+    error = await self._check_model(request)
     if error is not None:
       return error
 
     try:
-      prompt = self._tokenizer.apply_chat_template(
+      prompt = self.llm._tokenizer.apply_chat_template(
         conversation=request.messages,
         tokenize=False,
         add_generation_prompt=request.add_generation_prompt,
@@ -57,27 +61,26 @@ class OpenAI:
       )
     except Exception as e:
       traceback.print_exc()
-      return OpenAI.create_error_response(f'Failed to apply chat template: {e}')
+      return self.create_error_response(f'Failed to apply chat template: {e}')
 
     model_name, request_id = request.model, gen_random_uuid('chatcmpl')
     created_time = int(time.monotonic())
 
-    generator = self.generate_iterator(prompt, request_id=request_id, **request.model_dump())
+    generator = self.llm.generate_iterator(prompt, request_id=request_id, **request.model_dump())
     if request.stream:
-      return OpenAI.chat_completion_stream_generator(request, self, model_name, request_id, created_time, generator)
+      return self.chat_completion_stream_generator(request, model_name, request_id, created_time, generator)
 
     try:
-      return await OpenAI.chat_completion_full_generator(
-        request, self, model_name, request_id, created_time, generator
+      return await self.chat_completion_full_generator(
+        request, raw_request, model_name, request_id, created_time, generator
       )
     except Exception as err:
       traceback.print_exc()
-      return OpenAI.create_error_response(str(err))
+      return self.create_error_response(str(err))
 
-  @staticmethod
   async def chat_completion_stream_generator(
+    self,
     request: ChatCompletionRequest,
-    llm: openllm.LLM,
     model_name: str,
     request_id: str,
     created_time: int,
@@ -85,14 +88,14 @@ class OpenAI:
   ):
     first_iteration = True
 
-    previous_texts = [''] * llm.config['n']
-    previous_num_tokens = [0] * llm.config['n']
-    finish_reason_sent = [False] * llm.config['n']
+    previous_texts = [''] * self.llm.config['n']
+    previous_num_tokens = [0] * self.llm.config['n']
+    finish_reason_sent = [False] * self.llm.config['n']
     try:
       async for request_output in generator:
         if first_iteration:
-          role = OpenAI.get_chat_role(request)
-          for i in range(llm.config['n']):
+          role = self.get_chat_role(request)
+          for i in range(self.llm.config['n']):
             choice_data = ChatCompletionResponseStreamChoice(
               index=i, delta=Delta(role=role), logprobs=None, finish_reason=None
             )
@@ -135,8 +138,7 @@ class OpenAI:
           logprobs = None
 
           if request.logprobs:
-            logprobs = OpenAI._create_logprobs(
-              llm,
+            logprobs = self._create_logprobs(
               token_ids=delta_token_ids,
               top_logprobs=top_logprobs,
               num_output_top_logprobs=request.logprobs,
@@ -176,15 +178,15 @@ class OpenAI:
             yield f'data: {data}\n\n'
             finish_reason_sent[i] = True
     except ValueError as e:
-      data = OpenAI.create_error_response(str(e)).model_dump_json()
+      data = self.create_error_response(str(e)).model_dump_json()
       yield f'data: {data}\n\n'
     # Send the final done message after all response.n are finished
     yield 'data: [DONE]\n\n'
 
-  @staticmethod
   async def chat_completion_full_generator(
+    self,
     request: ChatCompletionRequest,
-    llm: openllm.LLM,
+    raw_request: Request,
     model_name: str,
     request_id: str,
     created_time: int,
@@ -192,19 +194,21 @@ class OpenAI:
   ):
     final_result: RequestOutput = None
 
-    # TODO: Check if raw_request is disconnected or not.
     try:
       async for request_output in generator:
+        if await raw_request.is_disconnected():
+          await self.llm._model.abort(request_id)
+          return self.create_error_response('Client disconnected.')
         final_result = request_output
     except ValueError as e:
-      await llm._model.abort(request_id)
-      return OpenAI.create_error_response(str(e))
+      await self.llm._model.abort(request_id)
+      return self.create_error_response(str(e))
 
     if final_result is None:
-      return OpenAI.create_error_response('No result is returned.')
+      return self.create_error_response('No result is returned.')
 
     choices = []
-    role = OpenAI.get_chat_role(request)
+    role = self.get_chat_role(request)
 
     for output in final_result.outputs:
       token_ids = output.token_ids
@@ -212,8 +216,8 @@ class OpenAI:
 
       logprobs = None
       if request.logprobs:
-        logprobs = OpenAI._create_logprobs(
-          llm, token_ids=token_ids, top_logprobs=top_logprobs, num_output_top_logprobs=request.logprobs
+        logprobs = self._create_logprobs(
+          token_ids=token_ids, top_logprobs=top_logprobs, num_output_top_logprobs=request.logprobs
         )
 
       choice_data = ChatCompletionResponseChoice(
@@ -252,30 +256,26 @@ class OpenAI:
     return response
 
   # --- chat specific ---
-  @staticmethod
-  def get_chat_role(request: ChatCompletionRequest) -> str:
+  def get_chat_role(self, request: ChatCompletionRequest) -> str:
     return request.messages[-1]['role'] if not request.add_generation_prompt else 'assistant'
 
   @staticmethod
-  async def completions(self: openllm.LLM, **request) -> t.AsyncGenerator[CompletionResponse, None]: ...
+  async def completions(self, request) -> t.AsyncGenerator[CompletionResponse, None]: ...
 
   # ---
-  @staticmethod
-  def create_error_response(message: str, exception: type[OpenLLMException] = ValidationError) -> ErrorResponse:
+  def create_error_response(self, message: str, exception: type[OpenLLMException] = ValidationError) -> ErrorResponse:
     return error_response(exception, message)
 
-  @staticmethod
-  async def _check_model(self: openllm.LLM, request: ChatCompletionRequest | CompletionRequest) -> Error | None:
-    if request.model != self.llm_type:
+  async def _check_model(self, request: ChatCompletionRequest | CompletionRequest) -> Error | None:
+    if request.model != self.llm.llm_type:
       return error_response(
         ModelNotFound,
         f"Model '{request.model}' does not exists. Try 'GET /v1/models' to see available models.\nTip: If you are migrating from OpenAI, make sure to update your 'model' parameters in the request.",
       )
     # TODO: support lora
 
-  @staticmethod
   def _validate_prompt(
-    self: openllm.LLM,
+    self,
     request: ChatCompletionRequest | CompletionRequest,
     prompt: str | None = None,
     prompt_ids: list[int] | None = None,
@@ -290,9 +290,8 @@ class OpenAI:
     # token_num = len(input_ids)
     # if request.max_tokens is None: request.max_tokens = self.engine_args['max_model_len']
 
-  @staticmethod
   def _create_logprobs(
-    self: openllm.LLM,
+    self,
     token_ids: list[int],
     top_logprobs: list[dict[int, float] | None] | None = None,  #
     num_output_top_logprobs: int | None = None,

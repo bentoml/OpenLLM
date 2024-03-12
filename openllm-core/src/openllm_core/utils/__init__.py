@@ -241,6 +241,10 @@ def gen_random_uuid(prefix: str | None = None) -> str:
   return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
 
 
+def dict_filter_none(d: dict[str, t.Any]) -> dict[str, t.Any]:
+  return {k: v for k, v in d.items() if v is not None}
+
+
 # NOTE:  `compose` any number of unary functions into a single unary function
 # compose(f, g, h)(x) == f(g(h(x))); compose(f, g, h)(x, y, z) == f(g(h(x, y, z)))
 def compose(*funcs):

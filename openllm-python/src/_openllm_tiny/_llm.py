@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, traceback, openllm, typing as t
 
-from openllm_core.utils import VersionInfo, check_bool_env, is_vllm_available, normalise_model_name, gen_random_uuid
+from openllm_core.utils import (
+  VersionInfo,
+  check_bool_env,
+  is_vllm_available,
+  normalise_model_name,
+  gen_random_uuid,
+  dict_filter_none,
+)
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput, GenerationInput
 from _bentoml_sdk.service import ServiceConfig
@@ -158,7 +165,7 @@ class LLM:
   ) -> t.AsyncGenerator[RequestOutput, None]:
     from vllm import SamplingParams
 
-    config = self.config.model_copy(update=attrs)
+    config = self.config.generation_config.model_copy(update=dict_filter_none(attrs))
 
     stop_token_ids = stop_token_ids or []
     eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
@@ -178,17 +185,17 @@ class LLM:
 
     request_id = gen_random_uuid() if request_id is None else request_id
 
-    config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids))
     top_p = 1.0 if config['temperature'] <= 1e-5 else config['top_p']
-    generation_config = config.generation_config.model_copy(update={'top_p': top_p})
+    config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids, top_p=top_p))
     sampling_params = SamplingParams(**{
-      k: getattr(generation_config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())
+      k: getattr(config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())
     })
 
     try:
-      return self._model.generate(
+      async for it in self._model.generate(
         prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
-      )
+      ):
+        yield it
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
