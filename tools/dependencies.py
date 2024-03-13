@@ -272,7 +272,7 @@ def keywords() -> Array:
 
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
-  ext: dict[str, str] = {'openllm': 'openllm_cli.entrypoint:cli'}
+  ext: dict[str, str] = {'openllm': '_openllm_tiny.cli:cli'}
   ext.update(
     {
       f'openllm-{inflection.dasherize(ke)}': f'openllm_cli.extension.{ke}:cli'

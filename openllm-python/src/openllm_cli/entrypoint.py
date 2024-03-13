@@ -422,22 +422,6 @@ def start_command(
     trust_remote_code=trust_remote_code,
   )
   llm_config = openllm.AutoConfig.from_bentomodel(bentomodel)
-  backend_warning(backend)
-
-  # llm = openllm.LLM(
-  #   model_id=model_id,
-  #   model_version=model_version,
-  #   backend=backend,
-  #   adapter_map=adapter_map,
-  #   quantize=quantize,
-  #   serialisation=serialisation,
-  #   dtype=dtype,
-  #   max_model_len=max_model_len,
-  #   gpu_memory_utilization=gpu_memory_utilization,
-  #   trust_remote_code=check_bool_env('TRUST_REMOTE_CODE', False),
-  # )
-
-  config, _ = llm_config.model_validate_click(**attrs)
 
   # process_environ(
   #   config,
@@ -461,7 +445,7 @@ def start_command(
     'BENTOML_HOME': os.environ.get('BENTOML_HOME', BentoMLContainer.bentoml_home.get()),
     'OPENLLM_ADAPTER_MAP': orjson.dumps(adapter_map).decode(),
     'OPENLLM_SERIALIZATION': serialisation,
-    'OPENLLM_CONFIG': config.model_dump_json(),
+    'OPENLLM_CONFIG': llm_config.model_dump_json(),
     'BACKEND': backend,
     'DTYPE': dtype,
     'TRUST_REMOTE_CODE': str(trust_remote_code),
@@ -470,10 +454,6 @@ def start_command(
   })
   if quantize:
     os.environ['QUANTIZE'] = str(quantize)
-
-  from openllm._service import LLMService
-
-  openllm.utils.analytics.track_start_init(config)
 
   try:
     # build_bento_instruction(llm, model_id, serialisation, adapter_map)

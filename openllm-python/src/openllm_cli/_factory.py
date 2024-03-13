@@ -125,7 +125,7 @@ def _id_callback(ctx: click.Context, _: click.Parameter, value: t.Tuple[str, ...
 def optimization_decorator(fn: FC, *, factory=click, _eager=True) -> FC | list[AnyCallable]:
   shared = [
     dtype_option(factory=factory),
-    model_version_option(factory=factory),  #
+    revision_option(factory=factory),  #
     backend_option(factory=factory),
     quantize_option(factory=factory),  #
     serialisation_option(factory=factory),
@@ -174,8 +174,6 @@ def parse_serve_args() -> t.Callable[[t.Callable[..., LLMConfig]], t.Callable[[F
 
 def start_decorator(fn: FC) -> FC:
   composed = compose(
-    _OpenLLM_GenericInternalConfig.parse,
-    parse_serve_args(),
     cog.optgroup.group(
       'LLM Options',
       help="""The following options are related to running LLM Server as well as optimization options.
@@ -188,9 +186,6 @@ def start_decorator(fn: FC) -> FC:
           - GGML: Fast inference on [bare metal](https://github.com/ggerganov/ggml)
     """,
     ),
-    cog.optgroup.option('--server-timeout', type=int, default=None, help='Server timeout in seconds'),
-    workers_per_resource_option(factory=cog.optgroup),
-    cors_option(factory=cog.optgroup),
     *optimization_decorator(fn, factory=cog.optgroup, _eager=False),
     cog.optgroup.option(
       '--device',
@@ -202,7 +197,6 @@ def start_decorator(fn: FC) -> FC:
       show_envvar=True,
     ),
     adapter_id_option(factory=cog.optgroup),
-    click.option('--return-process', is_flag=True, default=False, help='Internal use only.', hidden=True),
   )
 
   return composed(fn)
@@ -295,12 +289,14 @@ def model_id_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable
   )(f)
 
 
-def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+def revision_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
+    '--revision',
     '--model-version',
+    'model_version',
     type=click.STRING,
     default=None,
-    help='Optional model version to save for this model. It will be inferred automatically from model-id.',
+    help='Optional model revision to save for this model. It will be inferred automatically from model-id.',
     **attrs,
   )(f)
 
@@ -361,38 +357,6 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, **att
   )(f)
 
 
-def workers_per_resource_option(
-  f: _AnyCallable | None = None, *, build: bool = False, **attrs: t.Any
-) -> t.Callable[[FC], FC]:
-  return cli_option(
-    '--workers-per-resource',
-    default=None,
-    callback=workers_per_resource_callback,
-    type=str,
-    required=False,
-    help="""Number of workers per resource assigned.
-
-      See https://docs.bentoml.org/en/latest/guides/scheduling.html#resource-scheduling-strategy
-      for more information. By default, this is set to 1.
-
-      > [!NOTE] ``--workers-per-resource`` will also accept the following strategies:
-
-      - ``round_robin``: Similar behaviour when setting ``--workers-per-resource 1``. This is useful for smaller models.
-
-      - ``conserved``: This will determine the number of available GPU resources. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
-      """
-    + (
-      """\n
-      > [!NOTE] The workers value passed into 'build' will determine how the LLM can
-      > be provisioned in Kubernetes as well as in standalone container. This will
-      > ensure it has the same effect with 'openllm start --api-workers ...'"""
-      if build
-      else ''
-    ),
-    **attrs,
-  )(f)
-
-
 def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
     '--serialisation',
@@ -415,25 +379,3 @@ def serialisation_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
       """,
     **attrs,
   )(f)
-
-
-_wpr_strategies = {'round_robin', 'conserved'}
-
-
-def workers_per_resource_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
-  if value is None:
-    return value
-  value = inflection.underscore(value)
-  if value in _wpr_strategies:
-    return value
-  else:
-    try:
-      float(value)  # type: ignore[arg-type]
-    except ValueError:
-      raise click.BadParameter(
-        f"'workers_per_resource' only accept '{_wpr_strategies}' as possible strategies, otherwise pass in float.",
-        ctx,
-        param,
-      ) from None
-    else:
-      return value
