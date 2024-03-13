@@ -5,6 +5,7 @@ import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, tra
 from openllm_core.utils import (
   VersionInfo,
   check_bool_env,
+  get_debug_mode,
   is_vllm_available,
   normalise_model_name,
   gen_random_uuid,
@@ -80,6 +81,10 @@ class LLM:
         'dtype': dtype,
         'quantization': quantise,
       })
+      if 'disable_log_stats' not in self.engine_args:
+        self.engine_args['disable_log_stats'] = not get_debug_mode()
+      if 'disable_log_requests' not in self.engine_args:
+        self.engine_args['disable_log_requests'] = not get_debug_mode()
       try:
         from vllm import AsyncEngineArgs, AsyncLLMEngine
 

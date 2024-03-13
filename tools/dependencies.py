@@ -272,22 +272,7 @@ def keywords() -> Array:
 
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
-  ext: dict[str, str] = {'openllm': '_openllm_tiny.cli:cli'}
-  ext.update(
-    {
-      f'openllm-{inflection.dasherize(ke)}': f'openllm_cli.extension.{ke}:cli'
-      for ke in sorted(
-        [
-          fname[:-3]
-          for fname in os.listdir(
-            os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm_cli', 'extension'))
-          )
-          if fname.endswith('.py') and not fname.startswith('__')
-        ]
-      )
-    }
-  )
-  table.update(ext)
+  table.update({'openllm': '_openllm_tiny.cli:cli'})
   return table
 
 

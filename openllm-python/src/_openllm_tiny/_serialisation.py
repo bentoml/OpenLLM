@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging, attr, inflection, importlib.metadata, typing as t
+import logging, os, attr, inflection, importlib.metadata, typing as t
 from openllm_core.utils import LazyLoader, getenv, resolve_filepath, validate_is_path, normalise_model_name
 from openllm.serialisation import _make_tag_components
 from openllm.exceptions import OpenLLMException
@@ -79,7 +79,8 @@ def prepare_model(
       metadata['quantize'] = quantize
     model, tokenizer = None, None
 
-    with bentoml.models.create(bentomodel_tag, labels=labels, metadata=metadata) as bentomodel:
+    module = f'{os.path.basename(os.path.dirname(__file__))}.{os.path.basename(__file__)[:-3]}'
+    with bentoml.models.create(bentomodel_tag, labels=labels, metadata=metadata, module=module) as bentomodel:
       if _local:
         logger.warning('Loading local model %s into memory', model_id)
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_remote_code, **kwargs)

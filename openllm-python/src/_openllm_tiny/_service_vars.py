@@ -14,7 +14,7 @@ from _openllm_tiny._llm import Dtype
   gpu_memory_utilization,
   services_config,
 ) = (
-  coreutils.getenv('model_id', var=['SERIALISATION'], return_type=str),
+  coreutils.getenv('model_id', var=['MODEL_ID'], return_type=str),
   coreutils.getenv('model_tag', default=None, return_type=t.Optional[str]),
   coreutils.getenv('model_version', default=None, return_type=t.Optional[str]),
   coreutils.getenv('quantize', var=['QUANTISE'], return_type=LiteralQuantise),

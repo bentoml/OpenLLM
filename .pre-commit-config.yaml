@@ -38,6 +38,7 @@ repos:
         exclude: |
           (?x)^(
               openllm-python/src/openllm_cli/entrypoint.py |
+              openllm-python/src/_openllm_tiny/cli.py |
               openllm-client/src/openllm_client/pb.*
           )$
   - repo: meta

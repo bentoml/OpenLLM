@@ -17,21 +17,6 @@ from openllm_core._typing_compat import (
 from openllm_core.utils import DEBUG, compose, dantic, resolve_user_filepath
 
 
-class _OpenLLM_GenericInternalConfig(LLMConfig):
-  metadata_config = {
-    'name_type': 'lowercase',
-    'default_id': 'openllm/generic',
-    'model_ids': ['openllm/generic'],
-    'architecture': 'PreTrainedModel',
-  }
-
-  class GenerationConfig:
-    top_k: int = 15
-    top_p: float = 0.78
-    temperature: float = 0.75
-    max_new_tokens: int = 128
-
-
 logger = logging.getLogger(__name__)
 
 P = ParamSpec('P')
