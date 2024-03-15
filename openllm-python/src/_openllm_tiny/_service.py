@@ -101,7 +101,7 @@ class LLMService:
         MessageParam(role='user', content='Hi there!'),
         MessageParam(role='assistant', content='Yes?'),
       ],
-      model=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
+      model=core.utils.normalise_model_name(model_id),
       n=1,
       stream=True,
     ),
@@ -129,12 +129,7 @@ class LLMService:
     You can refer to the available supported models with `openllm models` for more information.
     """
     return ModelList(
-      data=[
-        ModelCard(
-          root=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
-          id=core.utils.normalise_model_name(bentomodel.info.metadata['model_id']),
-        )
-      ]
+      data=[ModelCard(root=core.utils.normalise_model_name(model_id), id=core.utils.normalise_model_name(model_id))]
     )
 
 

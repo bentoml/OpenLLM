@@ -379,6 +379,7 @@ def build_command(
     model_id = bentomodel.path
     _revision = bentomodel.tag.version
   except (ValueError, bentoml.exceptions.NotFound):
+    bentomodel = None
     _revision = None
 
   config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=trust_remote_code)
@@ -394,7 +395,7 @@ def build_command(
   _revision = first_not_none(_revision, getattr(config, '_commit_hash', None), default=gen_random_uuid())
   if serialisation is None:
     termui.warning(
-      "Serialisation format is not specified. Defaulting to llm_config['serialisation']. Your model might not work with this format. Make sure to explicitly specify the serialisation format."
+      f"Serialisation format is not specified. Defaulting to '{llm_config['serialisation']}'. Your model might not work with this format. Make sure to explicitly specify the serialisation format."
     )
     serialisation = llm_config['serialisation']
 
@@ -416,7 +417,7 @@ def build_command(
     if state != ItemState.OVERWRITE:
       state = ItemState.ADDED
 
-    labels = {'library': ['vllm', 'transformers']}
+    labels = {'library': 'vllm'}
     service_config = dict(
       resources={'gpu' if device else 'cpu': len(device) if device else 'cpu_count'}, traffic=dict(timeout=timeout)
     )
@@ -433,6 +434,9 @@ def build_command(
         __gpu_memory_utilization__=gpu_memory_utilization,
         __services_config__=orjson.dumps(service_config).decode(),
       )
+      models = []
+      if bentomodel is not None:
+        models.append(ModelSpec.from_item({'tag': str(bentomodel.tag), 'alias': bentomodel.tag.name}))
       if SHOW_CODEGEN:
         logger.info('Generated _service_vars.py:\n%s', script)
       llm_fs.writetext('_service_vars.py', script)
@@ -446,7 +450,7 @@ def build_command(
           service=f"{llm_config['service_name']}:LLMService",
           name=bento_tag.name,
           labels=labels,
-          models=[ModelSpec.from_item({'tag': str(bentomodel.tag), 'alias': bentomodel.tag.name})],
+          models=models,
           envs=[
             EnvironmentEntry(name=QUIET_ENV_VAR, value=str(openllm.utils.get_quiet_mode())),
             EnvironmentEntry(name=DEBUG_ENV_VAR, value=str(openllm.utils.get_debug_mode())),
