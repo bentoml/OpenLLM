@@ -81,7 +81,7 @@ def _start(
   if adapter_map:
     args.extend(
       list(
-        itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])
+        itertools.chain.from_iterable([['--adapter-id', f"{k}{':' + v if v else ''}"] for k, v in adapter_map.items()])
       )
     )
   if additional_args:
@@ -173,7 +173,7 @@ def _build(
   if overwrite:
     args.append('--overwrite')
   if adapter_map:
-    args.extend([f"--adapter-id={k}{':'+v if v is not None else ''}" for k, v in adapter_map.items()])
+    args.extend([f"--adapter-id={k}{':' + v if v is not None else ''}" for k, v in adapter_map.items()])
   if model_version:
     args.extend(['--model-version', model_version])
   if bento_version:

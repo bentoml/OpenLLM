@@ -140,7 +140,9 @@ class APIResponse(t.Generic[Response]):
 
     data = self._raw_response.json()
     try:
-      return self._client._process_response_data(data=data, response_cls=self._response_cls, raw_response=self._raw_response)
+      return self._client._process_response_data(
+        data=data, response_cls=self._response_cls, raw_response=self._raw_response
+      )
     except Exception as exc:
       raise ValueError(exc) from None  # validation error here
 
@@ -271,10 +273,16 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
 
   def _build_request(self, options: RequestOptions) -> httpx.Request:
     return self._inner.build_request(
-      method=options.method, headers=self._build_headers(options), url=self._prepare_url(options.url), json=options.json, params=options.params
+      method=options.method,
+      headers=self._build_headers(options),
+      url=self._prepare_url(options.url),
+      json=options.json,
+      params=options.params,
     )
 
-  def _calculate_retry_timeout(self, remaining_retries: int, options: RequestOptions, headers: t.Optional[httpx.Headers] = None) -> float:
+  def _calculate_retry_timeout(
+    self, remaining_retries: int, options: RequestOptions, headers: t.Optional[httpx.Headers] = None
+  ) -> float:
     max_retries = options.get_max_retries(self._max_retries)
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
     try:
@@ -315,7 +323,9 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
       return True
     return False
 
-  def _process_response_data(self, *, response_cls: type[Response], data: t.Dict[str, t.Any], raw_response: httpx.Response) -> Response:
+  def _process_response_data(
+    self, *, response_cls: type[Response], data: t.Dict[str, t.Any], raw_response: httpx.Response
+  ) -> Response:
     return converter.structure(data, response_cls)
 
   def _process_response(
@@ -328,13 +338,24 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
     stream_cls: type[_Stream] | type[_AsyncStream] | None,
   ) -> Response:
     return APIResponse(
-      raw_response=raw_response, client=self, response_cls=response_cls, stream=stream, stream_cls=stream_cls, options=options
+      raw_response=raw_response,
+      client=self,
+      response_cls=response_cls,
+      stream=stream,
+      stream_cls=stream_cls,
+      options=options,
     ).parse()
 
 
 @attr.define(init=False)
 class Client(BaseClient[httpx.Client, Stream[t.Any]]):
-  def __init__(self, base_url: str | httpx.URL, version: str, timeout: int | httpx.Timeout = DEFAULT_TIMEOUT, max_retries: int = MAX_RETRIES):
+  def __init__(
+    self,
+    base_url: str | httpx.URL,
+    version: str,
+    timeout: int | httpx.Timeout = DEFAULT_TIMEOUT,
+    max_retries: int = MAX_RETRIES,
+  ):
     super().__init__(
       base_url=base_url,
       version=version,
@@ -366,7 +387,13 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
     stream: bool = False,
     stream_cls: type[_Stream] | None = None,
   ) -> Response | _Stream:
-    return self._request(response_cls=response_cls, options=options, remaining_retries=remaining_retries, stream=stream, stream_cls=stream_cls)
+    return self._request(
+      response_cls=response_cls,
+      options=options,
+      remaining_retries=remaining_retries,
+      stream=stream,
+      stream_cls=stream_cls,
+    )
 
   def _request(
     self,
@@ -385,7 +412,9 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
       if retries > 0 and self._should_retry(exc.response):
-        return self._retry_request(response_cls, options, retries, exc.response.headers, stream=stream, stream_cls=stream_cls)
+        return self._retry_request(
+          response_cls, options, retries, exc.response.headers, stream=stream, stream_cls=stream_cls
+        )
       # If the response is streamed then we need to explicitly read the completed response
       exc.response.read()
       raise ValueError(exc.message) from None
@@ -398,7 +427,9 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
         return self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
       raise ValueError(request) from None  # connection error
 
-    return self._process_response(response_cls=response_cls, options=options, raw_response=response, stream=stream, stream_cls=stream_cls)
+    return self._process_response(
+      response_cls=response_cls, options=options, raw_response=response, stream=stream, stream_cls=stream_cls
+    )
 
   def _retry_request(
     self,
@@ -428,7 +459,9 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
   ) -> Response | _Stream:
     if options is None:
       options = {}
-    return self.request(response_cls, RequestOptions(method='GET', url=path, **options), stream=stream, stream_cls=stream_cls)
+    return self.request(
+      response_cls, RequestOptions(method='GET', url=path, **options), stream=stream, stream_cls=stream_cls
+    )
 
   def _post(
     self,
@@ -442,12 +475,20 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
   ) -> Response | _Stream:
     if options is None:
       options = {}
-    return self.request(response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls)
+    return self.request(
+      response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls
+    )
 
 
 @attr.define(init=False)
 class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
-  def __init__(self, base_url: str | httpx.URL, version: str, timeout: int | httpx.Timeout = DEFAULT_TIMEOUT, max_retries: int = MAX_RETRIES):
+  def __init__(
+    self,
+    base_url: str | httpx.URL,
+    version: str,
+    timeout: int | httpx.Timeout = DEFAULT_TIMEOUT,
+    max_retries: int = MAX_RETRIES,
+  ):
     super().__init__(
       base_url=base_url,
       version=version,
@@ -471,7 +512,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
     try:
       loop = asyncio.get_event_loop()
       if loop.is_running():
-        loop.create_task(self.close())
+        loop.create_task(self.close())  # noqa
       else:
         loop.run_until_complete(self.close())
     except Exception:
@@ -486,7 +527,9 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
     stream: bool = False,
     stream_cls: type[_AsyncStream] | None = None,
   ) -> Response | _AsyncStream:
-    return await self._request(response_cls, options, remaining_retries=remaining_retries, stream=stream, stream_cls=stream_cls)
+    return await self._request(
+      response_cls, options, remaining_retries=remaining_retries, stream=stream, stream_cls=stream_cls
+    )
 
   async def _request(
     self,
@@ -506,7 +549,9 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
       if retries > 0 and self._should_retry(exc.response):
-        return self._retry_request(response_cls, options, retries, exc.response.headers, stream=stream, stream_cls=stream_cls)
+        return self._retry_request(
+          response_cls, options, retries, exc.response.headers, stream=stream, stream_cls=stream_cls
+        )
       # If the response is streamed then we need to explicitly read the completed response
       await exc.response.aread()
       raise ValueError(exc.message) from None
@@ -526,7 +571,9 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
         return await self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
       raise ValueError(request) from err  # connection error
 
-    return self._process_response(response_cls=response_cls, options=options, raw_response=response, stream=stream, stream_cls=stream_cls)
+    return self._process_response(
+      response_cls=response_cls, options=options, raw_response=response, stream=stream, stream_cls=stream_cls
+    )
 
   async def _retry_request(
     self,
@@ -555,7 +602,9 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
   ) -> Response | _AsyncStream:
     if options is None:
       options = {}
-    return await self.request(response_cls, RequestOptions(method='GET', url=path, **options), stream=stream, stream_cls=stream_cls)
+    return await self.request(
+      response_cls, RequestOptions(method='GET', url=path, **options), stream=stream, stream_cls=stream_cls
+    )
 
   async def _post(
     self,
@@ -569,4 +618,6 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
   ) -> Response | _AsyncStream:
     if options is None:
       options = {}
-    return await self.request(response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls)
+    return await self.request(
+      response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls
+    )
