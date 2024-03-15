@@ -34,7 +34,7 @@ metadata_config: ModelSettings = {
   ],
 }
 
-generation_config = openllm_core.GenerationConfig(max_new_tokens=2048, top_p=0.7, temperature=0.95)
+generation_config = openllm_core.GenerationConfig.model_construct(max_new_tokens=2048, top_p=0.7, temperature=0.95)
 
 BaichuanConfig = pydantic.create_model(
   'BaichuanConfig',

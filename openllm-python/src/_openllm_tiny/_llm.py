@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import inspect, orjson, dataclasses, functools, bentoml, attr, openllm_core, traceback, openllm, typing as t
+import inspect, orjson, dataclasses, bentoml, functools, attr, openllm_core, traceback, openllm, typing as t
 
 from openllm_core.utils import (
-  VersionInfo,
-  check_bool_env,
   get_debug_mode,
   is_vllm_available,
   normalise_model_name,
@@ -34,9 +32,7 @@ def check_engine_args(_, attr: attr.Attribute[dict[str, t.Any]], v: dict[str, t.
 @attr.define(init=False)
 class LLM:
   model_id: str
-  tag: str
-  revision: str
-  local: bool
+  bentomodel: bentoml.Model
   serialisation: LiteralSerialisation
   config: openllm_core.LLMConfig
   dtype: Dtype
@@ -47,7 +43,9 @@ class LLM:
 
   _path: str = attr.field(
     init=False,
-    default=attr.Factory(lambda self: self.bentomodel.path if self.local else self.model_id, takes_self=True),
+    default=attr.Factory(
+      lambda self: self.bentomodel.path if self.bentomodel is not None else self.model_id, takes_self=True
+    ),
   )
 
   def __init__(self, _: str = '', /, _internal: bool = False, **kwargs: t.Any) -> None:
@@ -85,6 +83,7 @@ class LLM:
         self.engine_args['disable_log_stats'] = not get_debug_mode()
       if 'disable_log_requests' not in self.engine_args:
         self.engine_args['disable_log_requests'] = not get_debug_mode()
+
       try:
         from vllm import AsyncEngineArgs, AsyncLLMEngine
 
@@ -97,44 +96,27 @@ class LLM:
     else:
       raise RuntimeError('Currently, OpenLLM is only supported running with a GPU and vLLM backend.')
 
-  @property
-  def bentomodel(self) -> bentoml.Model:
-    return bentoml.models.get(self.tag)
-
   @classmethod
   def from_model(
     cls,
-    model: bentoml.Model,
+    model_id: str,
+    dtype: str,
+    bentomodel: bentoml.Model | None = None,
+    serialisation: LiteralSerialisation = 'safetensors',
+    quantise: LiteralQuantise | None = None,
+    trust_remote_code: bool = False,
     llm_config: openllm_core.LLMConfig | None = None,
     service_config: ServiceConfig | None = None,
     **engine_args: t.Any,
   ) -> LLM:
-    metadata = model.info.metadata
-
-    api_version: str | None = metadata.get('api_version')
-    if api_version is None or VersionInfo.from_version_string(api_version) < VersionInfo.from_version_string('0.5.0'):
-      raise RuntimeError(
-        'Model API version is too old. Please update the model. Make sure to run openllm prune -y --include-bentos'
-      )
-
-    dtype = metadata['dtype']
-    local = metadata['_local']
-    model_id = metadata['model_id']
-    trust_remote_code = check_bool_env('TRUST_REMOTE_CODE', default=metadata['trust_remote_code'])
-
-    if llm_config is None:
-      llm_config = openllm_core.AutoConfig.from_bentomodel(model)
-
     return cls(
       _internal=True,
       model_id=model_id,
-      tag=str(model.tag),
-      local=local,
-      quantise=metadata.get('quantize'),
-      serialisation=metadata['serialisation'],
+      bentomodel=bentomodel,
+      quantise=quantise,
+      serialisation=serialisation,
       config=llm_config,
       dtype=dtype,
-      revision=metadata['_revision'],
       engine_args=engine_args,
       trust_remote_code=trust_remote_code,
       service_config=service_config,

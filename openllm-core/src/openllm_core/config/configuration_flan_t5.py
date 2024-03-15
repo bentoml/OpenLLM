@@ -35,7 +35,7 @@ class FlanT5Config(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(
+    default=openllm_core.GenerationConfig.model_construct(
       temperature=0.9, max_new_tokens=2048, top_k=50, top_p=0.4, repetition_penalty=1.0
     )
   )

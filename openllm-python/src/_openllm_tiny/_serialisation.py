@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging, os, attr, inflection, importlib.metadata, typing as t
+import logging, os, attr, inflection, openllm_core, importlib.metadata, typing as t
 from openllm_core.utils import LazyLoader, getenv, resolve_filepath, validate_is_path, normalise_model_name
 from openllm.serialisation import _make_tag_components
 from openllm.exceptions import OpenLLMException
@@ -28,6 +28,13 @@ def prepare_model(
   low_cpu_mem_usage=True,
   **kwargs,
 ):
+  try:
+    # NOTE in case model_id is a custom bentomodel tag
+    return bentoml.models.get(model_id.lower())
+  except Exception:
+    logger.debug('Failed to load model from %s', model_id, exc_info=True)
+    pass
+
   _local = False
   if validate_is_path(model_id):
     model_id, _local = resolve_filepath(model_id), True
@@ -69,18 +76,30 @@ def prepare_model(
       'architectures': config.architectures,
       'trust_remote_code': trust_remote_code,
       'api_version': '0.5.0',
+      'llm_type': normalise_model_name(model_id),
       **{
         f'{inflection.underscore(package)}_version': importlib.metadata.version(package)
         for package in {'openllm', 'openllm-core', 'openllm-client'}
       },
     }
-    labels = {'llm_type': normalise_model_name(model_id)}
+    labels = {}
     if quantize:
       metadata['quantize'] = quantize
+      labels['quantization'] = quantize
     model, tokenizer = None, None
 
     module = f'{os.path.basename(os.path.dirname(__file__))}.{os.path.basename(__file__)[:-3]}'
     with bentoml.models.create(bentomodel_tag, labels=labels, metadata=metadata, module=module) as bentomodel:
+      arch = config.architectures[0]
+      if arch not in openllm_core.AutoConfig._architecture_mappings:
+        raise OpenLLMException(f'Failed to determine config class for {model_id}')
+      llm_config: openllm_core.LLMConfig = openllm_core.AutoConfig.for_model(
+        openllm_core.AutoConfig._architecture_mappings[arch]
+      ).model_construct_env()
+
+      with open(bentomodel.path_of('openllm_configuration.json'), 'w') as f:
+        f.write(llm_config.model_dump_json())
+
       if _local:
         logger.warning('Loading local model %s into memory', model_id)
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_remote_code, **kwargs)
@@ -101,4 +120,5 @@ def prepare_model(
         del model, tokenizer
         if torch.cuda.is_available():
           torch.cuda.empty_cache()
+
       return bentomodel

@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
-from openllm_core._typing_compat import Annotated
+from openllm_core._typing_compat import Annotated, Unpack
 from openllm_core._schemas import MessageParam, MessagesConverterInput
 from openllm_core.protocol.openai import ModelCard, ModelList, ChatCompletionRequest
 from _openllm_tiny._helpers import OpenAI, Error
@@ -17,16 +17,13 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-bentomodel = openllm.prepare_model(
-  svars.model_id,
-  bentomodel_tag=svars.model_tag,
-  bentomodel_version=svars.model_version,
-  serialization=svars.serialisation,
-  quantize=svars.quantise,
-  dtype=svars.dtype,
-  trust_remote_code=svars.trust_remote_code,
-)
-llm_config = core.AutoConfig.from_bentomodel(bentomodel)
+try:
+  bentomodel = bentoml.models.get(svars.model_id.lower())
+  model_id = bentomodel.path
+except Exception:
+  bentomodel = None
+  model_id = svars.model_id
+llm_config = core.AutoConfig.for_model(svars.model_name)
 GenerationInput = core.GenerationInput.from_config(llm_config)
 
 app_v1 = FastAPI(debug=True, description='OpenAI Compatible API support')
@@ -39,20 +36,25 @@ class LLMService:
 
   def __init__(self):
     self.llm = openllm.LLM.from_model(
-      self.bentomodel,
+      model_id,
+      dtype=svars.dtype,
+      bentomodel=bentomodel,
+      serialisation=svars.serialisation,
+      quantise=svars.quantise,
       llm_config=llm_config,
+      trust_remote_code=svars.trust_remote_code,
+      services_config=svars.services_config,
       max_model_len=svars.max_model_len,
       gpu_memory_utilization=svars.gpu_memory_utilization,
-      trust_remote_code=svars.trust_remote_code,
     )
     self.openai = OpenAI(self.llm)
 
   @core.utils.api(route='/v1/generate')
-  async def generate_v1(self, **parameters: t.Any) -> core.GenerationOutput:
+  async def generate_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> core.GenerationOutput:
     return await self.llm.generate(**GenerationInput.from_dict(parameters).model_dump())
 
   @core.utils.api(route='/v1/generate_stream')
-  async def generate_stream_v1(self, **parameters: t.Any) -> t.AsyncGenerator[str, None]:
+  async def generate_stream_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> t.AsyncGenerator[str, None]:
     async for generated in self.llm.generate_iterator(**GenerationInput.from_dict(parameters).model_dump()):
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
@@ -106,7 +108,8 @@ class LLMService:
   ):
     generator = await self.openai.chat_completions(request, raw_request)
     if isinstance(generator, Error):
-      return JSONResponse(content=generator.model_dump(), status_code=generator.error.code)
+      # NOTE: safe to cast here as we know it's an error
+      return JSONResponse(content=generator.model_dump(), status_code=int(t.cast(str, generator.error.code)))
     if request.stream is True:
       return StreamingResponse(generator, media_type='text/event-stream')
     return JSONResponse(content=generator.model_dump())

@@ -25,6 +25,7 @@ ModelType: t.TypeAlias = t.Literal[
   'baichuan',
   'chatglm',
   'falcon',
+  'gemma',
   'gpt_neox',
   'dolly_v2',
   'stablelm',
@@ -47,6 +48,7 @@ CONFIG_MAPPING_NAMES: OrderedDict[ModelType, str] = OrderedDict(
     ('chatglm', 'ChatGLMConfig'),
     ('falcon', 'FalconConfig'),
     ('gpt_neox', 'GPTNeoXConfig'),
+    ('gemma', 'GemmaConfig'),
     ('dolly_v2', 'DollyV2Config'),
     ('stablelm', 'StableLMConfig'),
     ('llama', 'LlamaConfig'),
@@ -141,6 +143,9 @@ class AutoConfig:
   def for_model(cls, model_name: t.Literal['flan_t5'], **attrs: t.Any) -> openllm_core.config.FlanT5Config: ...
   @t.overload
   @classmethod
+  def for_model(cls, model_name: t.Literal['gemma'], **attrs: t.Any) -> openllm_core.config.GemmaConfig: ...
+  @t.overload
+  @classmethod
   def for_model(cls, model_name: t.Literal['gpt_neox'], **attrs: t.Any) -> openllm_core.config.GPTNeoXConfig: ...
   @t.overload
   @classmethod
@@ -172,6 +177,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['yi'], **attrs: t.Any) -> openllm_core.config.YiConfig: ...
+  @t.overload
+  @classmethod
+  def for_model(cls, model_name: LiteralString, **attrs: t.Any) -> openllm_core.LLMConfig: ...
   # update-config-stubs.py: auto stubs stop
   # fmt: on
   @classmethod
@@ -186,7 +194,7 @@ class AutoConfig:
   _architecture_mappings = {it().metadata_config['architecture']: k for k, it in CONFIG_MAPPING.items()}
 
   @classmethod
-  def from_llm(cls, llm: openllm.LLM[M, T], **attrs: t.Any) -> openllm_core.LLMConfig:
+  def from_llm(cls, llm: openllm.LLM, **attrs: t.Any) -> openllm_core.LLMConfig:
     config_cls = llm.config.__class__.__name__
     if config_cls in CONFIG_TO_ALIAS_NAMES:
       return cls.for_model(CONFIG_TO_ALIAS_NAMES[config_cls]).model_construct_env(**attrs)

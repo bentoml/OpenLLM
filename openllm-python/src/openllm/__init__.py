@@ -1,6 +1,5 @@
 import logging as _logging, os as _os, pathlib as _pathlib, warnings as _warnings, typing as _t
 
-from openllm_cli import _sdk
 from . import utils as utils
 
 if utils.DEBUG:
@@ -38,17 +37,10 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     '_quantisation': ['infer_quantisation_config'],
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
   },
-  extra_objects={
-    'COMPILED': COMPILED,
-    'start': _sdk.start,
-    'build': _sdk.build,  #
-    'import_model': _sdk.import_model,
-    'list_models': _sdk.list_models,  #
-  },
+  extra_objects={'COMPILED': COMPILED},
 )
 __all__, __dir__ = __lazy.__all__, __lazy.__dir__
 
-_NEW_API = ['prepare_model']
 _BREAKING_INTERNAL = ['_service', '_service_vars']
 _NEW_IMPL = ['LLM', *_BREAKING_INTERNAL]
 
@@ -73,9 +65,5 @@ def __getattr__(name: str) -> _t.Any:
       return __lazy.__getattr__(name)
     else:
       return getattr(_tiny, name)
-  elif name in _NEW_API:
-    if _tiny is None:
-      raise ImportError(f"The new SDK requires BentoML > 1.2, yet you have {'.'.join(map(str, _BENTOML_VERSION))}")
-    return getattr(_tiny, name)
   else:
     return __lazy.__getattr__(name)

@@ -41,7 +41,7 @@ class MistralConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(
+    default=openllm_core.GenerationConfig.model_construct(
       max_new_tokens=256, temperature=0.7, top_p=0.95, top_k=40, best_of=1, presence_penalty=0.5
     )
   )

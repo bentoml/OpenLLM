@@ -68,11 +68,11 @@ def main() -> int:
     ' ' * 2 + line
     for line in [
       '@overload\n',
-      f"def __getitem__(self, item: t.Literal['max_new_tokens']) -> int: ...\n",
+      "def __getitem__(self, item: t.Literal['max_new_tokens']) -> int: ...\n",
       '@overload\n',
-      f"def __getitem__(self, item: t.Literal['start_name']) -> str: ...\n",
+      "def __getitem__(self, item: t.Literal['start_name']) -> str: ...\n",
       '@overload\n',
-      f"def __getitem__(self, item: t.Literal['model_name']) -> str: ...\n",
+      "def __getitem__(self, item: t.Literal['model_name']) -> str: ...\n",
     ]
   ])
 
@@ -99,6 +99,14 @@ def main() -> int:
         f"def for_model(cls, model_name: t.Literal['{model}'], **attrs: t.Any) -> openllm_core.config.{class_name}: ...\n",
       ]
     ])
+  lines.extend([
+    ' ' * 2 + line
+    for line in [
+      '@t.overload\n',
+      '@classmethod\n',
+      'def for_model(cls, model_name: LiteralString, **attrs: t.Any) -> openllm_core.LLMConfig: ...\n',
+    ]
+  ])
   processed = (
     processed[:start_auto_stubs_idx]
     + [' ' * 2 + START_AUTO_STUBS_COMMENT, *lines, ' ' * 2 + END_AUTO_STUBS_COMMENT]

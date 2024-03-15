@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 _service_file = pathlib.Path(os.path.abspath(__file__)).parent.parent / '_service.py'
-_SERVICE_VARS = '''import orjson;model_id,model_tag,adapter_map,serialization,trust_remote_code,max_model_len,gpu_memory_utilization='{__model_id__}','{__model_tag__}',orjson.loads("""{__model_adapter_map__}"""),'{__model_serialization__}',{__model_trust_remote_code__},{__max_model_len__},{__gpu_memory_utilization__}'''
+_SERVICE_VARS = '''import orjson;model_id,model_tag,adapter_map,serialization,trust_remote_code,max_model_len,gpu_memory_utilization,services_config='{__model_id__}','{__model_tag__}',orjson.loads("""{__model_adapter_map__}"""),'{__model_serialization__}',{__model_trust_remote_code__},{__max_model_len__},{__gpu_memory_utilization__},orjson.loads("""{__services_config__}""")'''
 
 
 def build_editable(path, package='openllm'):
@@ -101,7 +101,7 @@ def create_bento(
     'base_name_or_path': llm.model_id,
     'bundler': 'openllm.bundle',
     **{
-      f'{package.replace("-","_")}_version': importlib.metadata.version(package)
+      f'{package.replace("-", "_")}_version': importlib.metadata.version(package)
       for package in {'openllm', 'openllm-core', 'openllm-client'}
     },
   })

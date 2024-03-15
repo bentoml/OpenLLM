@@ -33,7 +33,7 @@ metadata_config: ModelSettings = {
   ],
 }
 
-generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig(
+generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig.model_construct(
   max_new_tokens=128, temperature=0, top_p=0.8
 )
 

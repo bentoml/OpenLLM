@@ -36,7 +36,7 @@ class PhiConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(max_new_tokens=200, best_of=1)
+    default=openllm_core.GenerationConfig.model_construct(max_new_tokens=200, best_of=1)
   )
 
   @property

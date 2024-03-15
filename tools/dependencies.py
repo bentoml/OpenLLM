@@ -272,7 +272,7 @@ def keywords() -> Array:
 
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
-  table.update({'openllm': '_openllm_tiny.cli:cli'})
+  table.update({'openllm': '_openllm_tiny._entrypoint:cli'})
   return table
 
 

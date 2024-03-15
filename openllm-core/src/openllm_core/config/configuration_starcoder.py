@@ -22,7 +22,7 @@ metadata_config: ModelSettings = {
   'model_ids': ['bigcode/starcoder', 'bigcode/starcoderbase'],
 }
 
-generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig(
+generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig.model_construct(
   temperature=0.2,
   max_new_tokens=256,
   min_new_tokens=32,

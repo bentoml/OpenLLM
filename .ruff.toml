@@ -9,6 +9,7 @@ preview = true
 quote-style = "single"
 indent-style = "space"
 skip-magic-trailing-comma = true
+docstring-code-format = true
 
 [lint]
 typing-modules = [

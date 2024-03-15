@@ -406,6 +406,50 @@ You can specify any of the following FlanT5 models via `openllm start`:
 
 <details>
 
+<summary>Gemma</summary>
+
+
+### Quickstart
+
+
+
+> **Note:** Gemma requires to install with:
+> ```bash
+> pip install "openllm[gemma]"
+> ```
+
+
+Run the following command to quickly spin up a Gemma server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start google/gemma-7b
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Gemma variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=gemma) to see more Gemma-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Gemma models via `openllm start`:
+
+
+- [google/gemma-7b](https://huggingface.co/google/gemma-7b)
+- [google/gemma-7b-it](https://huggingface.co/google/gemma-7b-it)
+- [google/gemma-2b](https://huggingface.co/google/gemma-2b)
+- [google/gemma-2b-it](https://huggingface.co/google/gemma-2b-it)
+
+</details>
+
+<details>
+
 <summary>GPTNeoX</summary>
 
 

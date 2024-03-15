@@ -44,7 +44,9 @@ class FalconConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(max_new_tokens=200, top_k=10, num_return_sequences=1, num_beams=4)
+    default=openllm_core.GenerationConfig.model_construct(
+      max_new_tokens=200, top_k=10, num_return_sequences=1, num_beams=4
+    )
   )
 
   @property

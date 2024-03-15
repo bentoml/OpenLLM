@@ -6,6 +6,7 @@ from .configuration_chatglm import ChatGLMConfig as ChatGLMConfig
 from .configuration_dolly_v2 import DollyV2Config as DollyV2Config
 from .configuration_falcon import FalconConfig as FalconConfig
 from .configuration_flan_t5 import FlanT5Config as FlanT5Config
+from .configuration_gemma import GemmaConfig as GemmaConfig
 from .configuration_gpt_neox import GPTNeoXConfig as GPTNeoXConfig
 from .configuration_llama import LlamaConfig as LlamaConfig
 from .configuration_mistral import MistralConfig as MistralConfig

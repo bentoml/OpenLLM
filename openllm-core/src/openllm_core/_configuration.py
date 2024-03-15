@@ -530,7 +530,9 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     elif 'llm_config' in attrs:  # NOTE: this is the new key
       generation_config = attrs.pop('llm_config')
 
-    config_from_env.update({**generation_config, **attrs})
+    config_from_env.update({**generation_config, **cls().generation_config.model_dump(), **attrs})
+    config_from_env = {k: v for k, v in config_from_env.items() if v is not None}
+
     return cls.model_construct(generation_config=GenerationConfig.model_construct(**config_from_env))
 
   def inference_options(self, llm: openllm.LLM, backend: str | None = None) -> tuple[Self, t.Any]:

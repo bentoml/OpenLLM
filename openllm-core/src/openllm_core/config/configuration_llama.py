@@ -51,7 +51,7 @@ class LlamaConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(
+    default=openllm_core.GenerationConfig.model_construct(
       max_new_tokens=128, temperature=0.6, top_p=0.9, top_k=12, best_of=1, presence_penalty=0.5
     )
   )

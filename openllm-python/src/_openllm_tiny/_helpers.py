@@ -42,9 +42,7 @@ class OpenAI:
   def __init__(self, llm: openllm.LLM):
     self.llm = llm
 
-  async def chat_completions(
-    self, request: ChatCompletionRequest, raw_request: Request
-  ) -> t.AsyncGenerator[ChatCompletionResponse, None]:
+  async def chat_completions(self, request: ChatCompletionRequest, raw_request: Request):
     if request.logit_bias is not None and len(request.logit_bias) > 0:
       return self.create_error_response("'logit_bias' is not supported .", NotSupportedError)
 
@@ -53,7 +51,7 @@ class OpenAI:
       return error
 
     try:
-      prompt = self.llm._tokenizer.apply_chat_template(
+      prompt: str = self.llm._tokenizer.apply_chat_template(
         conversation=request.messages,
         tokenize=False,
         add_generation_prompt=request.add_generation_prompt,

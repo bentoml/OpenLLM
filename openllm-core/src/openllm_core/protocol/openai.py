@@ -192,7 +192,7 @@ class ModelPermission(pydantic.BaseModel):
   allow_fine_tuning: bool = False
   organization: str = '*'
   group: t.Optional[str] = None
-  is_blocking: str = False
+  is_blocking: bool = False
 
 
 class ModelList(pydantic.BaseModel):

@@ -28,7 +28,9 @@ metadata_config: ModelSettings = {
   'model_ids': ['eleutherai/gpt-neox-20b'],
 }
 
-generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig(temperature=0.9, max_new_tokens=100)
+generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig.model_construct(
+  temperature=0.9, max_new_tokens=100
+)
 
 GPTNeoXConfig = pydantic.create_model(
   'GPTNeoXConfig',

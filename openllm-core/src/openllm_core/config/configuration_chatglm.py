@@ -36,7 +36,9 @@ metadata_config: ModelSettings = {
   ],
 }
 
-generation_config = openllm_core.GenerationConfig(max_new_tokens=2048, num_beams=1, top_p=0.7, temperature=0.95)
+generation_config = openllm_core.GenerationConfig.model_construct(
+  max_new_tokens=2048, num_beams=1, top_p=0.7, temperature=0.95
+)
 
 ChatGLMConfig = pydantic.create_model(
   'ChatGLMConfig',

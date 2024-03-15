@@ -30,7 +30,7 @@ class MixtralConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(max_new_tokens=20, temperature=0.7, best_of=1)
+    default=openllm_core.GenerationConfig.model_construct(max_new_tokens=20, temperature=0.7, best_of=1)
   )
 
   # NOTE: see https://docs.mistral.ai/usage/guardrailing/ and https://docs.mistral.ai/llm/mistral-instruct-v0.1

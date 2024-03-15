@@ -50,7 +50,9 @@ class DollyV2Config(openllm_core.LLMConfig):
 
   # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(temperature=0.9, top_p=0.92, top_k=5, max_new_tokens=256, eos_token_id=50277)
+    default=openllm_core.GenerationConfig.model_construct(
+      temperature=0.9, top_p=0.92, top_k=5, max_new_tokens=256, eos_token_id=50277
+    )
   )
 
   @property

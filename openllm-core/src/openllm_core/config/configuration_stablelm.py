@@ -38,7 +38,7 @@ class StableLMConfig(openllm_core.LLMConfig):
   )
 
   generation_config: openllm_core.GenerationConfig = pydantic.Field(
-    default=openllm_core.GenerationConfig(temperature=0.9, max_new_tokens=128, top_k=0, top_p=0.9)
+    default=openllm_core.GenerationConfig.model_construct(temperature=0.9, max_new_tokens=128, top_k=0, top_p=0.9)
   )
 
   @property

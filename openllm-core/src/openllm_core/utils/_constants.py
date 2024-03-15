@@ -11,7 +11,7 @@ DEV_DEBUG_VAR = 'DEBUG'
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
 
 
-def check_bool_env(env, default=True):
+def check_bool_env(env: str, default: bool = True):
   v = os.getenv(env, default=str(default)).upper()
   if v.isdigit():
     return bool(int(v))  # special check for digits

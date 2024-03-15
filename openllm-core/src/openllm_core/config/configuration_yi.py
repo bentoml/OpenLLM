@@ -22,7 +22,7 @@ metadata_config: ModelSettings = {
   'model_ids': ['01-ai/Yi-6B', '01-ai/Yi-34B', '01-ai/Yi-6B-200K', '01-ai/Yi-34B-200K'],
 }
 
-generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig(
+generation_config: openllm_core.GenerationConfig = openllm_core.GenerationConfig.model_construct(
   max_new_tokens=256,
   temperature=0.7,
   repetition_penalty=1.3,
