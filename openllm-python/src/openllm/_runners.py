@@ -1,8 +1,8 @@
 from __future__ import annotations
-import gc, traceback, types, typing as t
+import gc, types, typing as t
 import torch, bentoml, openllm
 from openllm_core._schemas import CompletionChunk, GenerationOutput, SampleLogprobs
-from openllm_core.utils import ReprMixin, is_ctranslate_available, is_vllm_available
+from openllm_core.utils import ReprMixin, is_vllm_available
 
 if t.TYPE_CHECKING:
   from openllm_core._typing_compat import M, T
@@ -46,11 +46,14 @@ def runner(llm: openllm.LLM[M, T]) -> Runner[M, T]:
         (
           'runner_methods',
           {
-            method.name: {'batchable': method.config.batchable, 'batch_dim': method.config.batch_dim if method.config.batchable else None}
+            method.name: {
+              'batchable': method.config.batchable,
+              'batch_dim': method.config.batch_dim if method.config.batchable else None,
+            }
             for method in _.runner_methods
           },
         ),
-        ('config', llm.config.model_dump(flatten=True)),
+        ('config', llm.config.model_dump()),
         ('llm_type', llm.llm_type),
         ('backend', llm.__llm_backend__),
         ('llm_tag', llm.tag),
@@ -69,49 +72,6 @@ def runner(llm: openllm.LLM[M, T]) -> Runner[M, T]:
 
 
 @registry
-class CTranslateRunnable(bentoml.Runnable):
-  SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'cpu')
-  SUPPORTS_CPU_MULTI_THREADING = True
-
-  def __init__(self, llm):
-    if not is_ctranslate_available():
-      raise openllm.exceptions.OpenLLMException('ctranslate is not installed. Do `pip install "openllm[ctranslate]"`')
-    self.llm, self.config, self.model, self.tokenizer = llm, llm.config, llm.model, llm.tokenizer
-
-  @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
-    config, sampling_params = self.config.model_construct_env(stop=list(stop), **attrs).inference_options(self.llm)
-    cumulative_logprob, output_token_ids, input_len = 0.0, list(prompt_token_ids), len(prompt_token_ids)
-    tokens = self.tokenizer.convert_ids_to_tokens(prompt_token_ids)
-    async for request_output in self.model.async_generate_tokens(tokens, **sampling_params):
-      if config['logprobs']:
-        cumulative_logprob += request_output.log_prob
-      output_token_ids.append(request_output.token_id)
-      text = self.tokenizer.decode(
-        output_token_ids[input_len:],
-        skip_special_tokens=True,  #
-        spaces_between_special_tokens=False,
-        clean_up_tokenization_spaces=True,  #
-      )
-      out = GenerationOutput(
-        prompt_token_ids=prompt_token_ids,  #
-        prompt='',
-        finished=request_output.is_last,
-        request_id=request_id,  #
-        outputs=[
-          CompletionChunk(
-            index=0,
-            text=text,
-            finish_reason=None,  #
-            token_ids=output_token_ids[input_len:],
-            cumulative_logprob=cumulative_logprob,  #
-            # TODO: logprobs, but seems like we don't have access to the raw logits
-          )
-        ],
-      ).model_dump_json()
-      yield bentoml.io.SSE(out).marshal()
-
-@registry
 class vLLMRunnable(bentoml.Runnable):
   SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'amd.com/gpu', 'cpu')
   SUPPORTS_CPU_MULTI_THREADING = True
@@ -119,41 +79,17 @@ class vLLMRunnable(bentoml.Runnable):
   def __init__(self, llm):
     if not is_vllm_available():
       raise openllm.exceptions.OpenLLMException('vLLM is not installed. Do `pip install "openllm[vllm]"`.')
-    import vllm
 
-    self.llm, self.config, self.tokenizer = llm, llm.config, llm.tokenizer
-    num_gpus, dev = 1, openllm.utils.device_count()
-    if dev >= 2:
-      num_gpus = min(dev // 2 * 2, dev)
-    quantise = llm.quantise if llm.quantise and llm.quantise in {'gptq', 'awq', 'squeezellm'} else None
-    dtype = torch.float16 if quantise == 'gptq' else llm._torch_dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
-    try:
-      self.model = vllm.AsyncLLMEngine.from_engine_args(
-        vllm.AsyncEngineArgs(
-          worker_use_ray=False,
-          engine_use_ray=False,  #
-          tokenizer_mode='auto',
-          tensor_parallel_size=num_gpus,  #
-          model=llm.bentomodel.path,
-          tokenizer=llm.bentomodel.path,  #
-          trust_remote_code=llm.trust_remote_code,
-          dtype=dtype,  #
-          max_model_len=llm._max_model_len,
-          gpu_memory_utilization=llm._gpu_memory_utilization,  #
-          quantization=quantise,
-        )
-      )
-    except Exception as err:
-      traceback.print_exc()
-      raise openllm.exceptions.OpenLLMException(f'Failed to initialise vLLMEngine due to the following error:\n{err}') from err
+    self.llm, self.config, self.model = llm, llm.config, llm.model
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
+  async def generate_iterator(self, prompt, request_id, prompt_token_ids=None, stop=None, adapter_name=None, **attrs):
     _, sampling_params = self.config.model_construct_env(stop=stop, **attrs).inference_options(self.llm)
-    async for request_output in self.model.generate(None, sampling_params, request_id, prompt_token_ids):
+    async for request_output in self.model.generate(
+      prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
+    ):
       out = GenerationOutput.from_vllm(request_output).model_dump_json()
-      out = bentoml.io.SSE(out).marshal()
-      yield out
+      yield bentoml.io.SSE(out).marshal()
 
 
 @registry(alias='pt')
@@ -170,11 +106,16 @@ class PyTorchRunnable(bentoml.Runnable):
       self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
   @bentoml.Runnable.method(batchable=False)
-  async def generate_iterator(self, prompt_token_ids, request_id, stop=None, adapter_name=None, **attrs):
+  async def generate_iterator(self, prompt, request_id, prompt_token_ids=None, stop=None, adapter_name=None, **attrs):
     from ._generation import get_context_length, prepare_logits_processor
 
     if adapter_name is not None:
       self.model.set_adapter(adapter_name)
+
+    if prompt_token_ids is None:
+      if prompt is None:
+        raise ValueError('Either prompt or prompt_token_ids must be specified.')
+      prompt_token_ids = self.tokenizer.encode(prompt)
 
     max_new_tokens = attrs.pop('max_new_tokens', 256)
     context_length = attrs.pop('context_length', None)
@@ -202,7 +143,9 @@ class PyTorchRunnable(bentoml.Runnable):
         if config['logprobs']:  # FIXME: logprobs is not supported
           raise NotImplementedError('Logprobs is yet to be supported with encoder-decoder models.')
         encoder_output = self.model.encoder(input_ids=torch.as_tensor([prompt_token_ids], device=self.device))[0]
-        start_ids = torch.as_tensor([[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device)
+        start_ids = torch.as_tensor(
+          [[self.model.generation_config.decoder_start_token_id]], dtype=torch.int64, device=self.device
+        )
       else:
         start_ids = torch.as_tensor([prompt_token_ids], device=self.device)
 
@@ -230,7 +173,9 @@ class PyTorchRunnable(bentoml.Runnable):
           )
           logits = self.model.lm_head(out[0])
         else:
-          out = self.model(input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True)
+          out = self.model(
+            input_ids=torch.as_tensor([[token]], device=self.device), past_key_values=past_key_values, use_cache=True
+          )
           logits = out.logits
         past_key_values = out.past_key_values
         if logits_processor:
@@ -274,7 +219,12 @@ class PyTorchRunnable(bentoml.Runnable):
 
         tmp_output_ids, rfind_start = output_token_ids[input_len:], 0
         # XXX: Move this to API server
-        text = self.tokenizer.decode(tmp_output_ids, skip_special_tokens=True, spaces_between_special_tokens=False, clean_up_tokenization_spaces=True)
+        text = self.tokenizer.decode(
+          tmp_output_ids,
+          skip_special_tokens=True,
+          spaces_between_special_tokens=False,
+          clean_up_tokenization_spaces=True,
+        )
 
         if len(stop) > 0:
           for it in stop:

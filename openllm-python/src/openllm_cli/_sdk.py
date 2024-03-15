@@ -1,7 +1,6 @@
 from __future__ import annotations
-import itertools, logging, os, re, subprocess, sys, typing as t
+import itertools, logging, os, re, subprocess, sys, typing as t, bentoml, openllm_core, orjson
 from simple_di import Provide, inject
-import bentoml, openllm_core, orjson
 from bentoml._internal.configuration.containers import BentoMLContainer
 from openllm_core._typing_compat import LiteralSerialisation
 from openllm_core.exceptions import OpenLLMException
@@ -69,7 +68,10 @@ def _start(
   if timeout:
     args.extend(['--server-timeout', str(timeout)])
   if workers_per_resource:
-    args.extend(['--workers-per-resource', str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource])
+    args.extend([
+      '--workers-per-resource',
+      str(workers_per_resource) if not isinstance(workers_per_resource, str) else workers_per_resource,
+    ])
   if device and not os.environ.get('CUDA_VISIBLE_DEVICES'):
     args.extend(['--device', ','.join(device)])
   if quantize:
@@ -77,7 +79,11 @@ def _start(
   if cors:
     args.append('--cors')
   if adapter_map:
-    args.extend(list(itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])))
+    args.extend(
+      list(
+        itertools.chain.from_iterable([['--adapter-id', f"{k}{':'+v if v else ''}"] for k, v in adapter_map.items()])
+      )
+    )
   if additional_args:
     args.extend(additional_args)
   if __test__:
@@ -148,7 +154,9 @@ def _build(
     '--machine',
     '--quiet',
     '--serialisation',
-    first_not_none(serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'),
+    first_not_none(
+      serialisation, default='safetensors' if has_safetensors_weights(model_id, model_version) else 'legacy'
+    ),
   ]
   if quantize:
     args.extend(['--quantize', quantize])
@@ -265,4 +273,4 @@ start, build, import_model, list_models = (
   codegen.gen_sdk(_import_model),
   codegen.gen_sdk(_list_models),
 )
-__all__ = ['start', 'build', 'import_model', 'list_models']
+__all__ = ['build', 'import_model', 'list_models', 'start']

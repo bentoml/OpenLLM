@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import openllm_core, typing as t
-
-if t.TYPE_CHECKING:
-  from openllm_core._schemas import MessageParam
+import openllm_core, pydantic
+from openllm_core._schemas import MessageParam
+from openllm_core._configuration import ModelSettings
 
 SINST_KEY, EINST_KEY, BOS_TOKEN, EOS_TOKEN = '[INST]', '[/INST]', '<s>', '</s>'
 
@@ -17,37 +16,45 @@ class MistralConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  __config__ = {
-    'name_type': 'lowercase',
-    'url': 'https://mistral.ai',
-    'architecture': 'MistralForCausalLM',
-    'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
-    'serialisation': 'safetensors',
-    'model_ids': [
-      'HuggingFaceH4/zephyr-7b-alpha',
-      'HuggingFaceH4/zephyr-7b-beta',
-      'mistralai/Mistral-7B-Instruct-v0.2',
-      'mistralai/Mistral-7B-Instruct-v0.1',
-      'mistralai/Mistral-7B-v0.1',
-    ],
-    'fine_tune_strategies': ({'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},),
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
-  class GenerationConfig:
-    max_new_tokens: int = 256
-    temperature: float = 0.7
-    top_p: float = 0.95
-    top_k: int = 40
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'name_type': 'lowercase',
+      'url': 'https://mistral.ai',
+      'architecture': 'MistralForCausalLM',
+      'default_id': 'mistralai/Mistral-7B-Instruct-v0.1',
+      'serialisation': 'safetensors',
+      'model_ids': [
+        'HuggingFaceH4/zephyr-7b-alpha',
+        'HuggingFaceH4/zephyr-7b-beta',
+        'mistralai/Mistral-7B-Instruct-v0.2',
+        'mistralai/Mistral-7B-Instruct-v0.1',
+        'mistralai/Mistral-7B-v0.1',
+      ],
+      'fine_tune_strategies': (
+        {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+      ),
+    },
+    repr=False,
+    exclude=True,
+  )
 
-  class SamplingParams:
-    best_of: int = 1
-    presence_penalty: float = 0.5
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig.model_construct(
+      max_new_tokens=256, temperature=0.7, top_p=0.95, top_k=40, best_of=1, presence_penalty=0.5
+    )
+  )
 
   # NOTE: see https://docs.mistral.ai/usage/guardrailing/ and https://docs.mistral.ai/llm/mistral-instruct-v0.1
   @property
   def template(self) -> str:
     return """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
-      start_inst=SINST_KEY, end_inst=EINST_KEY, start_key=BOS_TOKEN, system_message='{system_message}', instruction='{instruction}'
+      start_inst=SINST_KEY,
+      end_inst=EINST_KEY,
+      start_key=BOS_TOKEN,
+      system_message='{system_message}',
+      instruction='{instruction}',
     )
 
   # NOTE: https://docs.mistral.ai/usage/guardrailing/
@@ -63,8 +70,6 @@ class MistralConfig(openllm_core.LLMConfig):
 
   @property
   def chat_messages(self) -> list[MessageParam]:
-    from openllm_core._schemas import MessageParam
-
     return [
       MessageParam(role='user', content='What is your favourite condiment?'),
       MessageParam(

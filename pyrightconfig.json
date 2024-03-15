@@ -2,14 +2,12 @@
   "useLibraryCodeForTypes": true,
   "typeCheckingMode": "strict",
   "verboseOutput": true,
-  "include": [
-    "openllm-core/src",
-    "openllm-client/src",
-    "openllm-python/src"
-  ],
+  "include": ["openllm-core/src", "openllm-client/src", "openllm-python/src"],
   "define": {
     "MYPY": true
   },
+  "venvPath": ".",
+  "venv": ".venv",
   "exclude": [
     "cz.py",
     "tools",

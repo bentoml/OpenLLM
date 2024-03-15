@@ -38,7 +38,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.1.11,<1.2",
+    "bentoml[io]>=1.2",
     "transformers[torch,tokenizers]>=4.36.0",
     "openllm-client>=0.4.44",
     "openllm-core>=0.4.44",
@@ -81,13 +81,7 @@ license = "Apache-2.0"
 name = "openllm"
 requires-python = ">=3.8"
 [project.scripts]
-openllm = "openllm_cli.entrypoint:cli"
-openllm-dive-bentos = "openllm_cli.extension.dive_bentos:cli"
-openllm-get-containerfile = "openllm_cli.extension.get_containerfile:cli"
-openllm-get-prompt = "openllm_cli.extension.get_prompt:cli"
-openllm-list-bentos = "openllm_cli.extension.list_bentos:cli"
-openllm-list-models = "openllm_cli.extension.list_models:cli"
-openllm-playground = "openllm_cli.extension.playground:cli"
+openllm = "_openllm_tiny._entrypoint:cli"
 
 [project.urls]
 Blog = "https://modelserving.com"
@@ -105,21 +99,31 @@ all = ["openllm[full]"]
 awq = ["autoawq"]
 baichuan = ["cpm-kernels"]
 chatglm = ["cpm-kernels"]
-ctranslate = ["ctranslate2>=3.22.0"]
+dolly-v2 = ["cpm-kernels"]
 falcon = ["xformers"]
 fine-tune = ["peft>=0.6.0", "datasets", "trl", "huggingface-hub"]
+flan-t5 = ["xformers"]
 full = [
-    "openllm[agents,awq,baichuan,chatglm,ctranslate,falcon,fine-tune,ggml,gptq,grpc,mpt,openai,playground,qwen,starcoder,vllm]",
+    "openllm[agents,awq,baichuan,chatglm,dolly-v2,falcon,fine-tune,flan-t5,gemma,ggml,gpt-neox,gptq,grpc,llama,mistral,mixtral,mpt,openai,opt,phi,playground,qwen,stablelm,starcoder,vllm,yi]",
 ]
+gemma = ["xformers"]
 ggml = ["ctransformers"]
+gpt-neox = ["xformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.1.11,<1.2"]
+grpc = ["bentoml[grpc]>=1.2"]
+llama = ["xformers"]
+mistral = ["xformers"]
+mixtral = ["xformers"]
 mpt = ["triton"]
-openai = ["openai[datalib]>=1", "tiktoken"]
+openai = ["openai[datalib]>=1", "tiktoken", "fastapi"]
+opt = ["triton"]
+phi = ["triton"]
 playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
+stablelm = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm==0.2.7", "ray==2.6.0"]
+vllm = ["vllm==0.3.2"]
+yi = ["bitsandbytes"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

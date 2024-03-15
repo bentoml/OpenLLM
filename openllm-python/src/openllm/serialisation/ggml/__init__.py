@@ -5,9 +5,5 @@ def import_model(llm, *decls, trust_remote_code=True, **attrs):
   raise NotImplementedError('Currently work in progress.')
 
 
-def get(llm):
-  raise NotImplementedError('Currently work in progress.')
-
-
 def load_model(llm, *decls, **attrs):
   raise NotImplementedError('Currently work in progress.')

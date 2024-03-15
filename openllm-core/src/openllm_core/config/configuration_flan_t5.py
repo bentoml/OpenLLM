@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import openllm_core
+import openllm_core, pydantic
+from openllm_core._configuration import ModelSettings
 
 
 class FlanT5Config(openllm_core.LLMConfig):
@@ -11,22 +12,33 @@ class FlanT5Config(openllm_core.LLMConfig):
   Refer to [FLAN-T5's page](https://huggingface.co/docs/transformers/model_doc/flan-t5) for more information.
   """
 
-  __config__ = {
-    'url': 'https://huggingface.co/docs/transformers/model_doc/flan-t5',
-    'architecture': 'T5ForConditionalGeneration',
-    'model_type': 'seq2seq_lm',
-    'backend': ('pt',),
-    # NOTE: See https://www.philschmid.de/fine-tune-flan-t5. No specific template found, but seems to have the same dialogue style
-    'default_id': 'google/flan-t5-large',
-    'model_ids': ['google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl'],
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
-  class GenerationConfig:
-    temperature: float = 0.9
-    max_new_tokens: int = 2048
-    top_k: int = 50
-    top_p: float = 0.4
-    repetition_penalty = 1.0
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'url': 'https://huggingface.co/docs/transformers/model_doc/flan-t5',
+      'architecture': 'T5ForConditionalGeneration',
+      'model_type': 'seq2seq_lm',
+      'backend': ('pt',),
+      # NOTE: See https://www.philschmid.de/fine-tune-flan-t5. No specific template found, but seems to have the same dialogue style
+      'default_id': 'google/flan-t5-large',
+      'model_ids': [
+        'google/flan-t5-small',
+        'google/flan-t5-base',
+        'google/flan-t5-large',
+        'google/flan-t5-xl',
+        'google/flan-t5-xxl',
+      ],
+    },
+    repr=False,
+    exclude=True,
+  )
+
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig.model_construct(
+      temperature=0.9, max_new_tokens=2048, top_k=50, top_p=0.4, repetition_penalty=1.0
+    )
+  )
 
   @property
   def template(self) -> str:

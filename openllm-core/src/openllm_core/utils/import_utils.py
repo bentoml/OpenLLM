@@ -1,12 +1,13 @@
-import importlib, importlib.metadata, importlib.util, os
+import importlib, importlib.metadata, importlib.util, os, inspect, typing as t
+from .codegen import _make_method
+from ._constants import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 
-OPTIONAL_DEPENDENCIES = {'vllm', 'fine-tune', 'ggml', 'ctranslate', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
-ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
+OPTIONAL_DEPENDENCIES = {'vllm', 'fine-tune', 'ggml', 'agents', 'openai', 'playground', 'gptq', 'grpc', 'awq'}
 ENV_VARS_TRUE_AND_AUTO_VALUES = ENV_VARS_TRUE_VALUES.union({'AUTO'})
 USE_VLLM = os.getenv('USE_VLLM', 'AUTO').upper()
 
 
-def _is_package_available(package: str) -> bool:
+def _has_package(package: str) -> bool:
   _package_available = importlib.util.find_spec(package) is not None
   if _package_available:
     try:
@@ -16,73 +17,30 @@ def _is_package_available(package: str) -> bool:
   return _package_available
 
 
-_ctranslate_available = importlib.util.find_spec('ctranslate2') is not None
-_vllm_available = importlib.util.find_spec('vllm') is not None
-_grpc_available = importlib.util.find_spec('grpc') is not None
+_grpc_available = _has_package('grpc')
+_triton_available = _has_package('triton')
+_torch_available = _has_package('torch')
+_bentoml_available = _has_package('bentoml')
+_transformers_available = _has_package('transformers')
+_peft_available = _has_package('peft')
+_bitsandbytes_available = _has_package('bitsandbytes')
+_flash_attn_2_available = _has_package('flash_attn')
+_jupyter_available = _has_package('jupyter')
+_jupytext_available = _has_package('jupytext')
+_notebook_available = _has_package('notebook')
+_autogptq_available = _has_package('auto_gptq')
+
+_availables = {
+  k[1:]: v for k, v in locals().items() if k.startswith('_') and not inspect.isfunction(v) and k.endswith('_available')
+}
+caller = {
+  f'is_{k}': _make_method(
+    f'is_{k}', f'def is_{k}() -> bool:\n  global _{k}\n  return _{k}\n', f'generated_file_{k}', {f'_{k}': v}
+  )
+  for k, v in _availables.items()
+}
+
 _autoawq_available = importlib.util.find_spec('awq') is not None
-_triton_available = importlib.util.find_spec('triton') is not None
-_torch_available = _is_package_available('torch')
-_transformers_available = _is_package_available('transformers')
-_bentoml_available = _is_package_available('bentoml')
-_peft_available = _is_package_available('peft')
-_bitsandbytes_available = _is_package_available('bitsandbytes')
-_flash_attn_available = _is_package_available('flash_attn')
-_jupyter_available = _is_package_available('jupyter')
-_jupytext_available = _is_package_available('jupytext')
-_notebook_available = _is_package_available('notebook')
-_autogptq_available = _is_package_available('auto_gptq')
-
-
-def is_triton_available() -> bool:
-  return _triton_available
-
-
-def is_ctranslate_available() -> bool:
-  return _ctranslate_available
-
-
-def is_bentoml_available() -> bool:
-  return _bentoml_available  # needs this since openllm-core doesn't explicitly depends on bentoml
-
-
-def is_transformers_available() -> bool:
-  return _transformers_available  # needs this since openllm-core doesn't explicitly depends on transformers
-
-
-def is_grpc_available() -> bool:
-  return _grpc_available
-
-
-def is_jupyter_available() -> bool:
-  return _jupyter_available
-
-
-def is_jupytext_available() -> bool:
-  return _jupytext_available
-
-
-def is_notebook_available() -> bool:
-  return _notebook_available
-
-
-def is_peft_available() -> bool:
-  return _peft_available
-
-
-def is_bitsandbytes_available() -> bool:
-  return _bitsandbytes_available
-
-
-def is_autogptq_available() -> bool:
-  return _autogptq_available
-
-
-def is_torch_available() -> bool:
-  return _torch_available
-
-
-def is_flash_attn_2_available() -> bool:
-  return _flash_attn_available
 
 
 def is_autoawq_available() -> bool:
@@ -94,6 +52,9 @@ def is_autoawq_available() -> bool:
   return _autoawq_available
 
 
+_vllm_available = importlib.util.find_spec('vllm') is not None
+
+
 def is_vllm_available() -> bool:
   global _vllm_available
   if USE_VLLM in ENV_VARS_TRUE_AND_AUTO_VALUES or _vllm_available:
@@ -102,3 +63,13 @@ def is_vllm_available() -> bool:
     except importlib.metadata.PackageNotFoundError:
       _vllm_available = False
   return _vllm_available
+
+
+def __dir__() -> list[str]:
+  return [*list(caller.keys()), 'is_autoawq_available', 'is_vllm_available', 'USE_VLLM', 'ENV_VARS_TRUE_VALUES']
+
+
+def __getattr__(it: t.Any) -> t.Any:
+  if it in caller:
+    return caller[it]
+  raise AttributeError(f'module {__name__!r} has no attribute {it!r}')

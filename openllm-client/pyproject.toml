@@ -2,7 +2,7 @@
 build-backend = "hatchling.build"
 requires = [
     "hatchling==1.18.0",
-    "hatch-vcs==0.3.0",
+    "hatch-vcs==0.4.0",
     "hatch-fancy-pypi-readme==23.1.0",
 ]
 
@@ -52,7 +52,7 @@ keywords = [
     "PyTorch",
     "Transformers",
 ]
-dependencies = ["openllm-core", "httpx", "distro", "anyio"]
+dependencies = ["openllm-core", "attrs>=23.2.0", "httpx", "distro", "anyio"]
 license = "Apache-2.0"
 name = "openllm-client"
 requires-python = ">=3.8"

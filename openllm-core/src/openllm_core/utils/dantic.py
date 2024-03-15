@@ -1,42 +1,37 @@
 from __future__ import annotations
-import functools
-import importlib
-import os
-import sys
-import typing as t
+import functools, importlib, os, sys, typing as t
 from enum import Enum
-
-import attr
-import click
-import click_option_group as cog
-import inflection
-import orjson
+import attr, click, inflection, orjson, click_option_group as cog
 from click import ParamType, shell_completion as sc, types as click_types
+from .._typing_compat import overload, Unpack
 
 if t.TYPE_CHECKING:
   from attr import _ValidatorType
+  from pydantic import ConfigDict
 
+T = t.TypeVar('T')
 AnyCallable = t.Callable[..., t.Any]
 FC = t.TypeVar('FC', bound=t.Union[AnyCallable, click.Command])
 
 __all__ = [
+  'CUDA',
   'FC',
-  'attrs_to_options',
-  'Field',
-  'parse_type',
-  'is_typing',
-  'is_literal',
-  'ModuleType',
+  'BytesType',
   'EnumChoice',
+  'Field',
+  'JsonType',
   'LiteralChoice',
+  'ModuleType',
   'allows_multiple',
-  'is_mapping',
+  'attach_pydantic_model',
+  'attrs_to_options',
   'is_container',
+  'is_literal',
+  'is_mapping',
+  'is_typing',
   'parse_container_args',
   'parse_single_arg',
-  'CUDA',
-  'JsonType',
-  'BytesType',
+  'parse_type',
 ]
 
 
@@ -44,8 +39,94 @@ def __dir__() -> list[str]:
   return sorted(__all__)
 
 
+def _error_callable(field: str):
+  def fact():
+    raise ValueError(f'"{field}" is required to be set from given attrs class.')
+
+  return fact
+
+
+@overload
+def attach_pydantic_model(klass: t.Type[T], /, **config: Unpack[ConfigDict]) -> t.Type[T]: ...
+
+
+@overload
+def attach_pydantic_model(**config: Unpack[ConfigDict]) -> t.Callable[[t.Type[T]], t.Type[T]]: ...
+
+
+def attach_pydantic_model(
+  klass: t.Optional[t.Type[T]] = None, /, **config: Unpack[ConfigDict]
+) -> t.Type[T] | t.Callable[[t.Type[T]], t.Type[T]]:
+  # attach a cls.pydantic_model() -> pydantic.BaseModel compatible components.
+  def _decorator(_cls: t.Type[T]) -> t.Type[T]:
+    if not attr.has((_cls := attr.resolve_types(_cls))):
+      raise TypeError('this decorator should only be used with attrs-compatible classes')
+
+    from .pkg import pkg_version_info
+
+    if (ver := pkg_version_info('pydantic')) < (2,):
+      raise ImportError(f'Requires pydantic>=2.0, but found {".".join(map(str, ver))} instead.')
+
+    try:
+      from _bentoml_sdk.io_models import IODescriptor
+    except ImportError:
+      raise ImportError('Requires bentoml>=1.2 to be installed. Do "pip install -U "bentoml>=1.2""') from None
+
+    import pydantic
+
+    field_dict = {}
+    for key, attrib in attr.fields_dict(_cls).items():
+      attrib_type = resolve_attrib_types(attrib.type)
+      if attrib.default is attr.NOTHING:
+        field_dict[key] = (attrib_type, pydantic.Field(default_factory=_error_callable(key)))
+      elif isinstance(attrib.default, attr.Factory):
+        field_dict[key] = (attrib_type, pydantic.Field(default_factory=attrib.default.factory))
+      else:
+        field_dict[key] = (attrib_type, pydantic.Field(default=attrib.default))
+
+    def create_dantic_class(cls):
+      _klass = pydantic.create_model(
+        cls.__name__ + 'Pydantic',
+        __base__=(
+          IODescriptor,
+          pydantic.create_model(cls.__name__ + 'BaseModel', metadata_config=config, __module__=cls.__module__),
+        ),
+        __module__=cls.__module__,
+        **field_dict,
+      )
+      _klass.media_type = 'application/json'
+      return _klass
+
+    setattr(_cls, 'pydantic_model', classmethod(create_dantic_class))
+    setattr(_cls, '__openllm_attach_pydantic_model__', True)
+    return _cls
+
+  return _decorator if klass is None else _decorator(klass)
+
+
+def resolve_attrib_types(typ_: t.Any) -> t.Any:
+  if hasattr(typ_, 'pydantic_model'):
+    return resolve_attrib_types(typ_.pydantic_model())
+  if is_container(typ_):
+    args = t.get_args(typ_)
+    if len(args) == 0:
+      return typ_
+    # homogenous type
+    if len(args) == 1 or (len(args) == 2 and args[1] is Ellipsis):
+      if hasattr((single := args[0]), 'pydantic_model'):
+        single = single.pydantic_model()
+      return typ_.copy_with(single)
+    return tuple(resolve_attrib_types(it) for it in args)
+  return typ_
+
+
 def attrs_to_options(
-  name: str, field: attr.Attribute[t.Any], model_name: str, typ: t.Any = None, suffix_generation: bool = False, suffix_sampling: bool = False
+  name: str,
+  field: attr.Attribute[t.Any],
+  model_name: str,
+  typ: t.Any = None,
+  suffix_generation: bool = False,
+  suffix_sampling: bool = False,
 ) -> t.Callable[[FC], FC]:
   # TODO: support parsing nested attrs class and Union
   envvar = field.metadata['env']

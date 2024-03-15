@@ -141,27 +141,25 @@ class Dependencies:
     return cls(*decls)
 
 
-_LOWER_BENTOML_CONSTRAINT = '1.1.11'
-_UPPER_BENTOML_CONSTRAINT = '1.2'
+_LOWER_BENTOML_CONSTRAINT = '1.2'
 _BENTOML_EXT = ['io']
 _TRANSFORMERS_EXT = ['torch', 'tokenizers']
 _TRANSFORMERS_CONSTRAINTS = '4.36.0'
 
 FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
-GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT},<{_UPPER_BENTOML_CONSTRAINT}']
-OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken']
+GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
+OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken', 'fastapi']
 AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
 PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
-CTRANSLATE_DEPS = ['ctranslate2>=3.22.0']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.2.7', 'ray==2.6.0']
+VLLM_DEPS = ['vllm==0.3.2']
 
 _base_requirements: dict[str, t.Any] = {
-  inflection.dasherize(name): config_cls.__openllm_requirements__
+  inflection.dasherize(name): config_cls()['requirements']
   for name, config_cls in openllm.CONFIG_MAPPING.items()
-  if config_cls.__openllm_requirements__
+  if 'requirements' in config_cls()
 }
 
 # shallow copy from locals()
@@ -207,13 +205,13 @@ def create_classifiers() -> Array:
 
 def create_optional_table() -> Table:
   all_array = tomlkit.array()
-  all_array.append(f"openllm[{','.join(_base_requirements)}]")
+  all_array.append(f"openllm[{','.join([k for k,v in _base_requirements.items() if v])}]")
 
   table = tomlkit.table(is_super_table=True)
   _base_requirements.update(
     {'full': correct_style(all_array.multiline(True)), 'all': tomlkit.array('["openllm[full]"]')}
   )
-  table.update({k: v for k, v in sorted(_base_requirements.items())})
+  table.update({k: v for k, v in sorted(_base_requirements.items()) if v})
   table.add(tomlkit.nl())
 
   return table
@@ -274,22 +272,7 @@ def keywords() -> Array:
 
 def build_cli_extensions() -> Table:
   table = tomlkit.table()
-  ext: dict[str, str] = {'openllm': 'openllm_cli.entrypoint:cli'}
-  ext.update(
-    {
-      f'openllm-{inflection.dasherize(ke)}': f'openllm_cli.extension.{ke}:cli'
-      for ke in sorted(
-        [
-          fname[:-3]
-          for fname in os.listdir(
-            os.path.abspath(os.path.join(ROOT, 'openllm-python', 'src', 'openllm_cli', 'extension'))
-          )
-          if fname.endswith('.py') and not fname.startswith('__')
-        ]
-      )
-    }
-  )
-  table.update(ext)
+  table.update({'openllm': '_openllm_tiny._entrypoint:cli'})
   return table
 
 
@@ -305,11 +288,7 @@ def main(args) -> int:
     release_version = openllm.bundle.RefResolver.from_strategy('release').version
 
   _BASE_DEPENDENCIES = [
-    Dependencies(
-      name='bentoml', extensions=_BENTOML_EXT,
-      lower_constraint=_LOWER_BENTOML_CONSTRAINT,
-      upper_constraint=_UPPER_BENTOML_CONSTRAINT,
-    ),
+    Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=_LOWER_BENTOML_CONSTRAINT),
     Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint=_TRANSFORMERS_CONSTRAINTS),
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),

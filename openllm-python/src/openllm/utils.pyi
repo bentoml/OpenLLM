@@ -13,6 +13,7 @@ from openllm_core.utils import (
   LazyModule as LazyModule,
   ReprMixin as ReprMixin,
   VersionInfo as VersionInfo,
+  correct_closure as correct_closure,
   analytics as analytics,
   calc_dir_size as calc_dir_size,
   check_bool_env as check_bool_env,
@@ -34,7 +35,6 @@ from openllm_core.utils import (
   is_autogptq_available as is_autogptq_available,
   is_bentoml_available as is_bentoml_available,
   is_bitsandbytes_available as is_bitsandbytes_available,
-  is_ctranslate_available as is_ctranslate_available,
   is_flash_attn_2_available as is_flash_attn_2_available,
   is_grpc_available as is_grpc_available,
   is_jupyter_available as is_jupyter_available,
@@ -49,15 +49,15 @@ from openllm_core.utils import (
   resolve_filepath as resolve_filepath,
   resolve_user_filepath as resolve_user_filepath,
   serde as serde,
+  pkg as pkg,
   set_debug_mode as set_debug_mode,
   set_disable_warnings as set_disable_warnings,
   set_quiet_mode as set_quiet_mode,
   validate_is_path as validate_is_path,
 )
 from openllm_core.utils.serde import converter as converter
-
-from ._llm import LLM
+from openllm_core._typing_compat import LiteralSerialisation as _LiteralSerialisation
 
 def available_devices() -> Tuple[str, ...]: ...
 def device_count() -> int: ...
-def generate_labels(llm: LLM[Any, Any]) -> Dict[str, Any]: ...
+def generate_labels(serialisation: _LiteralSerialisation) -> Dict[str, Any]: ...

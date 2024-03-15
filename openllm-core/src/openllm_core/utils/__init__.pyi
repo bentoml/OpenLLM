@@ -1,6 +1,8 @@
+import functools
 from typing import Any, Dict, Tuple, TypeVar, Callable, Optional, Sequence, Literal, Union, Type
 from bentoml._internal.models.model import ModelContext
-from openllm_core._typing_compat import overload, AnyCallable
+from _bentoml_sdk.api import APIMethod
+from openllm_core._typing_compat import overload, AnyCallable, ParamSpec, Concatenate
 from bentoml._internal.types import PathType
 from openllm_core.utils.import_utils import (
   ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
@@ -10,7 +12,6 @@ from openllm_core.utils.import_utils import (
   is_bentoml_available as is_bentoml_available,
   is_bitsandbytes_available as is_bitsandbytes_available,
   is_triton_available as is_triton_available,
-  is_ctranslate_available as is_ctranslate_available,
   is_grpc_available as is_grpc_available,
   is_jupyter_available as is_jupyter_available,
   is_jupytext_available as is_jupytext_available,
@@ -34,6 +35,7 @@ from openllm_core.utils import (
 from openllm_core.utils.lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
 from openllm_core.utils.representation import ReprMixin as ReprMixin
 from openllm_core.utils.serde import converter as converter
+from pydantic import BaseModel
 
 DEBUG: bool = ...
 SHOW_CODEGEN: bool = ...
@@ -44,14 +46,52 @@ DEV_DEBUG_VAR: str = ...
 WARNING_ENV_VAR: str = ...
 
 _T = TypeVar('_T')
+R = TypeVar('R')
+P = ParamSpec('P')
 
+@functools.lru_cache(maxsize=1)
+def has_gpus() -> bool: ...
+def normalise_model_name(name: str) -> str: ...
+def dict_filter_none(d: Dict[str, Any]) -> Dict[str, Any]: ...
+def correct_closure(cls: Type[_T], ref: Type[R]) -> Type[_T]: ...
+@overload
+def api(func: Callable[Concatenate[Any, P], R]) -> APIMethod[P, R]: ...
+@overload
+def api(
+  *,
+  route: Optional[str] = ...,
+  name: Optional[str] = ...,
+  media_type: Optional[str] = ...,
+  input: Optional[type[BaseModel]] = ...,
+  output: Optional[type[BaseModel]] = ...,
+  batchable: bool = ...,
+  batch_dim: Union[int, Tuple[int, int]] = ...,
+  max_batch_size: int = ...,
+  max_latency_ms: int = ...,
+) -> Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]: ...
+@overload
+def api(
+  func: Optional[Callable[Concatenate[Any, P], R]] = ...,
+  *,
+  name: Optional[str] = ...,
+  route: Optional[str] = ...,
+  media_type: Optional[str] = ...,
+  input: Optional[type[BaseModel]] = ...,
+  output: Optional[type[BaseModel]] = ...,
+  batchable: bool = ...,
+  batch_dim: Union[int, Tuple[int, int]] = ...,
+  max_batch_size: int = ...,
+  max_latency_ms: int = ...,
+) -> Union[APIMethod[P, R], Callable[[Callable[Concatenate[Any, P], R]], APIMethod[P, R]]]: ...
 def lenient_issubclass(cls: Type[Any], class_or_tuple: Optional[Union[Type[Any], Tuple[Type[Any], ...]]]) -> bool: ...
 def resolve_user_filepath(filepath: str, ctx: Optional[str]) -> str: ...
 def resolve_filepath(path: str, ctx: Optional[str] = ...) -> str: ...
 def check_bool_env(env: str, default: bool = ...) -> bool: ...
 def calc_dir_size(path: PathType) -> int: ...
 def generate_hash_from_file(f: str, algorithm: Literal['md5', 'sha1'] = ...) -> str: ...
-def getenv(env: str, default: Optional[Any] = ..., var: Optional[Sequence[str]] = ...) -> Any: ...
+def getenv(
+  env: str, default: Optional[Any] = ..., var: Optional[Sequence[str]] = ..., return_type: _T = ...
+) -> _T: ...
 def field_env_key(key: str, suffix: Optional[str] = ...) -> str: ...
 def get_debug_mode() -> bool: ...
 def get_quiet_mode() -> bool: ...

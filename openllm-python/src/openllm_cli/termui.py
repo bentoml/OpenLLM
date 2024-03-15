@@ -9,7 +9,7 @@ import click
 import inflection
 import orjson
 
-from openllm_core._typing_compat import DictStrAny
+from openllm_core._typing_compat import DictStrAny, TypedDict
 from openllm_core.utils import get_debug_mode
 
 logger = logging.getLogger('openllm')
@@ -25,7 +25,14 @@ class Level(enum.IntEnum):
 
   @property
   def color(self) -> str | None:
-    return {Level.NOTSET: None, Level.DEBUG: 'cyan', Level.INFO: 'green', Level.WARNING: 'yellow', Level.ERROR: 'red', Level.CRITICAL: 'red'}[self]
+    return {
+      Level.NOTSET: None,
+      Level.DEBUG: 'cyan',
+      Level.INFO: 'green',
+      Level.WARNING: 'yellow',
+      Level.ERROR: 'red',
+      Level.CRITICAL: 'red',
+    }[self]
 
   @classmethod
   def from_logging_level(cls, level: int) -> Level:
@@ -38,7 +45,7 @@ class Level(enum.IntEnum):
     }[level]
 
 
-class JsonLog(t.TypedDict):
+class JsonLog(TypedDict):
   log_level: Level
   content: str
 
@@ -75,5 +82,9 @@ def echo(text: t.Any, fg: str | None = None, *, _with_style: bool = True, json: 
 
 
 COLUMNS: int = int(os.environ.get('COLUMNS', str(120)))
-CONTEXT_SETTINGS: DictStrAny = {'help_option_names': ['-h', '--help'], 'max_content_width': COLUMNS, 'token_normalize_func': inflection.underscore}
-__all__ = ['echo', 'COLUMNS', 'CONTEXT_SETTINGS', 'log', 'warning', 'error', 'critical', 'debug', 'info', 'Level']
+CONTEXT_SETTINGS: DictStrAny = {
+  'help_option_names': ['-h', '--help'],
+  'max_content_width': COLUMNS,
+  'token_normalize_func': inflection.underscore,
+}
+__all__ = ['COLUMNS', 'CONTEXT_SETTINGS', 'Level', 'critical', 'debug', 'echo', 'error', 'info', 'log', 'warning']

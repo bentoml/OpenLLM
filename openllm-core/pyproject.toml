@@ -2,7 +2,7 @@
 build-backend = "hatchling.build"
 requires = [
     "hatchling==1.18.0",
-    "hatch-vcs==0.3.0",
+    "hatch-vcs==0.4.0",
     "hatch-fancy-pypi-readme==23.1.0",
 ]
 
@@ -58,11 +58,10 @@ keywords = [
     "Transformers",
 ]
 dependencies = [
-    "attrs>=23.1.0",
-    "cattrs>=23.1.0,<23.2.0",
+    "attrs>=23.2.0",
+    "pydantic>2",
     "orjson",
     "inflection",
-    "deepmerge",
     "typing_extensions",
     "mypy_extensions",
 ]
@@ -79,17 +78,10 @@ Homepage = "https://bentoml.com"
 Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
-full = ["openllm-core[vllm,fine-tune,bentoml]"]
-vllm = ["vllm"]
-bentoml = ["bentoml>=1.1.11,<1.2"]
-fine-tune = [
-    "transformers[torch,tokenizers,accelerate]>=4.34.0",
-    "peft>=0.4.0",
-    "bitsandbytes",
-    "datasets",
-    "accelerate",
-    "trl",
-]
+full = ["openllm-core[vllm,bentoml,transformers]"]
+transformers = ["transformers>=4.36.0"]
+vllm = ["vllm>=0.3.0"]
+bentoml = ["bentoml>=1.2"]
 
 [tool.hatch.version]
 fallback-version = "0.0.0"

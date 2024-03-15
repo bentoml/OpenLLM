@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import openllm_core
+import openllm_core, pydantic
+from openllm_core._configuration import ModelSettings
 
 SINST_KEY, EINST_KEY, SYS_KEY, EOS_TOKEN, BOS_TOKEN = '[INST]', '[/INST]', '<<SYS>>', '</s>', '<s>'
 
@@ -18,43 +19,51 @@ class LlamaConfig(openllm_core.LLMConfig):
   for more information.
   """
 
-  __config__ = {
-    'name_type': 'lowercase',
-    'url': 'https://github.com/facebookresearch/llama',
-    'architecture': 'LlamaForCausalLM',
-    'default_id': 'NousResearch/llama-2-7b-hf',
-    'serialisation': 'safetensors',
-    'model_ids': [
-      'meta-llama/Llama-2-70b-chat-hf',
-      'meta-llama/Llama-2-13b-chat-hf',
-      'meta-llama/Llama-2-7b-chat-hf',
-      'meta-llama/Llama-2-70b-hf',
-      'meta-llama/Llama-2-13b-hf',
-      'meta-llama/Llama-2-7b-hf',
-      'NousResearch/llama-2-70b-chat-hf',
-      'NousResearch/llama-2-13b-chat-hf',
-      'NousResearch/llama-2-7b-chat-hf',
-      'NousResearch/llama-2-70b-hf',
-      'NousResearch/llama-2-13b-hf',
-      'NousResearch/llama-2-7b-hf',
-    ],
-    'fine_tune_strategies': ({'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},),
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
-  class GenerationConfig:
-    max_new_tokens: int = 128
-    temperature: float = 0.6
-    top_p: float = 0.9
-    top_k: int = 12
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'name_type': 'lowercase',
+      'url': 'https://github.com/facebookresearch/llama',
+      'architecture': 'LlamaForCausalLM',
+      'default_id': 'NousResearch/llama-2-7b-hf',
+      'serialisation': 'safetensors',
+      'model_ids': [
+        'meta-llama/Llama-2-70b-chat-hf',
+        'meta-llama/Llama-2-13b-chat-hf',
+        'meta-llama/Llama-2-7b-chat-hf',
+        'meta-llama/Llama-2-70b-hf',
+        'meta-llama/Llama-2-13b-hf',
+        'meta-llama/Llama-2-7b-hf',
+        'NousResearch/llama-2-70b-chat-hf',
+        'NousResearch/llama-2-13b-chat-hf',
+        'NousResearch/llama-2-7b-chat-hf',
+        'NousResearch/llama-2-70b-hf',
+        'NousResearch/llama-2-13b-hf',
+        'NousResearch/llama-2-7b-hf',
+      ],
+      'fine_tune_strategies': (
+        {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
+      ),
+    },
+    repr=False,
+    exclude=True,
+  )
 
-  class SamplingParams:
-    best_of: int = 1
-    presence_penalty: float = 0.5
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig.model_construct(
+      max_new_tokens=128, temperature=0.6, top_p=0.9, top_k=12, best_of=1, presence_penalty=0.5
+    )
+  )
 
   @property
   def template(self) -> str:
     return '{start_key} {sys_key}\n{system_message}\n{sys_key}\n\n{instruction}\n{end_key}\n'.format(
-      start_key=SINST_KEY, sys_key=SYS_KEY, system_message='{system_message}', instruction='{instruction}', end_key=EINST_KEY
+      start_key=SINST_KEY,
+      sys_key=SYS_KEY,
+      system_message='{system_message}',
+      instruction='{instruction}',
+      end_key=EINST_KEY,
     )
 
   @property
