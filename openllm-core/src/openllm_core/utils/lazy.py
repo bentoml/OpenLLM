@@ -17,7 +17,7 @@ import attr
 
 import openllm_core
 
-__all__ = ['LazyLoader', 'LazyModule', 'VersionInfo']
+__all__ = ['VersionInfo', 'LazyModule', 'LazyLoader']
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +107,7 @@ class VersionInfo:
       raise NotImplementedError
     if not (1 <= len(cmp) <= 4):
       raise NotImplementedError
-    return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[: len(cmp)]), t.cast(
-      t.Tuple[int, int, int, str], cmp
-    )
+    return t.cast(t.Tuple[int, int, int, str], attr.astuple(self)[: len(cmp)]), t.cast(t.Tuple[int, int, int, str], cmp)
 
   def __eq__(self, other: t.Any) -> bool:
     try:
@@ -231,9 +229,7 @@ class LazyModule(types.ModuleType):
       cur_value = self._objects['__openllm_migration__'].get(name, _sentinel)
       if cur_value is not _sentinel:
         warnings.warn(
-          f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead",
-          DeprecationWarning,
-          stacklevel=3,
+          f"'{name}' is deprecated and will be removed in future version. Make sure to use '{cur_value}' instead", DeprecationWarning, stacklevel=3
         )
         return getattr(self, cur_value)
     if name in self._objects:
@@ -254,9 +250,7 @@ class LazyModule(types.ModuleType):
     try:
       return importlib.import_module('.' + module_name, self.__name__)
     except Exception as e:
-      raise RuntimeError(
-        f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}'
-      ) from e
+      raise RuntimeError(f'Failed to import {self.__name__}.{module_name} because of the following error (look up to see its traceback):\n{e}') from e
 
   # make sure this module is picklable
   def __reduce__(self) -> tuple[type[LazyModule], tuple[str, str | None, dict[str, list[str]]]]:

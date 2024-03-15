@@ -30,9 +30,7 @@ def load_tokenizer(llm: LLM[M, T], **tokenizer_attrs: t.Any) -> TypeGuard[T]:
           'For example: "bentoml.transformers.save_model(..., custom_objects={\'tokenizer\': tokenizer})"'
         ) from None
   else:
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
-      bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs
-    )
+    tokenizer = transformers.AutoTokenizer.from_pretrained(bentomodel_fs.getsyspath('/'), trust_remote_code=llm.trust_remote_code, **tokenizer_attrs)
 
   if tokenizer.pad_token_id is None:
     if config.pad_token_id is not None:

@@ -17,7 +17,7 @@ if t.TYPE_CHECKING:
   from ._shim import AsyncClient, Client
 
 
-__all__ = ['CompletionChunk', 'Helpers', 'Metadata', 'Response', 'StreamingResponse']
+__all__ = ['Response', 'CompletionChunk', 'Metadata', 'StreamingResponse', 'Helpers']
 
 
 @attr.define
@@ -42,11 +42,7 @@ def _structure_metadata(data: t.Dict[str, t.Any], cls: type[Metadata]) -> Metada
     raise RuntimeError(f'Malformed metadata configuration (Server-side issue): {e}') from None
   try:
     return cls(
-      model_id=data['model_id'],
-      timeout=data['timeout'],
-      model_name=data['model_name'],
-      backend=data['backend'],
-      configuration=configuration,
+      model_id=data['model_id'], timeout=data['timeout'], model_name=data['model_name'], backend=data['backend'], configuration=configuration
     )
   except Exception as e:
     raise RuntimeError(f'Malformed metadata (Server-side issue): {e}') from None
@@ -65,10 +61,7 @@ class StreamingResponse(_SchemaMixin):
   @classmethod
   def from_response_chunk(cls, response: Response) -> StreamingResponse:
     return cls(
-      request_id=response.request_id,
-      index=response.outputs[0].index,
-      text=response.outputs[0].text,
-      token_ids=response.outputs[0].token_ids[0],
+      request_id=response.request_id, index=response.outputs[0].index, text=response.outputs[0].text, token_ids=response.outputs[0].token_ids[0]
     )
 
 
@@ -95,17 +88,11 @@ class Helpers:
     return self._async_client
 
   def messages(self, messages, add_generation_prompt=False):
-    return self.client._post(
-      '/v1/helpers/messages',
-      response_cls=str,
-      json=dict(messages=messages, add_generation_prompt=add_generation_prompt),
-    )
+    return self.client._post('/v1/helpers/messages', response_cls=str, json=dict(messages=messages, add_generation_prompt=add_generation_prompt))
 
   async def async_messages(self, messages, add_generation_prompt=False):
     return await self.async_client._post(
-      '/v1/helpers/messages',
-      response_cls=str,
-      json=dict(messages=messages, add_generation_prompt=add_generation_prompt),
+      '/v1/helpers/messages', response_cls=str, json=dict(messages=messages, add_generation_prompt=add_generation_prompt)
     )
 
   @classmethod

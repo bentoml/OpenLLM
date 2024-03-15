@@ -18,20 +18,12 @@ svc = bentoml.Service(name=f"llm-{llm.config['start_name']}-service", runners=[l
 llm_model_class = openllm.GenerationInput.from_llm_config(llm.config)
 
 
-@svc.api(
-  route='/v1/generate',
-  input=JSON.from_sample(llm_model_class.examples()),
-  output=JSON.from_sample(openllm.GenerationOutput.examples()),
-)
+@svc.api(route='/v1/generate', input=JSON.from_sample(llm_model_class.examples()), output=JSON.from_sample(openllm.GenerationOutput.examples()))
 async def generate_v1(input_dict: dict[str, t.Any]) -> dict[str, t.Any]:
   return (await llm.generate(**llm_model_class(**input_dict).model_dump())).model_dump()
 
 
-@svc.api(
-  route='/v1/generate_stream',
-  input=JSON.from_sample(llm_model_class.examples()),
-  output=Text(content_type='text/event-stream'),
-)
+@svc.api(route='/v1/generate_stream', input=JSON.from_sample(llm_model_class.examples()), output=Text(content_type='text/event-stream'))
 async def generate_stream_v1(input_dict: dict[str, t.Any]) -> t.AsyncGenerator[str, None]:
   async for it in llm.generate_iterator(**llm_model_class(**input_dict).model_dump()):
     yield f'data: {it.model_dump_json()}\n\n'
@@ -76,6 +68,4 @@ def helpers_messages_v1(message: MessagesConverterInput) -> str:
   return llm.tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=False)
 
 
-openllm.mount_entrypoints(
-  svc, llm
-)  # HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.
+openllm.mount_entrypoints(svc, llm)  # HACK: This must always be the last line in this file, as we will do some MK for OpenAPI schema.

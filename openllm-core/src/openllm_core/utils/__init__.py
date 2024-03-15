@@ -24,9 +24,7 @@ def _WithArgsTypes() -> tuple[type[t.Any], ...]:
   except ImportError:
     _TypingGenericAlias = ()  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   #  _GenericAlias is the actual GenericAlias implementation
-  return (
-    (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
-  )
+  return (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
 
 
 def lenient_issubclass(cls, class_or_tuple):
@@ -209,9 +207,7 @@ def flatten_attrs(**attrs):
 # Special debug flag controled via DEBUG
 DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
 # Whether to show the codenge for debug purposes
-SHOW_CODEGEN = (
-  DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
-)
+SHOW_CODEGEN = DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
 # MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
 MYPY = False
 
@@ -261,11 +257,7 @@ _LOGGING_CONFIG = {
     'warningfilter': {'()': 'openllm_core.utils.WarningFilter'},
   },
   'handlers': {
-    'bentomlhandler': {
-      'class': 'logging.StreamHandler',
-      'filters': ['excfilter', 'warningfilter', 'infofilter'],
-      'stream': 'ext://sys.stdout',
-    },
+    'bentomlhandler': {'class': 'logging.StreamHandler', 'filters': ['excfilter', 'warningfilter', 'infofilter'], 'stream': 'ext://sys.stdout'},
     'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
   },
   'loggers': {
@@ -301,9 +293,7 @@ def configure_logging():
 # since _extras will be the locals() import from this file.
 _extras = {
   **{
-    k: v
-    for k, v in locals().items()
-    if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
+    k: v for k, v in locals().items() if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
   },
   '__openllm_migration__': {'bentoml_cattr': 'converter'},
 }

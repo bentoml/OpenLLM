@@ -61,11 +61,7 @@ def jsonify_attr(obj):
 
 def error_response(status_code, message):
   return JSONResponse(
-    {
-      'error': converter.unstructure(
-        ErrorResponse(message=message, type='invalid_request_error', code=str(status_code.value))
-      )
-    },
+    {'error': converter.unstructure(ErrorResponse(message=message, type='invalid_request_error', code=str(status_code.value)))},
     status_code=status_code.value,
   )
 
@@ -99,11 +95,7 @@ def create_logprobs(token_ids, top_logprobs, num_output_top_logprobs=None, initi
       logprobs.text_offset.append(logprobs.text_offset[-1] + last_token_len)
     last_token_len = len(token)
     if num_output_top_logprobs:
-      logprobs.top_logprobs.append(
-        {llm.tokenizer.convert_ids_to_tokens(i): p for i, p in step_top_logprobs.items()}
-        if step_top_logprobs
-        else None
-      )
+      logprobs.top_logprobs.append({llm.tokenizer.convert_ids_to_tokens(i): p for i, p in step_top_logprobs.items()} if step_top_logprobs else None)
   return logprobs
 
 
@@ -114,14 +106,8 @@ def mount_to_svc(svc, llm):
   app = Starlette(
     debug=True,
     routes=[
-      Route(
-        '/models', functools.partial(apply_schema(list_models, __model_id__=llm.llm_type), llm=llm), methods=['GET']
-      ),
-      Route(
-        '/completions',
-        functools.partial(apply_schema(completions, __model_id__=llm.llm_type), llm=llm),
-        methods=['POST'],
-      ),
+      Route('/models', functools.partial(apply_schema(list_models, __model_id__=llm.llm_type), llm=llm), methods=['GET']),
+      Route('/completions', functools.partial(apply_schema(completions, __model_id__=llm.llm_type), llm=llm), methods=['POST']),
       Route(
         '/chat/completions',
         functools.partial(
@@ -146,9 +132,7 @@ def mount_to_svc(svc, llm):
 # GET /v1/models
 @add_schema_definitions
 def list_models(_, llm):
-  return JSONResponse(
-    converter.unstructure(ModelList(data=[ModelCard(id=llm.llm_type)])), status_code=HTTPStatus.OK.value
-  )
+  return JSONResponse(converter.unstructure(ModelList(data=[ModelCard(id=llm.llm_type)])), status_code=HTTPStatus.OK.value)
 
 
 # POST /v1/chat/completions
@@ -182,9 +166,7 @@ async def chat_completions(req, llm):
   config = llm.config.compatible_options(request)
 
   def get_role() -> str:
-    return (
-      request.messages[-1]['role'] if not request.add_generation_prompt else 'assistant'
-    )  # TODO: Support custom role here.
+    return request.messages[-1]['role'] if not request.add_generation_prompt else 'assistant'  # TODO: Support custom role here.
 
   try:
     result_generator = llm.generate_iterator(prompt, request_id=request_id, **config)
@@ -198,9 +180,7 @@ async def chat_completions(req, llm):
       id=request_id,
       created=created_time,
       model=model_name,
-      choices=[
-        ChatCompletionResponseStreamChoice(index=index, delta=Delta(content=text), finish_reason=finish_reason)
-      ],
+      choices=[ChatCompletionResponseStreamChoice(index=index, delta=Delta(content=text), finish_reason=finish_reason)],
     )
     if usage is not None:
       response.usage = usage
@@ -251,17 +231,12 @@ async def chat_completions(req, llm):
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
     final_result = final_result.with_options(
-      outputs=[
-        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
-        for output in final_result.outputs
-      ]
+      outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs]
     )
 
     role = get_role()
     choices = [
-      ChatCompletionResponseChoice(
-        index=output.index, message=ChatMessage(role=role, content=output.text), finish_reason=output.finish_reason
-      )
+      ChatCompletionResponseChoice(index=output.index, message=ChatMessage(role=role, content=output.text), finish_reason=output.finish_reason)
       for output in final_result.outputs
     ]
     if request.echo:
@@ -275,9 +250,7 @@ async def chat_completions(req, llm):
     num_prompt_tokens = len(final_result.prompt_token_ids)
     num_generated_tokens = sum(len(output.token_ids) for output in final_result.outputs)
     usage = UsageInfo(num_prompt_tokens, num_generated_tokens, num_prompt_tokens + num_generated_tokens)
-    response = ChatCompletionResponse(
-      id=request_id, created=created_time, model=model_name, usage=usage, choices=choices
-    )
+    response = ChatCompletionResponse(id=request_id, created=created_time, model=model_name, usage=usage, choices=choices)
     return JSONResponse(converter.unstructure(response), status_code=HTTPStatus.OK.value)
   except Exception as err:
     traceback.print_exc()
@@ -369,13 +342,7 @@ async def completions(req, llm):
               top_logprobs = res.prompt_logprobs
           previous_echo[i] = True
         if request.logprobs is not None:
-          logprobs = create_logprobs(
-            output.token_ids,
-            output.logprobs[previous_num_tokens[i] :],
-            request.logprobs,
-            len(previous_texts[i]),
-            llm=llm,
-          )
+          logprobs = create_logprobs(output.token_ids, output.logprobs[previous_num_tokens[i] :], request.logprobs, len(previous_texts[i]), llm=llm)
         previous_num_tokens[i] += len(output.token_ids)
         previous_texts[i] += output.text
         yield f'data: {create_stream_response_json(index=i, text=output.text, logprobs=logprobs, finish_reason=output.finish_reason)}\n\n'
@@ -402,10 +369,7 @@ async def completions(req, llm):
     if final_result is None:
       return error_response(HTTPStatus.BAD_REQUEST, 'No response from model.')
     final_result = final_result.with_options(
-      outputs=[
-        output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index])
-        for output in final_result.outputs
-      ]
+      outputs=[output.with_options(text=''.join(texts[output.index]), token_ids=token_ids[output.index]) for output in final_result.outputs]
     )
 
     choices = []
@@ -428,9 +392,7 @@ async def completions(req, llm):
           output_text = prompt_text + output_text
       else:
         output_text = prompt_text
-      choice_data = CompletionResponseChoice(
-        index=output.index, text=output_text, logprobs=logprobs, finish_reason=output.finish_reason
-      )
+      choice_data = CompletionResponseChoice(index=output.index, text=output_text, logprobs=logprobs, finish_reason=output.finish_reason)
       choices.append(choice_data)
 
     num_prompt_tokens = len(final_result.prompt_token_ids)

@@ -121,11 +121,7 @@ def generate_function(
 ) -> AnyCallable:
   from openllm_core.utils import SHOW_CODEGEN
 
-  script = 'def %s(%s):\n    %s\n' % (
-    func_name,
-    ', '.join(args) if args is not None else '',
-    '\n    '.join(lines) if lines else 'pass',
-  )
+  script = 'def %s(%s):\n    %s\n' % (func_name, ', '.join(args) if args is not None else '', '\n    '.join(lines) if lines else 'pass')
   meth = _make_method(func_name, script, generate_unique_filename(typ, func_name), globs)
   if annotations:
     meth.__annotations__ = annotations
@@ -197,4 +193,4 @@ def gen_sdk(func: _T, name: str | None = None, **attrs: t.Any) -> _T:
   )
 
 
-__all__ = ['gen_sdk', 'generate_function', 'generate_unique_filename', 'make_attr_tuple_class', 'make_env_transformer']
+__all__ = ['gen_sdk', 'make_attr_tuple_class', 'make_env_transformer', 'generate_unique_filename', 'generate_function']

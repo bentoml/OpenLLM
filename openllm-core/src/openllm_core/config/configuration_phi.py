@@ -27,9 +27,7 @@ class PhiConfig(openllm_core.LLMConfig):
     'default_id': 'microsoft/phi-1_5',
     'serialisation': 'safetensors',
     'model_ids': ['microsoft/phi-1_5'],
-    'fine_tune_strategies': (
-      {'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},
-    ),
+    'fine_tune_strategies': ({'adapter_type': 'lora', 'r': 64, 'lora_alpha': 16, 'lora_dropout': 0.1, 'bias': 'none'},),
   }
 
   class GenerationConfig:
@@ -49,13 +47,7 @@ class PhiConfig(openllm_core.LLMConfig):
     from openllm_core._schemas import MessageParam
 
     return [
-      MessageParam(
-        role='user', content="I don't know why, I'm struggling to maintain focus while studying. Any suggestions?"
-      ),
-      MessageParam(
-        role='assistant', content='Have you tried using a timer? It can help you stay on track and avoid distractions.'
-      ),
-      MessageParam(
-        role='user', content="That's a good idea. I'll give it a try. What else can I do to boost my productivity?"
-      ),
+      MessageParam(role='user', content="I don't know why, I'm struggling to maintain focus while studying. Any suggestions?"),
+      MessageParam(role='assistant', content='Have you tried using a timer? It can help you stay on track and avoid distractions.'),
+      MessageParam(role='user', content="That's a good idea. I'll give it a try. What else can I do to boost my productivity?"),
     ]

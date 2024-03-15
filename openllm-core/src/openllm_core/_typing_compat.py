@@ -20,9 +20,7 @@ LiteralDtype = Literal['float16', 'float32', 'bfloat16', 'int8', 'int16']
 LiteralSerialisation = Literal['safetensors', 'legacy']
 LiteralQuantise = Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
 LiteralBackend = Literal['pt', 'vllm', 'ctranslate', 'triton']  # TODO: ggml
-AdapterType = Literal[
-  'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
-]
+AdapterType = Literal['lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr']
 LiteralVersionStrategy = Literal['release', 'nightly', 'latest', 'custom']
 
 
@@ -56,12 +54,7 @@ else:
 if sys.version_info[:2] >= (3, 10):
   from typing import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 else:
-  from typing_extensions import (
-    Concatenate as Concatenate,
-    ParamSpec as ParamSpec,
-    TypeAlias as TypeAlias,
-    TypeGuard as TypeGuard,
-  )
+  from typing_extensions import Concatenate as Concatenate, ParamSpec as ParamSpec, TypeAlias as TypeAlias, TypeGuard as TypeGuard
 
 if sys.version_info[:2] >= (3, 9):
   from typing import Annotated as Annotated

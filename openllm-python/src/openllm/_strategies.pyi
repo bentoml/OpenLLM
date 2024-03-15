@@ -13,12 +13,7 @@ class CascadingResourceStrategy:
   TODO: Support CloudTPUResource
   """
   @classmethod
-  def get_worker_count(
-    cls,
-    runnable_class: Type[bentoml.Runnable],
-    resource_request: Optional[Dict[str, Any]],
-    workers_per_resource: float,
-  ) -> int:
+  def get_worker_count(cls, runnable_class: Type[bentoml.Runnable], resource_request: Optional[Dict[str, Any]], workers_per_resource: float) -> int:
     """Return the number of workers to be used for the given runnable class.
 
     Note that for all available GPU, the number of workers will always be 1.
@@ -40,7 +35,5 @@ class CascadingResourceStrategy:
       worker_index: The index of the worker, start from 0.
     """
   @staticmethod
-  def transpile_workers_to_cuda_envvar(
-    workers_per_resource: Union[float, int], gpus: List[str], worker_index: int
-  ) -> str:
+  def transpile_workers_to_cuda_envvar(workers_per_resource: Union[float, int], gpus: List[str], worker_index: int) -> str:
     """Convert given workers_per_resource to correct CUDA_VISIBLE_DEVICES string."""

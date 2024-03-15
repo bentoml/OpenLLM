@@ -8,7 +8,7 @@ from typing import cast
 
 from packaging.version import Version
 
-__all__ = ['PackageNotFoundError', 'find_spec', 'get_pkg_version', 'pkg_version_info', 'source_locations']
+__all__ = ['PackageNotFoundError', 'pkg_version_info', 'get_pkg_version', 'source_locations', 'find_spec']
 
 get_pkg_version = importlib.metadata.version
 find_spec = importlib.util.find_spec

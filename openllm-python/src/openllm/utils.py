@@ -1,6 +1,6 @@
 import functools, importlib.metadata, openllm_core
 
-__all__ = ['available_devices', 'device_count', 'generate_labels']
+__all__ = ['generate_labels', 'available_devices', 'device_count']
 
 
 def generate_labels(llm):

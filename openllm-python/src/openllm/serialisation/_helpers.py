@@ -29,9 +29,7 @@ def patch_correct_tag(llm, config, _revision=None) -> None:
     if _revision is None and llm.tag.version is not None:
       _revision = llm.tag.version
     if llm.tag.version is None:
-      _object_setattr(
-        llm, '_tag', attr.evolve(llm.tag, version=_revision)
-      )  # HACK: This copies the correct revision into llm.tag
+      _object_setattr(llm, '_tag', attr.evolve(llm.tag, version=_revision))  # HACK: This copies the correct revision into llm.tag
     if llm._revision is None:
       _object_setattr(llm, '_revision', _revision)  # HACK: This copies the correct revision into llm._model_version
 
@@ -47,9 +45,7 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
     if trust_remote_code:
       auto_map = getattr(config, 'auto_map', {})
       if not auto_map:
-        raise RuntimeError(
-          f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}'
-        )
+        raise RuntimeError(f'Failed to determine the architecture from both `auto_map` and `architectures` from {llm.model_id}')
       autoclass = 'AutoModelForSeq2SeqLM' if llm.config['model_type'] == 'seq2seq_lm' else 'AutoModelForCausalLM'
       if autoclass not in auto_map:
         raise RuntimeError(
@@ -60,10 +56,7 @@ def _create_metadata(llm, config, safe_serialisation, trust_remote_code, metadat
       raise RuntimeError(
         'Failed to determine the architecture for this model. Make sure the `config.json` is valid and can be loaded with `transformers.AutoConfig`'
       )
-  metadata.update({
-    '_pretrained_class': architectures[0],
-    '_revision': get_hash(config) if not llm.local else llm.revision,
-  })
+  metadata.update({'_pretrained_class': architectures[0], '_revision': get_hash(config) if not llm.local else llm.revision})
   return metadata
 
 
@@ -144,9 +137,7 @@ def save_model(
       bentomodel.flush()
       bentomodel.save(_model_store)
       openllm.utils.analytics.track(
-        openllm.utils.analytics.ModelSaveEvent(
-          module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024
-        )
+        openllm.utils.analytics.ModelSaveEvent(module=bentomodel.info.module, model_size_in_kb=openllm.utils.calc_dir_size(bentomodel.path) / 1024)
       )
     finally:
       bentomodel.exit_cloudpickle_context(imported_modules)

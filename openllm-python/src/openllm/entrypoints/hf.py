@@ -37,10 +37,7 @@ def mount_to_svc(svc, llm):
 
 
 def error_response(status_code, message):
-  return JSONResponse(
-    converter.unstructure(HFErrorResponse(message=message, error_code=status_code.value)),
-    status_code=status_code.value,
-  )
+  return JSONResponse(converter.unstructure(HFErrorResponse(message=message, error_code=status_code.value)), status_code=status_code.value)
 
 
 @add_schema_definitions
@@ -56,9 +53,7 @@ async def hf_agent(req, llm):
   stop = request.parameters.pop('stop', [])
   try:
     result = await llm.generate(request.inputs, stop=stop, **request.parameters)
-    return JSONResponse(
-      converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value
-    )
+    return JSONResponse(converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value)
   except Exception as err:
     logger.error('Error while generating: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error while generating (Check server log).')

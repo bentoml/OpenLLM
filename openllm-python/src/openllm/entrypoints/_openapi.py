@@ -501,11 +501,7 @@ class OpenLLMSchemaGenerator(SchemaGenerator):
         endpoints_info.extend(sub_endpoints)
       elif not isinstance(route, Route) or not route.include_in_schema:
         continue
-      elif (
-        inspect.isfunction(route.endpoint)
-        or inspect.ismethod(route.endpoint)
-        or isinstance(route.endpoint, functools.partial)
-      ):
+      elif inspect.isfunction(route.endpoint) or inspect.ismethod(route.endpoint) or isinstance(route.endpoint, functools.partial):
         endpoint = route.endpoint.func if isinstance(route.endpoint, functools.partial) else route.endpoint
         path = self._remove_converter(route.path)
         for method in route.methods or ['GET']:
@@ -552,9 +548,7 @@ def get_generator(title, components=None, tags=None, inject=True):
 
 def component_schema_generator(attr_cls, description=None):
   schema = {'type': 'object', 'required': [], 'properties': {}, 'title': attr_cls.__name__}
-  schema['description'] = first_not_none(
-    getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}'
-  )
+  schema['description'] = first_not_none(getattr(attr_cls, '__doc__', None), description, default=f'Generated components for {attr_cls.__name__}')
   for field in attr.fields(attr.resolve_types(attr_cls)):
     attr_type = field.type
     origin_type = t.get_origin(attr_type)
@@ -596,10 +590,7 @@ def component_schema_generator(attr_cls, description=None):
 
 
 _SimpleSchema = types.new_class(
-  '_SimpleSchema',
-  (object,),
-  {},
-  lambda ns: ns.update({'__init__': lambda self, it: setattr(self, 'it', it), 'asdict': lambda self: self.it}),
+  '_SimpleSchema', (object,), {}, lambda ns: ns.update({'__init__': lambda self, it: setattr(self, 'it', it), 'asdict': lambda self: self.it})
 )
 
 

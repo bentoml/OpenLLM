@@ -35,11 +35,7 @@ class MixtralConfig(openllm_core.LLMConfig):
   @property
   def template(self) -> str:
     return """{start_key}{start_inst} {system_message} {instruction} {end_inst}\n""".format(
-      start_inst=SINST_KEY,
-      end_inst=EINST_KEY,
-      start_key=BOS_TOKEN,
-      system_message='{system_message}',
-      instruction='{instruction}',
+      start_inst=SINST_KEY, end_inst=EINST_KEY, start_key=BOS_TOKEN, system_message='{system_message}', instruction='{instruction}'
     )
 
   # NOTE: https://docs.mistral.ai/usage/guardrailing/
