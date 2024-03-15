@@ -119,12 +119,12 @@ fi
 # Construct the new version string
 if [ -n "$ALPHA" ]; then
   if ((ALPHA_NUM > 0)); then
-    RELEASE_VERSION="v$VNUM1.$VNUM2.$VNUM3-alpha.$ALPHA_NUM"
+    RELEASE_VERSION="$VNUM1.$VNUM2.$VNUM3-alpha.$ALPHA_NUM"
   else
-    RELEASE_VERSION="v$VNUM1.$VNUM2.$VNUM3-alpha"
+    RELEASE_VERSION="$VNUM1.$VNUM2.$VNUM3-alpha"
   fi
 else
-  RELEASE_VERSION="v$VNUM1.$VNUM2.$VNUM3"
+  RELEASE_VERSION="$VNUM1.$VNUM2.$VNUM3"
 fi
 
 echo "Commit count: $(git rev-list --count HEAD)"
