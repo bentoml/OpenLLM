@@ -12,7 +12,9 @@ from .._helpers import patch_correct_tag, save_model
 from ..transformers._helpers import get_tokenizer, process_config
 
 if not is_ctranslate_available():
-  raise RuntimeError("'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'")
+  raise RuntimeError(
+    "'ctranslate2' is required to use with backend 'ctranslate'. Install it with 'pip install \"openllm[ctranslate]\"'"
+  )
 
 import ctranslate2
 from ctranslate2.converters.transformers import TransformersConverter
@@ -42,11 +44,17 @@ def import_model(llm, *decls, trust_remote_code, **attrs):
   config, hub_attrs, attrs = process_config(llm.model_id, trust_remote_code, **attrs)
   patch_correct_tag(llm, config)
   tokenizer = get_tokenizer(llm.model_id, trust_remote_code=trust_remote_code, **hub_attrs, **tokenizer_attrs)
-  with save_model(llm, config, False, trust_remote_code, 'ctranslate', [importlib.import_module(tokenizer.__module__)]) as save_metadata:
+  with save_model(
+    llm, config, False, trust_remote_code, 'ctranslate', [importlib.import_module(tokenizer.__module__)]
+  ) as save_metadata:
     bentomodel, _ = save_metadata
     if llm._local:
       shutil.copytree(
-        llm.model_id, bentomodel.path, symlinks=False, ignore=shutil.ignore_patterns('.git', 'venv', '__pycache__', '.venv'), dirs_exist_ok=True
+        llm.model_id,
+        bentomodel.path,
+        symlinks=False,
+        ignore=shutil.ignore_patterns('.git', 'venv', '__pycache__', '.venv'),
+        dirs_exist_ok=True,
       )
     else:
       TransformersConverter(
@@ -66,7 +74,9 @@ def get(llm):
     model = bentoml.models.get(llm.tag)
     backend = model.info.labels['backend']
     if backend != llm.__llm_backend__:
-      raise OpenLLMException(f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'.")
+      raise OpenLLMException(
+        f"'{model.tag!s}' was saved with backend '{backend}', while loading with '{llm.__llm_backend__}'."
+      )
     patch_correct_tag(
       llm,
       transformers.AutoConfig.from_pretrained(model.path_of('/hf/'), trust_remote_code=llm.trust_remote_code),
