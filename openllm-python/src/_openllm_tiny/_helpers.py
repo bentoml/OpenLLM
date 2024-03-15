@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from starlette.requests import Request
-
-import openllm, traceback, logging, time, pydantic, typing as t
+import openllm, traceback, logging, time, pathlib, pydantic, typing as t
 from openllm_core.exceptions import ModelNotFound, OpenLLMException, ValidationError
-from openllm_core.utils import gen_random_uuid
+from openllm_core.utils import gen_random_uuid, resolve_filepath
 from openllm_core.protocol.openai import (
   ChatCompletionRequest,
   ChatCompletionResponseChoice,
@@ -20,6 +18,8 @@ from openllm_core.protocol.openai import (
   LogProbs,
   UsageInfo,
 )
+from starlette.requests import Request
+from huggingface_hub import scan_cache_dir
 
 if t.TYPE_CHECKING:
   from vllm import RequestOutput
@@ -320,3 +320,21 @@ class OpenAI:
           {p.decoded_token: p.logprob for i, p in step_top_logprobs.items()} if step_top_logprobs else None
         )
     return logprobs
+
+
+# NOTE: Check for following supported mapping from here:
+# python -c "from openllm_core._typing_compat import get_type_hints, get_literal_args; from _bentoml_sdk.service.config import ResourceSchema; print(get_literal_args(get_type_hints(ResourceSchema)['gpu_type']))"
+RECOMMENDED_MAPPING = {'nvidia-l4': 24e9, 'nvidia-a10g': 24e9, 'nvidia-tesla-a100': 40e9, 'nvidia-a100-80gb': 80e9}
+
+
+def recommended_instance_type(model_id, bentomodel=None):
+  if bentomodel is not None:
+    size = sum(f.stat().st_size for f in pathlib.Path(resolve_filepath(model_id)).glob('**/*') if f.is_file())
+  else:
+    info = next(filter(lambda repo: repo.repo_id == model_id, scan_cache_dir().repos))
+    size = info.size_on_disk
+
+  # find the first occurence of the gpu_type in the recommended mapping such that "size" should be less than or equal to 70% of the recommended size
+  for gpu, max_size in RECOMMENDED_MAPPING.items():
+    if size <= max_size * 0.7:
+      return gpu

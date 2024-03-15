@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Callable, Dict, Tuple, List, Literal, Any, TypeVar
+from typing_extensions import get_type_hints as get_type_hints
 import sys, attr
 
 M = TypeVar('M')

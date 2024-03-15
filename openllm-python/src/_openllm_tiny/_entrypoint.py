@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os, logging, traceback, pathlib, sys, fs, click, enum, inflection, bentoml, orjson, openllm, openllm_core, platform, typing as t
+from ._helpers import recommended_instance_type
 from openllm_core.utils import (
   DEBUG_ENV_VAR,
   QUIET_ENV_VAR,
@@ -419,7 +420,11 @@ def build_command(
 
     labels = {'library': 'vllm'}
     service_config = dict(
-      resources={'gpu' if device else 'cpu': len(device) if device else 'cpu_count'}, traffic=dict(timeout=timeout)
+      resources={
+        'gpu' if device else 'cpu': len(device) if device else 'cpu_count',
+        'gpu_type': recommended_instance_type(model_id, bentomodel),
+      },
+      traffic=dict(timeout=timeout),
     )
     with fs.open_fs(f'temp://llm_{gen_random_uuid()}') as llm_fs:
       logger.debug('Generating service vars %s (dir=%s)', model_id, llm_fs.getsyspath('/'))
