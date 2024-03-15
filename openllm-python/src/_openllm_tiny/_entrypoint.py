@@ -280,11 +280,10 @@ def start_command(
 
 
 def construct_python_options(llm_config, llm_fs):
-  from openllm.bundle import RefResolver
   from bentoml._internal.bento.build_config import PythonOptions
   from openllm.bundle._package import build_editable
 
-  packages = ['scipy', 'bentoml[tracing]>=1.2', f'openllm[vllm]>={RefResolver.from_strategy("release").version}']
+  packages = ['scipy', 'bentoml[tracing]>=1.2', 'openllm[vllm]']
   if llm_config['requirements'] is not None:
     packages.extend(llm_config['requirements'])
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
