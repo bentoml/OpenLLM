@@ -11,7 +11,6 @@ from openllm_core.utils import (
 )
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
 from openllm_core._schemas import GenerationOutput, GenerationInput
-from _bentoml_sdk.service import ServiceConfig
 
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
@@ -39,7 +38,6 @@ class LLM:
   quantise: t.Optional[LiteralQuantise] = attr.field(default=None)
   trust_remote_code: bool = attr.field(default=False)
   engine_args: t.Dict[str, t.Any] = attr.field(factory=dict, validator=check_engine_args)
-  service_config: t.Optional[ServiceConfig] = attr.field(factory=dict)
 
   _path: str = attr.field(
     init=False,
@@ -106,7 +104,6 @@ class LLM:
     quantise: LiteralQuantise | None = None,
     trust_remote_code: bool = False,
     llm_config: openllm_core.LLMConfig | None = None,
-    service_config: ServiceConfig | None = None,
     **engine_args: t.Any,
   ) -> LLM:
     return cls(
@@ -119,7 +116,6 @@ class LLM:
       dtype=dtype,
       engine_args=engine_args,
       trust_remote_code=trust_remote_code,
-      service_config=service_config,
     )
 
   @property

@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 import openllm, bentoml, logging, openllm_core as core
 import _service_vars as svars, typing as t
-from openllm_core._typing_compat import Annotated, Unpack
+from openllm_core._typing_compat import Annotated
 from openllm_core._schemas import MessageParam, MessagesConverterInput
 from openllm_core.protocol.openai import ModelCard, ModelList, ChatCompletionRequest
 from _openllm_tiny._helpers import OpenAI, Error
@@ -43,19 +43,48 @@ class LLMService:
       quantise=svars.quantise,
       llm_config=llm_config,
       trust_remote_code=svars.trust_remote_code,
-      services_config=svars.services_config,
       max_model_len=svars.max_model_len,
       gpu_memory_utilization=svars.gpu_memory_utilization,
     )
     self.openai = OpenAI(self.llm)
 
   @core.utils.api(route='/v1/generate')
-  async def generate_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> core.GenerationOutput:
-    return await self.llm.generate(**GenerationInput.from_dict(parameters).model_dump())
+  async def generate_v1(
+    self,
+    llm_config: t.Dict[str, t.Any],
+    prompt: str = 'What is the meaning of life?',
+    prompt_token_ids: t.Optional[t.List[int]] = None,
+    stop: t.Optional[t.List[str]] = None,
+    stop_token_ids: t.Optional[t.List[int]] = None,
+    request_id: t.Optional[str] = None,
+  ) -> core.GenerationOutput:
+    return await self.llm.generate(
+      prompt=prompt,
+      prompt_token_ids=prompt_token_ids,
+      llm_config=llm_config,
+      stop=stop,
+      stop_token_ids=stop_token_ids,
+      request_id=request_id,
+    )
 
   @core.utils.api(route='/v1/generate_stream')
-  async def generate_stream_v1(self, **parameters: Unpack[core.GenerationInputDict]) -> t.AsyncGenerator[str, None]:
-    async for generated in self.llm.generate_iterator(**GenerationInput.from_dict(parameters).model_dump()):
+  async def generate_stream_v1(
+    self,
+    llm_config: t.Dict[str, t.Any],
+    prompt: str = 'What is the meaning of life?',
+    prompt_token_ids: t.Optional[t.List[int]] = None,
+    stop: t.Optional[t.List[str]] = None,
+    stop_token_ids: t.Optional[t.List[int]] = None,
+    request_id: t.Optional[str] = None,
+  ) -> t.AsyncGenerator[str, None]:
+    async for generated in self.llm.generate_iterator(
+      prompt=prompt,
+      prompt_token_ids=prompt_token_ids,
+      llm_config=llm_config,
+      stop=stop,
+      stop_token_ids=stop_token_ids,
+      request_id=request_id,
+    ):
       yield f'data: {generated.model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 

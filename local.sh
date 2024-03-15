@@ -104,9 +104,14 @@ else
   EXTENSIONS_STR=${EXTENSIONS_STR// /,} # Replace spaces with commas
 fi
 
-uv pip install --editable "$GIT_ROOT/openllm-python$EXTENSIONS_STR"
-uv pip install --editable "$GIT_ROOT/openllm-client"
-uv pip install --editable "$GIT_ROOT/openllm-core"
+PRERELEASE=${PRERELEASE:-false}
+
+ARGS=()
+[[ "${PRERELEASE}" == "true" ]] && ARGS+=("--prerelease=allow")
+
+uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-python$EXTENSIONS_STR"
+uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-client"
+uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-core"
 
 echo "Instaling development dependencies..."
 uv pip install -r "$GIT_ROOT/tools/requirements.txt"

@@ -240,7 +240,7 @@ def start_command(
     bentomodel = bentoml.models.get(model_id.lower())
     model_id = bentomodel.path
   except (ValueError, bentoml.exceptions.NotFound):
-    pass
+    bentomodel = None
   config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=trust_remote_code)
   for arch in config.architectures:
     if arch in openllm_core.AutoConfig._architecture_mappings:
@@ -250,6 +250,8 @@ def start_command(
     raise RuntimeError(f'Failed to determine config class for {model_id}')
 
   llm_config = openllm_core.AutoConfig.for_model(model_name).model_construct_env()
+  if serialisation is None:
+    serialisation = llm_config['serialisation']
 
   # TODO: support LoRA adapters
   os.environ.update({
