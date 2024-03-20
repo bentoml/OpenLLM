@@ -22,6 +22,7 @@ from starlette.requests import Request
 from huggingface_hub import scan_cache_dir
 
 if t.TYPE_CHECKING:
+  import bentoml
   from vllm import RequestOutput
 
 
@@ -327,7 +328,7 @@ class OpenAI:
 RECOMMENDED_MAPPING = {'nvidia-l4': 24e9, 'nvidia-a10g': 24e9, 'nvidia-tesla-a100': 40e9, 'nvidia-a100-80gb': 80e9}
 
 
-def recommended_instance_type(model_id, bentomodel=None):
+def recommended_instance_type(model_id: str, bentomodel: bentoml.Model | None = None):
   if bentomodel is not None:
     size = sum(f.stat().st_size for f in pathlib.Path(resolve_filepath(model_id)).glob('**/*') if f.is_file())
   else:
