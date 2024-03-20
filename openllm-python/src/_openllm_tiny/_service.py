@@ -162,7 +162,5 @@ class LLMService:
     )
 
 
-LLMService.mount_asgi_app(app_v1)
-
 if __name__ == '__main__':
   LLMService.serve_http(reload=core.utils.check_bool_env('RELOAD', False))
