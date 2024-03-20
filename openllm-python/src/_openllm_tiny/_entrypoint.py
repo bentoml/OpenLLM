@@ -291,7 +291,9 @@ def construct_python_options(llm_config, llm_fs):
   from bentoml._internal.bento.build_config import PythonOptions
   from openllm.bundle._package import build_editable
 
-  packages = ['scipy', 'bentoml[tracing]==1.2.8', 'openllm[vllm]>0.5', 'vllm==0.3.0']
+  # TODO: Add this line back once 0.5 is out, for now depends on OPENLLM_DEV_BUILD
+  # packages = ['scipy', 'bentoml[tracing]>=1.2.8', 'openllm[vllm]>0.4', 'vllm>=0.3']
+  packages = ['scipy', 'bentoml[tracing]>=1.2.8', 'vllm>=0.3']
   if llm_config['requirements'] is not None:
     packages.extend(llm_config['requirements'])
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
@@ -299,7 +301,6 @@ def construct_python_options(llm_config, llm_fs):
     packages=packages,
     wheels=[llm_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels] if all(i for i in built_wheels) else None,
     lock_packages=False,
-    pip_args='--pre',
   )
 
 
