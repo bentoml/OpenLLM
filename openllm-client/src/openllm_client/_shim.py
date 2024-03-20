@@ -408,7 +408,7 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
     request = self._build_request(options)
     try:
       response = self._inner.send(request, auth=self.auth, stream=stream)
-      logger.debug('HTTP [%s, %s]: %s [%i]', request.method, request.url, response.status_code, response.reason_phrase)
+      logger.debug('HTTP [%s, %s]: %i [%s]', request.method, request.url, response.status_code, response.reason_phrase)
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
       if retries > 0 and self._should_retry(exc.response):
@@ -545,7 +545,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
 
     try:
       response = await self._inner.send(request, auth=self.auth, stream=stream)
-      logger.debug('HTTP [%s, %s]: %s [%i]', request.method, request.url, response.status_code, response.reason_phrase)
+      logger.debug('HTTP [%s, %s]: %i [%s]', request.method, request.url, response.status_code, response.reason_phrase)
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
       if retries > 0 and self._should_retry(exc.response):
