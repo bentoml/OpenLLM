@@ -46,8 +46,8 @@ quantise=coreutils.getenv('quantize',default='{__model_quantise__}',var=['QUANTI
 serialisation=coreutils.getenv('serialization',default='{__model_serialization__}',var=['SERIALISATION'])
 dtype=coreutils.getenv('dtype', default='{__model_dtype__}', var=['TORCH_DTYPE'])
 trust_remote_code=coreutils.check_bool_env("TRUST_REMOTE_CODE",{__model_trust_remote_code__})
-max_model_len={__max_model_len__}
-gpu_memory_utilization={__gpu_memory_utilization__}
+max_model_len=orjson.loads(coreutils.getenv('max_model_len', default=orjson.dumps({__max_model_len__})))
+gpu_memory_utilization=orjson.loads(coreutils.getenv('gpu_memory_utilization', default=orjson.dumps({__gpu_memory_utilization__}), var=['GPU_MEMORY_UTILISATION']))
 services_config=orjson.loads(coreutils.getenv('services_config',"""{__services_config__}"""))
 '''
 _DOCKERFILE_TEMPLATE = """\

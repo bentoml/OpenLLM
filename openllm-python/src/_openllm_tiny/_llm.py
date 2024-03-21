@@ -65,7 +65,6 @@ class LLM:
       quantise = self.quantise if self.quantise and self.quantise in {'gptq', 'awq', 'squeezellm'} else None
       dtype = 'float16' if quantise == 'gptq' else self.dtype  # NOTE: quantise GPTQ doesn't support bfloat16 yet.
 
-      self.engine_args.setdefault('gpu_memory_utilization', 0.9)
       self.engine_args.update({
         'worker_use_ray': False,
         'engine_use_ray': False,
@@ -81,6 +80,8 @@ class LLM:
         self.engine_args['disable_log_stats'] = not get_debug_mode()
       if 'disable_log_requests' not in self.engine_args:
         self.engine_args['disable_log_requests'] = not get_debug_mode()
+      if 'gpu_memory_utilization' not in self.engine_args:
+        self.engine_args['gpu_memory_utilization'] = 0.9
 
       try:
         from vllm import AsyncEngineArgs, AsyncLLMEngine
