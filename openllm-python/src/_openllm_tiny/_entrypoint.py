@@ -269,7 +269,6 @@ def start_command(
     'OPENLLM_CONFIG': llm_config.model_dump_json(),
     'DTYPE': dtype,
     'TRUST_REMOTE_CODE': str(trust_remote_code),
-    'MAX_MODEL_LEN': orjson.dumps(max_model_len).decode(),
     'GPU_MEMORY_UTILIZATION': orjson.dumps(gpu_memory_utilization).decode(),
     'SERVICES_CONFIG': orjson.dumps(
       dict(
@@ -277,13 +276,16 @@ def start_command(
       )
     ).decode(),
   })
+  if max_model_len is not None:
+    os.environ['MAX_MODEL_LEN'] = orjson.dumps(max_model_len)
   if quantize:
     os.environ['QUANTIZE'] = str(quantize)
 
   working_dir = os.path.abspath(os.path.dirname(__file__))
   if sys.path[0] != working_dir:
     sys.path.insert(0, working_dir)
-  load('.', working_dir=working_dir).inject_config()
+  service = load('.', working_dir=working_dir)
+  service.inject_config()
   serve_http('.', working_dir=working_dir)
 
 

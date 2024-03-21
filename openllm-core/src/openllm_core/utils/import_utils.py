@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib, importlib.metadata, importlib.util, os, inspect, typing as t
 from .codegen import _make_method
 from ._constants import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
