@@ -3,6 +3,7 @@ from __future__ import annotations
 import os, logging, traceback, pathlib, sys, fs, click, enum, inflection, bentoml, orjson, openllm, openllm_core, platform, typing as t
 from ._helpers import recommended_instance_type
 from openllm_core.utils import (
+  DEBUG,
   DEBUG_ENV_VAR,
   QUIET_ENV_VAR,
   SHOW_CODEGEN,
@@ -286,7 +287,7 @@ def start_command(
     sys.path.insert(0, working_dir)
   service = load('.', working_dir=working_dir)
   service.inject_config()
-  serve_http('.', working_dir=working_dir)
+  serve_http('.', working_dir=working_dir, reload=check_bool_env('RELOAD', default=False), development_mode=DEBUG)
 
 
 def construct_python_options(llm_config, llm_fs):

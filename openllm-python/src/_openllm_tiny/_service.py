@@ -26,7 +26,7 @@ except Exception:
 llm_config = core.AutoConfig.for_model(svars.model_name)
 GenerationInput = core.GenerationInput.from_config(llm_config)
 
-app_v1 = FastAPI(debug=True, description='OpenAI Compatible API support')
+app_v1 = FastAPI(description='OpenAI Compatible API support')
 
 
 @bentoml.mount_asgi_app(app_v1)
@@ -160,7 +160,3 @@ class LLMService:
     return ModelList(
       data=[ModelCard(root=core.utils.normalise_model_name(model_id), id=core.utils.normalise_model_name(model_id))]
     )
-
-
-if __name__ == '__main__':
-  LLMService.serve_http(reload=core.utils.check_bool_env('RELOAD', False))
