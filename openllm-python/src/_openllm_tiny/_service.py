@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 from http import HTTPStatus
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
@@ -26,10 +27,16 @@ except Exception:
 llm_config = core.AutoConfig.for_model(svars.model_name)
 GenerationInput = core.GenerationInput.from_config(llm_config)
 
-app_v1 = FastAPI(description='OpenAI Compatible API support')
+app_v1 = FastAPI(
+  debug=True,
+  version=importlib.metadata.version('openllm'),
+  title='OpenAI',
+  description='OpenAI Compatible API support',
+  contact={'name': 'BentoML Team', 'email': 'contact@bentoml.com'},
+)
 
 
-@bentoml.mount_asgi_app(app_v1)
+@bentoml.mount_asgi_app(app_v1, path='/v1')
 @bentoml.service(name=f"llm-{llm_config['start_name']}-service", **svars.services_config)
 class LLMService:
   bentomodel = bentomodel
@@ -115,7 +122,7 @@ class LLMService:
     )
 
   @app_v1.post(
-    '/v1/chat/completions',
+    '/chat/completions',
     tags=['OpenAI'],
     status_code=HTTPStatus.OK,
     summary='Given a list of messages comprising a conversation, the model will return a response.',
@@ -145,7 +152,7 @@ class LLMService:
 
   # GET /v1/models
   @app_v1.get(
-    '/v1/models',
+    '/models',
     tags=['OpenAI'],
     status_code=HTTPStatus.OK,
     summary='Describes a model offering that can be used with the API.',

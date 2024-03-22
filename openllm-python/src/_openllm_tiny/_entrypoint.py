@@ -235,7 +235,6 @@ def start_command(
   """
   import transformers
 
-  from _bentoml_impl.server import serve_http
   from bentoml._internal.service.loader import load
   from bentoml._internal.log import configure_server_logging
 
@@ -285,9 +284,9 @@ def start_command(
   working_dir = os.path.abspath(os.path.dirname(__file__))
   if sys.path[0] != working_dir:
     sys.path.insert(0, working_dir)
-  service = load('.', working_dir=working_dir)
-  service.inject_config()
-  serve_http('.', working_dir=working_dir, reload=check_bool_env('RELOAD', default=False), development_mode=DEBUG)
+  load('.', working_dir=working_dir).serve_http(
+    working_dir=working_dir, reload=check_bool_env('RELOAD', default=False), development_mode=DEBUG
+  )
 
 
 def construct_python_options(llm_config, llm_fs):
