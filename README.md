@@ -82,7 +82,11 @@ We provide a docker container that helps you start running OpenLLM:
 ```bash
 docker run --rm -it -p 3000:3000 ghcr.io/bentoml/openllm start facebook/opt-1.3b --backend pt
 ```
+### PyTorch
 
+```
+    docker run --rm -it -p 3000:3000 ghcr.io/bentoml/openllm start facebook/opt-1.3b --backend vllm
+```
 > [!NOTE]
 > Given you have access to GPUs and have setup [nvidia-docker](https://github.com/NVIDIA/nvidia-container-toolkit),  you can additionally pass in `--gpus`
 > to use GPU for faster inference and optimization
