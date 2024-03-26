@@ -1,6 +1,6 @@
 {
   "lspconfig": {
-    "pyright": {
+    "basedpyright": {
       "python.venvPath": "./.venv",
       "python.analysis.autoSearchPaths": true,
       "python.analysis.typeCheckingMode": "strict",
