@@ -1,5 +1,6 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
+
 import asyncio
 import email.utils
 import logging
@@ -14,7 +15,7 @@ import distro
 import httpx
 
 from ._stream import AsyncStream, Response, Stream
-from ._typing_compat import Architecture, LiteralString, Platform
+from ._typing_compat import Annotated, Architecture, LiteralString, Platform
 from ._utils import converter
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ InnerClient = t.TypeVar('InnerClient', bound=t.Union[httpx.Client, httpx.AsyncCl
 StreamType = t.TypeVar('StreamType', bound=t.Union[Stream[t.Any], AsyncStream[t.Any]])
 _Stream = t.TypeVar('_Stream', bound=Stream[t.Any])
 _AsyncStream = t.TypeVar('_AsyncStream', bound=AsyncStream[t.Any])
-LiteralVersion = t.Annotated[LiteralString, t.Literal['v1'], str]
+LiteralVersion = Annotated[LiteralString, t.Literal['v1'], str]
 
 
 def _address_converter(addr: str | httpx.URL) -> httpx.URL:
