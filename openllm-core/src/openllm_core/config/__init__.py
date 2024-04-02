@@ -3,6 +3,7 @@
 from .configuration_auto import CONFIG_MAPPING as CONFIG_MAPPING, CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES, AutoConfig as AutoConfig
 from .configuration_baichuan import BaichuanConfig as BaichuanConfig
 from .configuration_chatglm import ChatGLMConfig as ChatGLMConfig
+from .configuration_dbrx import DbrxConfig as DbrxConfig
 from .configuration_dolly_v2 import DollyV2Config as DollyV2Config
 from .configuration_falcon import FalconConfig as FalconConfig
 from .configuration_flan_t5 import FlanT5Config as FlanT5Config

@@ -28,6 +28,7 @@ ModelType: t.TypeAlias = t.Literal[
   'gemma',
   'gpt_neox',
   'dolly_v2',
+  'dbrx',
   'stablelm',
   'llama',
   'mpt',
@@ -49,6 +50,7 @@ CONFIG_MAPPING_NAMES: OrderedDict[ModelType, str] = OrderedDict(
     ('falcon', 'FalconConfig'),
     ('gpt_neox', 'GPTNeoXConfig'),
     ('gemma', 'GemmaConfig'),
+    ('dbrx', 'DbrxConfig'),
     ('dolly_v2', 'DollyV2Config'),
     ('stablelm', 'StableLMConfig'),
     ('llama', 'LlamaConfig'),
@@ -132,6 +134,9 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['chatglm'], **attrs: t.Any) -> openllm_core.config.ChatGLMConfig: ...
+  @t.overload
+  @classmethod
+  def for_model(cls, model_name: t.Literal['dbrx'], **attrs: t.Any) -> openllm_core.config.DbrxConfig: ...
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['dolly_v2'], **attrs: t.Any) -> openllm_core.config.DollyV2Config: ...

@@ -290,6 +290,48 @@ You can specify any of the following ChatGLM models via `openllm start`:
 
 <details>
 
+<summary>Dbrx</summary>
+
+
+### Quickstart
+
+
+
+> **Note:** Dbrx requires to install with:
+> ```bash
+> pip install "openllm[dbrx]"
+> ```
+
+
+Run the following command to quickly spin up a Dbrx server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start databricks/dbrx-instruct
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Dbrx variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=dbrx) to see more Dbrx-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Dbrx models via `openllm start`:
+
+
+- [databricks/dbrx-instruct](https://huggingface.co/databricks/dbrx-instruct)
+- [databricks/dbrx-base](https://huggingface.co/databricks/dbrx-base)
+
+</details>
+
+<details>
+
 <summary>DollyV2</summary>
 
 

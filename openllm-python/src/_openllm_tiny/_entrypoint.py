@@ -78,7 +78,7 @@ def parse_device_callback(
   '--version',
   '-v',
   package_name=_PACKAGE_NAME,
-  message=f'{_PACKAGE_NAME}, %(version)s (compiled: {openllm.COMPILED})\nPython ({platform.python_implementation()}) {platform.python_version()}',
+  message=f'{_PACKAGE_NAME}, %(version)s\nPython ({platform.python_implementation()}) {platform.python_version()}',
 )
 def cli() -> None:
   """\b

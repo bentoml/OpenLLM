@@ -80,9 +80,9 @@ class Classifier:
     ]
     base.append(Classifier.create_classifier('language', 'Python', '3', 'Only'))
     base.extend([Classifier.create_classifier('language', 'Python', version) for version in supported_version])
-    base.extend(
-      [Classifier.create_classifier('language', 'Python', 'Implementation', impl) for impl in implementation]
-    )
+    base.extend([
+      Classifier.create_classifier('language', 'Python', 'Implementation', impl) for impl in implementation
+    ])
     return base
 
   @staticmethod
@@ -154,7 +154,7 @@ PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.3.2']
+VLLM_DEPS = ['vllm==0.4.0']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls()['requirements']
@@ -167,9 +167,9 @@ _locals = locals().copy()
 
 # NOTE: update this table when adding new external dependencies
 # sync with openllm.utils.OPTIONAL_DEPENDENCIES
-_base_requirements.update(
-  {v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES}
-)
+_base_requirements.update({
+  v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES
+})
 
 _base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
@@ -182,35 +182,34 @@ def correct_style(it: t.Any) -> t.Any:
 
 def create_classifiers() -> Array:
   arr = correct_style(tomlkit.array())
-  arr.extend(
-    [
-      Classifier.create_status_classifier(5),
-      Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA'),
-      Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '12'),
-      Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '11.8'),
-      Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '11.7'),
-      Classifier.apache(),
-      Classifier.create_classifier('topic', 'Scientific/Engineering', 'Artificial Intelligence'),
-      Classifier.create_classifier('topic', 'Software Development', 'Libraries'),
-      Classifier.create_classifier('os', 'OS Independent'),
-      Classifier.create_classifier('audience', 'Developers'),
-      Classifier.create_classifier('audience', 'Science/Research'),
-      Classifier.create_classifier('audience', 'System Administrators'),
-      Classifier.create_classifier('typing', 'Typed'),
-      *Classifier.create_python_classifier(),
-    ]
-  )
+  arr.extend([
+    Classifier.create_status_classifier(5),
+    Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA'),
+    Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '12'),
+    Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '11.8'),
+    Classifier.create_classifier('environment', 'GPU', 'NVIDIA CUDA', '11.7'),
+    Classifier.apache(),
+    Classifier.create_classifier('topic', 'Scientific/Engineering', 'Artificial Intelligence'),
+    Classifier.create_classifier('topic', 'Software Development', 'Libraries'),
+    Classifier.create_classifier('os', 'OS Independent'),
+    Classifier.create_classifier('audience', 'Developers'),
+    Classifier.create_classifier('audience', 'Science/Research'),
+    Classifier.create_classifier('audience', 'System Administrators'),
+    Classifier.create_classifier('typing', 'Typed'),
+    *Classifier.create_python_classifier(),
+  ])
   return arr.multiline(True)
 
 
 def create_optional_table() -> Table:
   all_array = tomlkit.array()
-  all_array.append(f"openllm[{','.join([k for k,v in _base_requirements.items() if v])}]")
+  all_array.append(f"openllm[{','.join([k for k, v in _base_requirements.items() if v])}]")
 
   table = tomlkit.table(is_super_table=True)
-  _base_requirements.update(
-    {'full': correct_style(all_array.multiline(True)), 'all': tomlkit.array('["openllm[full]"]')}
-  )
+  _base_requirements.update({
+    'full': correct_style(all_array.multiline(True)),
+    'all': tomlkit.array('["openllm[full]"]'),
+  })
   table.update({k: v for k, v in sorted(_base_requirements.items()) if v})
   table.add(tomlkit.nl())
 
@@ -244,29 +243,27 @@ def build_system() -> Table:
 
 def keywords() -> Array:
   arr = correct_style(tomlkit.array())
-  arr.extend(
-    [
-      'MLOps',
-      'AI',
-      'BentoML',
-      'Model Serving',
-      'Model Deployment',
-      'LLMOps',
-      'Falcon',
-      'Vicuna',
-      'Llama 2',
-      'Fine tuning',
-      'Serverless',
-      'Large Language Model',
-      'Generative AI',
-      'StableLM',
-      'Alpaca',
-      'PyTorch',
-      'Mistral',
-      'vLLM',
-      'Transformers',
-    ]
-  )
+  arr.extend([
+    'MLOps',
+    'AI',
+    'BentoML',
+    'Model Serving',
+    'Model Deployment',
+    'LLMOps',
+    'Falcon',
+    'Vicuna',
+    'Llama 2',
+    'Fine tuning',
+    'Serverless',
+    'Large Language Model',
+    'Generative AI',
+    'StableLM',
+    'Alpaca',
+    'PyTorch',
+    'Mistral',
+    'vLLM',
+    'Transformers',
+  ])
   return arr.multiline(True)
 
 
@@ -293,6 +290,7 @@ def main(args) -> int:
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
     Dependencies(name='safetensors'),
+    Dependencies(name='vllm', lower_constraint='0.4.0'),
     Dependencies(name='optimum', lower_constraint='1.12.0'),
     Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
