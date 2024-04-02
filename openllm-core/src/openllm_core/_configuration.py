@@ -213,6 +213,12 @@ class GenerationConfig(pydantic.BaseModel):
     description='The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.',
     alias='max_new_tokens',
   )
+  min_tokens: int = pydantic.Field(
+    0,
+    ge=0,
+    description='Minimum number of tokens to generate per output sequence before EOS or stop_token_ids can be generated',
+    alias='min_new_tokens',
+  )
   logprobs: t.Optional[int] = pydantic.Field(
     None, description='Number of log probabilities to return per output token.'
   )
@@ -453,6 +459,8 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
   def __getitem__(self, item: t.Literal['ignore_eos']) -> bool: ...
   @overload
   def __getitem__(self, item: t.Literal['max_tokens']) -> int: ...
+  @overload
+  def __getitem__(self, item: t.Literal['min_tokens']) -> int: ...
   @overload
   def __getitem__(self, item: t.Literal['logprobs']) -> t.Optional[int]: ...
   @overload

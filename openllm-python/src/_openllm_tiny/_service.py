@@ -92,7 +92,7 @@ class LLMService:
       stop_token_ids=stop_token_ids,
       request_id=request_id,
     ):
-      yield f'data: {generated.model_dump_json()}\n\n'
+      yield f'data: {core.GenerationOutput.from_vllm(generated).model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 
   @core.utils.api(route='/v1/metadata')
