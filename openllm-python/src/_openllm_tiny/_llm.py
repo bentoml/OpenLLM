@@ -172,9 +172,8 @@ class LLM:
     top_p = 1.0 if config['temperature'] <= 1e-5 else config['top_p']
     config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids, top_p=top_p))
 
-    sampling_params = SamplingParams(**{
-      k: getattr(config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())
-    })
+    params = {k: getattr(config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())}
+    sampling_params = SamplingParams(**{k: v for k, v in params.items() if v is not None})
 
     try:
       async for it in self._model.generate(
