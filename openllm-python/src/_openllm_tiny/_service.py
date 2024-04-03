@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import importlib.metadata
+import openllm, bentoml, logging, pydantic, importlib.metadata
+import openllm_core as core, _service_vars as svars, typing as t
+
 from http import HTTPStatus
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
-import openllm, bentoml, logging, openllm_core as core
-import _service_vars as svars, typing as t
 from openllm_core._typing_compat import Annotated
 from openllm_core._schemas import MessageParam, MessagesConverterInput
 from openllm_core.protocol.openai import ModelCard, ModelList, ChatCompletionRequest
@@ -58,8 +58,8 @@ class LLMService:
   @core.utils.api(route='/v1/generate')
   async def generate_v1(
     self,
-    llm_config: t.Dict[str, t.Any],
-    prompt: str = 'What is the meaning of life?',
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default_factory=lambda: llm_config, description='LLM Config'),
+    prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
@@ -77,8 +77,8 @@ class LLMService:
   @core.utils.api(route='/v1/generate_stream')
   async def generate_stream_v1(
     self,
-    llm_config: t.Dict[str, t.Any],
-    prompt: str = 'What is the meaning of life?',
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default_factory=lambda: llm_config, description='LLM Config'),
+    prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
