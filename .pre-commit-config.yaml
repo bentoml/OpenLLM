@@ -9,7 +9,7 @@ default_language_version:
 exclude: '.*\.(css|js|svg)$'
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.3.4'
+    rev: 'v0.3.5'
     hooks:
       - id: ruff
         alias: r
@@ -46,7 +46,7 @@ repos:
       - id: check-hooks-apply
       - id: check-useless-excludes
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
         verbose: true
@@ -60,7 +60,7 @@ repos:
       - id: debug-statements
       - id: check-merge-conflict
   - repo: https://github.com/econchick/interrogate
-    rev: 1.5.0
+    rev: 1.7.0
     hooks:
       - id: interrogate
         verbose: true
@@ -68,7 +68,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0-rc.0
+    rev: v9.0.0
     hooks:
       - id: eslint
         verbose: true
