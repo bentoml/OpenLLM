@@ -3,7 +3,7 @@
 <!-- hatch-fancy-pypi-readme intro start -->
 
 <div align="center">
-    <h1 align="center">🦾 OpenLLM</h1>
+    <h1 align="center">🦾 OpenLLM: Self-Hosting Large Language Models Made Easy</h1>
     <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
     </a><a href="https://test.pypi.org/project/openllm/">
@@ -30,8 +30,7 @@
     </a><a href="https://github.com/microsoft/pyright">
         <img src="https://img.shields.io/badge/types-pyright-yellow.svg" alt="types - pyright" />
     </a><br>
-    <p>An open platform for operating large language models (LLMs) in production.</br>
-    Fine-tune, serve, deploy, and monitor any LLMs with ease.</p>
+    <p>Run any open-source LLMs, such as Llama 2 and Mistral, as OpenAI-compatible API endpoints, locally and in the cloud.</p>
     <i></i>
 </div>
 
