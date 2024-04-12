@@ -151,7 +151,7 @@ jobs:
           targets: ${{ matrix.job.target }}
       - name: Set up cross compiling
         if: matrix.job.cross
-        uses: taiki-e/install-action@b7add58e53e52e624966da65007ce24524f3dcf3 # ratchet:taiki-e/install-action@v2.27.9
+        uses: taiki-e/install-action@e4ef34df890c5af6027f55257634401a93b14dc7 # ratchet:taiki-e/install-action@v2.32.9
         with:
           tool: cross
       - name: Configure cross compiling
