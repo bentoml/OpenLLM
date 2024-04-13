@@ -1,6 +1,12 @@
-from . import exceptions as exceptions, utils as utils
-from ._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig, SamplingParams as SamplingParams
-from ._schemas import GenerationInput as GenerationInput, GenerationOutput as GenerationOutput, MetadataOutput as MetadataOutput
+from . import exceptions as exceptions, utils as utils, protocol as protocol
+from ._configuration import GenerationConfig as GenerationConfig, LLMConfig as LLMConfig
+from ._schemas import (
+  GenerationInput as GenerationInput,
+  GenerationOutput as GenerationOutput,
+  GenerationInputDict as GenerationInputDict,
+  MetadataOutput as MetadataOutput,
+  MessageParam as MessageParam,
+)
 from .config import (
   CONFIG_MAPPING as CONFIG_MAPPING,
   CONFIG_MAPPING_NAMES as CONFIG_MAPPING_NAMES,

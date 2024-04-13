@@ -1,7 +1,7 @@
 from __future__ import annotations
-import typing as t
 
-import openllm_core
+import openllm_core, pydantic, typing as t
+from openllm_core._configuration import ModelSettings
 
 if t.TYPE_CHECKING:
   import transformers
@@ -9,7 +9,9 @@ if t.TYPE_CHECKING:
 INSTRUCTION_KEY = '### Instruction:'
 RESPONSE_KEY = '### Response:'
 END_KEY = '### End'
-INTRO_BLURB = 'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
+INTRO_BLURB = (
+  'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
+)
 
 
 def get_special_token_id(tokenizer: transformers.PreTrainedTokenizer, key: str) -> int:
@@ -32,20 +34,26 @@ class DollyV2Config(openllm_core.LLMConfig):
   Refer to [Databricks's Dolly page](https://github.com/databrickslabs/dolly) for more information.
   """
 
-  __config__ = {
-    'timeout': 3600000,
-    'url': 'https://github.com/databrickslabs/dolly',
-    'architecture': 'GPTNeoXForCausalLM',
-    'default_id': 'databricks/dolly-v2-3b',
-    'model_ids': ['databricks/dolly-v2-3b', 'databricks/dolly-v2-7b', 'databricks/dolly-v2-12b'],
-  }
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
 
-  class GenerationConfig:
-    temperature: float = 0.9
-    top_p: float = 0.92
-    top_k: int = 5
-    max_new_tokens: int = 256
-    eos_token_id: int = 50277  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
+  metadata_config: ModelSettings = pydantic.Field(
+    default={
+      'timeout': 3600000,
+      'url': 'https://github.com/databrickslabs/dolly',
+      'architecture': 'GPTNeoXForCausalLM',
+      'default_id': 'databricks/dolly-v2-3b',
+      'model_ids': ['databricks/dolly-v2-3b', 'databricks/dolly-v2-7b', 'databricks/dolly-v2-12b'],
+    },
+    repr=False,
+    exclude=True,
+  )
+
+  # NOTE: from get_special_token_id(self.tokenizer, END_KEY)
+  generation_config: openllm_core.GenerationConfig = pydantic.Field(
+    default=openllm_core.GenerationConfig.model_construct(
+      temperature=0.9, top_p=0.92, top_k=5, max_new_tokens=256, eos_token_id=50277
+    )
+  )
 
   @property
   def template(self):

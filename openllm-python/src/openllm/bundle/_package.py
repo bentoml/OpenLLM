@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 _service_file = pathlib.Path(os.path.abspath(__file__)).parent.parent / '_service.py'
-_SERVICE_VARS = '''import orjson;model_id,model_tag,adapter_map,serialization,trust_remote_code,max_model_len,gpu_memory_utilization='{__model_id__}','{__model_tag__}',orjson.loads("""{__model_adapter_map__}"""),'{__model_serialization__}',{__model_trust_remote_code__},{__max_model_len__},{__gpu_memory_utilization__}'''
+_SERVICE_VARS = '''import orjson;model_id,model_tag,adapter_map,serialization,trust_remote_code,max_model_len,gpu_memory_utilization,services_config='{__model_id__}','{__model_tag__}',orjson.loads("""{__model_adapter_map__}"""),'{__model_serialization__}',{__model_trust_remote_code__},{__max_model_len__},{__gpu_memory_utilization__},orjson.loads("""{__services_config__}""")'''
 
 
 def build_editable(path, package='openllm'):
@@ -38,8 +38,11 @@ def build_editable(path, package='openllm'):
 def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=None):
   from . import RefResolver
 
-  openllm_package = 'openllm[vllm]' if llm.__llm_backend__.lower() == "vllm" else "openllm"
-  packages = ['scipy', 'bentoml[tracing]>=1.1.11,<1.2', f'{openllm_package}>={RefResolver.from_strategy("release").version}']  # apparently bnb misses this one
+  packages = [
+    'scipy',
+    'bentoml[tracing]>=1.2',
+    f'openllm[vllm]>={RefResolver.from_strategy("release").version}',
+  ]  # apparently bnb misses this one
   if adapter_map is not None:
     packages += ['openllm[fine-tune]']
   if extra_dependencies is not None:
@@ -57,7 +60,18 @@ def construct_python_options(llm, llm_fs, extra_dependencies=None, adapter_map=N
 def construct_docker_options(llm, _, quantize, adapter_map, dockerfile_template, serialisation):
   from openllm_cli.entrypoint import process_environ
 
-  environ = process_environ(llm.config, llm.config['timeout'], 1.0, None, True, llm.model_id, None, llm._serialisation, llm, use_current_env=False)
+  environ = process_environ(
+    llm.config,
+    llm.config['timeout'],
+    1.0,
+    None,
+    True,
+    llm.model_id,
+    None,
+    llm._serialisation,
+    llm,
+    use_current_env=False,
+  )
   # XXX: We need to quote this so that the envvar in container recognize as valid json
   environ['OPENLLM_CONFIG'] = f"'{environ['OPENLLM_CONFIG']}'"
   environ.pop('BENTOML_HOME', None)  # NOTE: irrelevant in container
@@ -86,7 +100,10 @@ def create_bento(
     'start_name': llm.config['start_name'],
     'base_name_or_path': llm.model_id,
     'bundler': 'openllm.bundle',
-    **{f'{package.replace("-","_")}_version': importlib.metadata.version(package) for package in {'openllm', 'openllm-core', 'openllm-client'}},
+    **{
+      f'{package.replace("-", "_")}_version': importlib.metadata.version(package)
+      for package in {'openllm', 'openllm-core', 'openllm-client'}
+    },
   })
   if adapter_map:
     labels.update(adapter_map)

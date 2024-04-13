@@ -9,13 +9,17 @@ preview = true
 quote-style = "single"
 indent-style = "space"
 skip-magic-trailing-comma = true
+docstring-code-format = true
 
 [lint]
 typing-modules = [
     "openllm_core._typing_compat",
     "openllm_client._typing_compat",
 ]
-ignore = ["RUF012"]
+ignore = [
+    "RUF012",
+    "ANN",    # Mypy is better at this
+]
 select = [
     "F",
     "G",    # flake8-logging-format

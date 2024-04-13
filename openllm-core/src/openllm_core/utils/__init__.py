@@ -1,20 +1,83 @@
 from __future__ import annotations
-import functools, hashlib, logging, logging.config, os, sys, types, uuid, typing as t
+import functools, hashlib, logging, logging.config, pydantic, inflection, os, sys, types, uuid, typing as t
 from pathlib import Path as _Path
 from . import import_utils as iutils, pkg
-from .import_utils import ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES
 from .lazy import LazyLoader as LazyLoader, LazyModule as LazyModule, VersionInfo as VersionInfo
+from ._constants import (
+  DEBUG_ENV_VAR as DEBUG_ENV_VAR,
+  QUIET_ENV_VAR as QUIET_ENV_VAR,
+  GRPC_DEBUG_ENV_VAR as GRPC_DEBUG_ENV_VAR,
+  WARNING_ENV_VAR as WARNING_ENV_VAR,
+  DEV_DEBUG_VAR as DEV_DEBUG_VAR,
+  ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
+  check_bool_env as check_bool_env,
+  DEBUG as DEBUG,
+  SHOW_CODEGEN as SHOW_CODEGEN,
+  MYPY as MYPY,
+)
 
-# See https://github.com/bentoml/BentoML/blob/a59750c5044bab60b6b3765e6c17041fd8984712/src/bentoml_cli/env.py#L17
-DEBUG_ENV_VAR = 'BENTOML_DEBUG'
-QUIET_ENV_VAR = 'BENTOML_QUIET'
-# https://github.com/grpc/grpc/blob/master/doc/environment_variables.md
-_GRPC_DEBUG_ENV_VAR = 'GRPC_VERBOSITY'
-WARNING_ENV_VAR = 'OPENLLM_DISABLE_WARNING'
-DEV_DEBUG_VAR = 'DEBUG'
+if t.TYPE_CHECKING:
+  from _bentoml_sdk import IODescriptor
+
 # equivocal setattr to save one lookup per assignment
 _object_setattr = object.__setattr__
 logger = logging.getLogger(__name__)
+
+
+def normalise_model_name(name):
+  return (
+    os.path.basename(resolve_filepath(name))
+    if validate_is_path(name)
+    else inflection.dasherize(name.replace('/', '--'))
+  )
+
+
+@functools.lru_cache(maxsize=1)
+def has_gpus() -> bool:
+  try:
+    from cuda import cuda
+
+    err, *_ = cuda.cuInit(0)
+    if err != cuda.CUresult.CUDA_SUCCESS:
+      raise RuntimeError('Failed to initialise CUDA runtime binding.')
+    err, _ = cuda.cuDeviceGetCount()
+    if err != cuda.CUresult.CUDA_SUCCESS:
+      raise RuntimeError('Failed to get CUDA device count.')
+    return True
+  except (ImportError, RuntimeError):
+    return False
+
+
+def correct_closure(cls, ref):
+  # The following is a fix for
+  # <https://github.com/python-attrs/attrs/issues/102>.
+  # If a method mentions `__class__` or uses the no-arg super(), the
+  # compiler will bake a reference to the class in the method itself
+  # as `method.__closure__`.  Since we replace the class with a
+  # clone, we rewrite these references so it keeps working.
+  for item in cls.__dict__.values():
+    if isinstance(item, (classmethod, staticmethod)):
+      # Class- and staticmethods hide their functions inside.
+      # These might need to be rewritten as well.
+      closure_cells = getattr(item.__func__, '__closure__', None)
+    elif isinstance(item, property):
+      # Workaround for property `super()` shortcut (PY3-only).
+      # There is no universal way for other descriptors.
+      closure_cells = getattr(item.fget, '__closure__', None)
+    else:
+      closure_cells = getattr(item, '__closure__', None)
+
+    if not closure_cells:
+      continue  # Catch None or the empty list.
+    for cell in closure_cells:
+      try:
+        match = cell.cell_contents is ref
+      except ValueError:  # noqa: PERF203
+        pass  # ValueError: Cell is empty
+      else:
+        if match:
+          cell.cell_contents = cls
+  return cls
 
 
 @functools.lru_cache(maxsize=1)
@@ -24,7 +87,9 @@ def _WithArgsTypes() -> tuple[type[t.Any], ...]:
   except ImportError:
     _TypingGenericAlias = ()  # python < 3.9 does not have GenericAlias (list[int], tuple[str, ...] and so on)
   #  _GenericAlias is the actual GenericAlias implementation
-  return (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
+  return (
+    (_TypingGenericAlias,) if sys.version_info < (3, 10) else (t._GenericAlias, types.GenericAlias, types.UnionType)
+  )
 
 
 def lenient_issubclass(cls, class_or_tuple):
@@ -34,6 +99,52 @@ def lenient_issubclass(cls, class_or_tuple):
     if isinstance(cls, _WithArgsTypes()):
       return False
     raise
+
+
+def io_descriptor(model) -> type[IODescriptor] | None:
+  if model is None:
+    return model
+  try:
+    from _bentoml_sdk.io_models import IODescriptor
+  except ImportError as err:
+    raise RuntimeError('Requires "bentoml>1.2" to use `openllm_core.utils.io_descriptor`') from err
+
+  return pydantic.create_model(f'{model.__class__.__name__}IODescriptor', __base__=(IODescriptor, model))
+
+
+def api(
+  func=None,
+  *,
+  name=None,
+  input=None,
+  output=None,
+  route=None,
+  batchable=False,
+  batch_dim=0,
+  max_batch_size=100,
+  max_latency_ms=60000,
+):
+  try:
+    import bentoml
+  except ImportError:
+    raise RuntimeError('Requires "bentoml" to use `openllm_core.utils.api`') from None
+
+  def caller(func):
+    wrapped = bentoml.api(
+      func,
+      route=route,
+      name=name,
+      input_spec=io_descriptor(input),
+      output_spec=io_descriptor(output),
+      batchable=batchable,
+      batch_dim=batch_dim,
+      max_batch_size=max_batch_size,
+      max_latency_ms=max_latency_ms,
+    )
+    object.__setattr__(func, '__openllm_api_func__', True)
+    return wrapped
+
+  return caller(func) if func is not None else caller
 
 
 def resolve_user_filepath(filepath, ctx):
@@ -56,13 +167,6 @@ def resolve_filepath(path, ctx=None):
     return path
 
 
-def check_bool_env(env, default=True):
-  v = os.getenv(env, default=str(default)).upper()
-  if v.isdigit():
-    return bool(int(v))  # special check for digits
-  return v in ENV_VARS_TRUE_VALUES
-
-
 def calc_dir_size(path):
   return sum(f.stat().st_size for f in _Path(path).glob('**/*') if f.is_file())
 
@@ -72,7 +176,7 @@ def generate_hash_from_file(f, algorithm='sha1'):
   return str(getattr(hashlib, algorithm)(str(os.path.getmtime(resolve_filepath(f))).encode()).hexdigest())
 
 
-def getenv(env, default=None, var=None):
+def getenv(env, default=None, var=None, return_type=t.Any):
   env_key = {env.upper(), f'OPENLLM_{env.upper()}'}
   if var is not None:
     env_key = set(var) | env_key
@@ -83,7 +187,7 @@ def getenv(env, default=None, var=None):
       logger.warning("Using '%s' environment is deprecated, use '%s' instead.", k.upper(), k[8:].upper())
     return _var
 
-  return first_not_none(*(callback(k) for k in env_key), default=default)
+  return t.cast(return_type, first_not_none(*(callback(k) for k in env_key), default=default))
 
 
 def field_env_key(key, suffix=None):
@@ -117,7 +221,7 @@ def set_debug_mode(enabled, level=1):
   os.environ.update({
     DEBUG_ENV_VAR: str(enabled),
     QUIET_ENV_VAR: str(not enabled),  #
-    _GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR',
+    GRPC_DEBUG_ENV_VAR: 'DEBUG' if enabled else 'ERROR',
     'CT2_VERBOSE': '3',  #
   })
   set_disable_warnings(not enabled)
@@ -127,7 +231,7 @@ def set_quiet_mode(enabled):
   os.environ.update({
     QUIET_ENV_VAR: str(enabled),
     DEBUG_ENV_VAR: str(not enabled),  #
-    _GRPC_DEBUG_ENV_VAR: 'NONE',
+    GRPC_DEBUG_ENV_VAR: 'NONE',
     'CT2_VERBOSE': '-1',  #
   })
   set_disable_warnings(enabled)
@@ -135,6 +239,10 @@ def set_quiet_mode(enabled):
 
 def gen_random_uuid(prefix: str | None = None) -> str:
   return '-'.join([prefix or 'openllm', str(uuid.uuid4().hex)])
+
+
+def dict_filter_none(d: dict[str, t.Any]) -> dict[str, t.Any]:
+  return {k: v for k, v in d.items() if v is not None}
 
 
 # NOTE:  `compose` any number of unary functions into a single unary function
@@ -168,8 +276,6 @@ def generate_context(framework_name):
   }
   if iutils.is_torch_available():
     framework_versions['torch'] = pkg.get_pkg_version('torch')
-  if iutils.is_ctranslate_available():
-    framework_versions['ctranslate2'] = pkg.get_pkg_version('ctranslate2')
   if iutils.is_vllm_available():
     framework_versions['vllm'] = pkg.get_pkg_version('vllm')
   if iutils.is_autoawq_available():
@@ -202,14 +308,6 @@ def flatten_attrs(**attrs):
     if k.startswith(_TOKENIZER_PREFIX):
       del attrs[k]
   return attrs, tokenizer_attrs
-
-
-# Special debug flag controled via DEBUG
-DEBUG = sys.flags.dev_mode or (not sys.flags.ignore_environment and check_bool_env(DEV_DEBUG_VAR, default=False))
-# Whether to show the codenge for debug purposes
-SHOW_CODEGEN = DEBUG and os.environ.get(DEV_DEBUG_VAR, str(0)).isdigit() and int(os.environ.get(DEV_DEBUG_VAR, str(0))) > 3
-# MYPY is like t.TYPE_CHECKING, but reserved for Mypy plugins
-MYPY = False
 
 
 class ExceptionFilter(logging.Filter):
@@ -257,7 +355,11 @@ _LOGGING_CONFIG = {
     'warningfilter': {'()': 'openllm_core.utils.WarningFilter'},
   },
   'handlers': {
-    'bentomlhandler': {'class': 'logging.StreamHandler', 'filters': ['excfilter', 'warningfilter', 'infofilter'], 'stream': 'ext://sys.stdout'},
+    'bentomlhandler': {
+      'class': 'logging.StreamHandler',
+      'filters': ['excfilter', 'warningfilter', 'infofilter'],
+      'stream': 'ext://sys.stdout',
+    },
     'defaulthandler': {'class': 'logging.StreamHandler', 'level': logging.WARNING},
   },
   'loggers': {
@@ -293,7 +395,9 @@ def configure_logging():
 # since _extras will be the locals() import from this file.
 _extras = {
   **{
-    k: v for k, v in locals().items() if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
+    k: v
+    for k, v in locals().items()
+    if k in {'pkg'} or (not isinstance(v, types.ModuleType) and k not in {'annotations'} and not k.startswith('_'))
   },
   '__openllm_migration__': {'bentoml_cattr': 'converter'},
 }
@@ -319,7 +423,6 @@ __lazy = LazyModule(
       'is_notebook_available',
       'is_autogptq_available',
       'is_grpc_available',
-      'is_ctranslate_available',
       'is_transformers_available',
       'is_autoawq_available',
       'is_flash_attn_2_available',

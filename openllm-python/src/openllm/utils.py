@@ -1,15 +1,12 @@
 import functools, importlib.metadata, openllm_core
 
-__all__ = ['generate_labels', 'available_devices', 'device_count']
+__all__ = ['available_devices', 'device_count', 'generate_labels']
 
 
-def generate_labels(llm):
+def generate_labels(serialisation):
   return {
-    'backend': llm.__llm_backend__,
     'framework': 'openllm',
-    'model_name': llm.config['model_name'],  #
-    'architecture': llm.config['architecture'],
-    'serialisation': llm._serialisation,  #
+    'serialisation': serialisation,
     **{package: importlib.metadata.version(package) for package in {'openllm', 'openllm-core', 'openllm-client'}},
   }
 

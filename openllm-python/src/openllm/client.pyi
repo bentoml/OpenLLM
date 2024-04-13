@@ -1,8 +1,8 @@
 """OpenLLM Python client.
 
 ```python
-client = openllm.client.HTTPClient("http://localhost:8080")
-client.query("What is the difference between gather and scatter?")
+client = openllm.client.HTTPClient('http://localhost:8080')
+client.query('What is the difference between gather and scatter?')
 ```
 """
 

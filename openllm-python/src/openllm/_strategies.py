@@ -176,12 +176,16 @@ class _ResourceMixin:
     elif isinstance(spec, list):
       return [str(x) for x in spec]
     else:
-      raise TypeError(f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead.")
+      raise TypeError(
+        f"'{cls.__name__}.from_spec' only supports parsing spec of type int, str, or list, got '{type(spec)}' instead."
+      )
 
   @staticmethod
   def validate(cls, val: list[t.Any]) -> None:
     if cls.resource_id == 'amd.com/gpu':
-      raise RuntimeError("AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'")
+      raise RuntimeError(
+        "AMD GPU validation is not yet supported. Make sure to call 'get_resource(..., validate=False)'"
+      )
     if not all(isinstance(i, str) for i in val):
       raise ValueError('Input list should be all string type.')
 
@@ -325,12 +329,18 @@ class CascadingResourceStrategy(bentoml.Strategy, coreutils.ReprMixin):
           worker_index,
           assigned_resource_per_worker,
         )
-        raise IndexError(f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}].")
-      assigned_gpu = gpus[assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1)]
+        raise IndexError(
+          f"There aren't enough assigned GPU(s) for given worker id '{worker_index}' [required: {assigned_resource_per_worker}]."
+        )
+      assigned_gpu = gpus[
+        assigned_resource_per_worker * worker_index : assigned_resource_per_worker * (worker_index + 1)
+      ]
       dev = ','.join(assigned_gpu)
     else:
       idx = worker_index // workers_per_resource
       if idx >= len(gpus):
-        raise ValueError(f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}')
+        raise ValueError(
+          f'Number of available GPU ({gpus}) preceeds the given workers_per_resource {workers_per_resource}'
+        )
       dev = str(gpus[idx])
     return dev

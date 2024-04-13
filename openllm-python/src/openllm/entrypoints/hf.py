@@ -27,7 +27,6 @@ def mount_to_svc(svc, llm):
     debug=True,
     routes=[
       Route('/agent', endpoint=functools.partial(hf_agent, llm=llm), name='hf_agent', methods=['POST']),
-      Route('/adapters', endpoint=functools.partial(hf_adapters, llm=llm), name='adapters', methods=['GET']),
       Route('/schema', endpoint=lambda req: schemas.OpenAPIResponse(req), include_in_schema=False),
     ],
   )
@@ -37,7 +36,10 @@ def mount_to_svc(svc, llm):
 
 
 def error_response(status_code, message):
-  return JSONResponse(converter.unstructure(HFErrorResponse(message=message, error_code=status_code.value)), status_code=status_code.value)
+  return JSONResponse(
+    converter.unstructure(HFErrorResponse(message=message, error_code=status_code.value)),
+    status_code=status_code.value,
+  )
 
 
 @add_schema_definitions
@@ -53,20 +55,9 @@ async def hf_agent(req, llm):
   stop = request.parameters.pop('stop', [])
   try:
     result = await llm.generate(request.inputs, stop=stop, **request.parameters)
-    return JSONResponse(converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value)
+    return JSONResponse(
+      converter.unstructure([AgentResponse(generated_text=result.outputs[0].text)]), status_code=HTTPStatus.OK.value
+    )
   except Exception as err:
     logger.error('Error while generating: %s', err)
     return error_response(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error while generating (Check server log).')
-
-
-@add_schema_definitions
-def hf_adapters(req, llm):
-  if not llm.has_adapters:
-    return error_response(HTTPStatus.NOT_FOUND, 'No adapters found.')
-  return JSONResponse(
-    {
-      adapter_tuple[1]: {'adapter_name': k, 'adapter_type': adapter_tuple[0].peft_type.value}
-      for k, adapter_tuple in dict(*llm.adapter_map.values()).items()
-    },
-    status_code=HTTPStatus.OK.value,
-  )

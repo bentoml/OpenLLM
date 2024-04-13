@@ -18,6 +18,37 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.5.0-alpha.3](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.3)
+No significant changes.
+
+
+## [0.5.0-alpha.2](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.2)
+No significant changes.
+
+
+## [0.5.0-alpha.1](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.1)
+No significant changes.
+
+
+## [0.5.0-alpha](https://github.com/bentoml/openllm/tree/v0.5.0-alpha)
+
+### Backwards-incompatible Changes
+
+- ### openllm-core
+
+  Bump `attrs` to `23.2.0`
+
+  Added experimental helpers `.pydantic_model()` functions to convert current attrs-based class to its compatible pydantic class.
+
+  ### openllm
+
+  Updated OpenLLM architecture to new 1.2 BentoML.
+
+  `openllm.Runner` remains the old Runnable implementation. Therefore, if you still depends on the old architecture, make sure to use `openllm.Runner` instead of `llm.runner`.
+
+  `llm.runner` will now become an `bentoml.depends()` singleton, therefore, to avoid breaking change, make sure to set `OPENLLM_RUNNER_BEHAVIOUR=deprecated` in your environment variable. This is the default behaviour. To opt-in the new architecture, set `OPENLLM_RUNNER_BEHAVIOUR=new_impl`
+  [#821](https://github.com/bentoml/openllm/issues/821)
+
 ## [0.4.44](https://github.com/bentoml/openllm/tree/v0.4.44)
 No significant changes.
 

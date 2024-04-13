@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Literal, Optional, Tuple, TypedDict, Union
+from typing import Any, AsyncGenerator, Dict, Generic, Iterable, List, Optional, Tuple, TypedDict, Union, TypeVar
 
 import attr
 import torch
@@ -7,13 +7,26 @@ from peft.peft_model import PeftModel, PeftModelForCausalLM, PeftModelForSeq2Seq
 
 from bentoml import Model, Tag
 from openllm_core import LLMConfig
-from openllm_core._schemas import GenerationOutput
-from openllm_core._typing_compat import AdapterMap, AdapterType, LiteralBackend, LiteralDtype, LiteralQuantise, LiteralSerialisation, M, T
+from openllm_core._schemas import GenerationOutput, GenerationInputDict, MetadataOutput
+from openllm_core._typing_compat import (
+  AdapterMap,
+  AdapterType,
+  LiteralBackend,
+  LiteralQuantise,
+  LiteralSerialisation,
+  ParamSpec,
+  MessagesConverterInput,
+)
+from openllm_core.utils import api
 
 from ._quantisation import QuantizationConfig
 from ._runners import Runner
+from _openllm_tiny._llm import Dtype
 
 InjectedModel = Union[PeftModel, PeftModelForCausalLM, PeftModelForSeq2SeqLM]
+P = ParamSpec('P')
+M = TypeVar('M')
+T = TypeVar('T')
 
 class IdentifyingParams(TypedDict):
   configuration: str
@@ -21,8 +34,16 @@ class IdentifyingParams(TypedDict):
   model_id: str
 
 ResolvedAdapterMap = Dict[AdapterType, Dict[str, Tuple[PeftConfig, str]]]
-CTranslateDtype = Literal['int8_float32', 'int8_float16', 'int8_bfloat16']
-Dtype = Union[LiteralDtype, CTranslateDtype, Literal['auto', 'half', 'float']]
+
+class LLMService:
+  @api
+  async def generate_v1(self, parameters: GenerationInputDict = ...) -> GenerationOutput: ...
+  @api
+  async def generate_stream_v1(self, parameters: GenerationInputDict = ...) -> AsyncGenerator[str, None]: ...
+  @api
+  def metadata_v1(self) -> MetadataOutput: ...
+  @api
+  def helpers_messages_v1(self, message: MessagesConverterInput = ...) -> str: ...
 
 @attr.define(slots=True, repr=False, init=False)
 class LLM(Generic[M, T]):
@@ -37,6 +58,8 @@ class LLM(Generic[M, T]):
   _adapter_map: Optional[AdapterMap]
   _serialisation: LiteralSerialisation
   _local: bool
+  _max_model_len: Optional[int]
+  _gpu_memory_utilization: float
 
   __llm_dtype__: Dtype = ...
   __llm_torch_dtype__: Optional[torch.dtype] = ...
@@ -49,7 +72,26 @@ class LLM(Generic[M, T]):
   __llm_adapter_map__: Optional[ResolvedAdapterMap] = ...
   __llm_trust_remote_code__: bool = ...
 
-  def __repr__(self) -> str: ...
+  async def generate(
+    self,
+    prompt: Optional[str],
+    prompt_token_ids: Optional[List[int]] = ...,
+    stop: Optional[Union[str, Iterable[str]]] = ...,
+    stop_token_ids: Optional[List[int]] = ...,
+    request_id: Optional[str] = ...,
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
+  ) -> GenerationOutput: ...
+  async def generate_iterator(
+    self,
+    prompt: Optional[str],
+    prompt_token_ids: Optional[List[int]] = ...,
+    stop: Optional[Union[str, Iterable[str]]] = ...,
+    stop_token_ids: Optional[List[int]] = ...,
+    request_id: Optional[str] = ...,
+    adapter_name: Optional[str] = ...,
+    **attrs: Any,
+  ) -> AsyncGenerator[GenerationOutput, None]: ...
   def __init__(
     self,
     model_id: str,
@@ -66,6 +108,8 @@ class LLM(Generic[M, T]):
     embedded: bool = ...,
     dtype: Dtype = ...,
     low_cpu_mem_usage: bool = ...,
+    max_model_len: Optional[int] = ...,
+    gpu_memory_utilization: float = ...,
     **attrs: Any,
   ) -> None: ...
   @property
@@ -91,8 +135,6 @@ class LLM(Generic[M, T]):
   @property
   def quantization_config(self) -> QuantizationConfig: ...
   @property
-  def has_adapters(self) -> bool: ...
-  @property
   def local(self) -> bool: ...
   @property
   def quantise(self) -> Optional[LiteralQuantise]: ...
@@ -112,24 +154,6 @@ class LLM(Generic[M, T]):
   def runner(self) -> Runner[M, T]: ...
   @property
   def adapter_map(self) -> ResolvedAdapterMap: ...
-  def prepare(self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any) -> Tuple[InjectedModel, T]: ...
-  async def generate(
-    self,
-    prompt: Optional[str],
-    prompt_token_ids: Optional[List[int]] = ...,
-    stop: Optional[Union[str, Iterable[str]]] = ...,
-    stop_token_ids: Optional[List[int]] = ...,
-    request_id: Optional[str] = ...,
-    adapter_name: Optional[str] = ...,
-    **attrs: Any,
-  ) -> GenerationOutput: ...
-  async def generate_iterator(
-    self,
-    prompt: Optional[str],
-    prompt_token_ids: Optional[List[int]] = ...,
-    stop: Optional[Union[str, Iterable[str]]] = ...,
-    stop_token_ids: Optional[List[int]] = ...,
-    request_id: Optional[str] = ...,
-    adapter_name: Optional[str] = ...,
-    **attrs: Any,
-  ) -> AsyncGenerator[GenerationOutput, None]: ...
+  def prepare(
+    self, adapter_type: AdapterType = ..., use_gradient_checking: bool = ..., **attrs: Any
+  ) -> Tuple[InjectedModel, T]: ...

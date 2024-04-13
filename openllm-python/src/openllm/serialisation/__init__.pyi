@@ -6,18 +6,10 @@ Currently, GGML format is working in progress.
 """
 
 from typing import Any
-from bentoml import Model
-from openllm import LLM
-from openllm_core._typing_compat import M, T
-from . import constants as constants, ggml as ggml, transformers as transformers
+from bentoml import Model as _Model
+from openllm import LLM as _LLM
+from . import constants as constants, ggml as ggml, transformers as transformers, vllm as vllm
 
-def load_tokenizer(llm: LLM[M, T], **attrs: Any) -> T:
-  """Load the tokenizer from BentoML store.
-
-  By default, it will try to find the bentomodel whether it is in store..
-  If model is not found, it will raises a ``bentoml.exceptions.NotFound``.
-  """
-
-def get(llm: LLM[M, T]) -> Model: ...
-def import_model(llm: LLM[M, T], *args: Any, trust_remote_code: bool, **attrs: Any) -> Model: ...
-def load_model(llm: LLM[M, T], *args: Any, **attrs: Any) -> M: ...
+def import_model(*args: Any, trust_remote_code: bool, **attrs: Any) -> _Model: ...
+def load_model(llm: _LLM, *args: Any, **attrs: Any) -> Any: ...
+def load_tokenizer(llm: _LLM, **attrs: Any) -> Any: ...

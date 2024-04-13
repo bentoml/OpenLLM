@@ -40,7 +40,7 @@ def test_general_build_from_local(tmp_path_factory: pytest.TempPathFactory):
   llm = openllm.LLM(model_id=HF_INTERNAL_T5_TESTING, serialisation='legacy')
 
   llm.model.save_pretrained(str(local_path))
-  llm.tokenizer.save_pretrained(str(local_path))
+  llm._tokenizer.save_pretrained(str(local_path))
 
   assert openllm.build('flan-t5', model_id=local_path.resolve().__fspath__(), model_version='local')
 

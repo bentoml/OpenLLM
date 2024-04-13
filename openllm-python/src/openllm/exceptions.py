@@ -7,4 +7,5 @@ from openllm_core.exceptions import (
   ValidationError as ValidationError,  #
   MissingAnnotationAttributeError as MissingAnnotationAttributeError,
   MissingDependencyError as MissingDependencyError,
+  ModelNotFound as ModelNotFound,  #
 )
