@@ -124,7 +124,7 @@ playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
 stablelm = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]
-vllm = ["vllm==0.4.0"]
+vllm = ["vllm==0.4.1"]
 yi = ["bitsandbytes"]
 
 [tool.hatch.version]
