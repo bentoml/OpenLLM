@@ -140,7 +140,7 @@ jobs:
         run: >-
           mkdir $PYAPP_REPO && curl -L https://github.com/ofek/pyapp/releases/download/v$PYAPP_VERSION/source.tar.gz | tar --strip-components=1 -xzf - -C $PYAPP_REPO
       - name: Set up Python
-        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # ratchet:actions/setup-python@v5.0.0
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # ratchet:actions/setup-python@v5.1.0
         with:
           python-version-file: .python-version-default
       - name: Install Hatch
@@ -237,7 +237,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
       - name: Set up Python
-        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # ratchet:actions/setup-python@v5.0.0
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # ratchet:actions/setup-python@v5.1.0
         with:
           python-version-file: .python-version-default
       - name: Pull latest change
