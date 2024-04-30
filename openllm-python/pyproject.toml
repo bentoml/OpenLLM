@@ -40,8 +40,8 @@ classifiers = [
 dependencies = [
     "bentoml[io]>=1.2",
     "transformers[torch,tokenizers]>=4.36.0",
-    "openllm-client>=0.5.0-alpha.3",
-    "openllm-core>=0.5.0-alpha.3",
+    "openllm-client>=0.4.44",
+    "openllm-core>=0.4.44",
     "safetensors",
     "vllm>=0.4.0",
     "optimum>=1.12.0",
@@ -55,7 +55,7 @@ dependencies = [
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
 ]
-description = "OpenLLM: Operating LLMs in production"
+description = "OpenLLM: Run any open-source LLMs, such as Llama 2, Mistral, as OpenAI compatible API endpoint in the cloud."
 dynamic = ["version", "readme"]
 keywords = [
     "MLOps",
