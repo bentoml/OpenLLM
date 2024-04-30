@@ -213,12 +213,13 @@ class LLM:
         token_ids[output.index].extend(output.token_ids)
     if (final_result := result) is None:
       raise RuntimeError('No result is returned.')
-    return GenerationOutput.from_vllm(final_result).model_copy(
+    converted = GenerationOutput.from_vllm(final_result)
+    return converted.model_copy(
       update=dict(
         prompt=prompt,
         outputs=[
           output.model_copy(update=dict(text=''.join(texts[output.index]), token_ids=token_ids[output.index]))
-          for output in final_result.outputs
+          for output in converted.outputs
         ],
       )
     )

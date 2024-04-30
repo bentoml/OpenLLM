@@ -55,7 +55,7 @@ dependencies = [
     "cuda-python;platform_system!=\"Darwin\"",
     "bitsandbytes<0.42",
 ]
-description = "OpenLLM: Operating LLMs in production"
+description = "OpenLLM: Run any open-source LLMs, such as Llama 2, Mistral, as OpenAI compatible API endpoint in the cloud."
 dynamic = ["version", "readme"]
 keywords = [
     "MLOps",
