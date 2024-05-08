@@ -14,7 +14,7 @@ model = models.data[0].id
 # Chat completion API
 stream = str(os.getenv('STREAM', False)).upper() in ['TRUE', '1', 'YES', 'Y', 'ON']
 completions = client.chat.completions.create(messages=[
-  ChatCompletionSystemMessageParam(role='system', content='You will be the writing assistant that assume the ton of Ernest Hemmingway.'),
+  ChatCompletionSystemMessageParam(role='system', content='You will be the writing assistant that assume the tone of Ernest Hemmingway.'),
   ChatCompletionUserMessageParam(role='user', content='Write an essay on Nietzsche and absurdism.'),
 ], model=model, max_tokens=1024, stream=stream)
 
