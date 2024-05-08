@@ -154,7 +154,7 @@ PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
 GGML_DEPS = ['ctransformers']
 AWQ_DEPS = ['autoawq']
 GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.4.0']
+VLLM_DEPS = ['vllm==0.4.2']
 
 _base_requirements: dict[str, t.Any] = {
   inflection.dasherize(name): config_cls()['requirements']
@@ -290,7 +290,7 @@ def main(args) -> int:
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
     Dependencies(name='safetensors'),
-    Dependencies(name='vllm', lower_constraint='0.4.0'),
+    Dependencies(name='vllm', lower_constraint='0.4.2'),
     Dependencies(name='optimum', lower_constraint='1.12.0'),
     Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
