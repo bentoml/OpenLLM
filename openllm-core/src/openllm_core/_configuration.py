@@ -234,6 +234,7 @@ class GenerationConfig(pydantic.BaseModel):
   logits_processors: t.Optional[t.List[LogitsProcessor]] = pydantic.Field(
     None, description='List of functions that modify logits based on previously generated tokens.'
   )
+  seed: t.Optional[int] = pydantic.Field(None, description='Random seed for generation.')
 
   def __getitem__(self, item: str) -> t.Any:
     if hasattr(self, item):

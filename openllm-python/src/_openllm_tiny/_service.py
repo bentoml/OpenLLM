@@ -58,39 +58,31 @@ class LLMService:
   @core.utils.api(route='/v1/generate')
   async def generate_v1(
     self,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default_factory=lambda: llm_config, description='LLM Config'),
     prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=llm_config, description='LLM Config'),
   ) -> core.GenerationOutput:
+    llm_config.update(stop=stop, stop_token_ids=stop_token_ids)
     return await self.llm.generate(
-      prompt=prompt,
-      prompt_token_ids=prompt_token_ids,
-      llm_config=llm_config,
-      stop=stop,
-      stop_token_ids=stop_token_ids,
-      request_id=request_id,
+      prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
     )
 
   @core.utils.api(route='/v1/generate_stream')
   async def generate_stream_v1(
     self,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default_factory=lambda: llm_config, description='LLM Config'),
     prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=llm_config, description='LLM Config'),
   ) -> t.AsyncGenerator[str, None]:
+    llm_config.update(stop=stop, stop_token_ids=stop_token_ids)
     async for generated in self.llm.generate_iterator(
-      prompt=prompt,
-      prompt_token_ids=prompt_token_ids,
-      llm_config=llm_config,
-      stop=stop,
-      stop_token_ids=stop_token_ids,
-      request_id=request_id,
+      prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
     ):
       yield f'data: {core.GenerationOutput.from_vllm(generated).model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
@@ -108,13 +100,15 @@ class LLMService:
   @core.utils.api(route='/v1/helpers/messages')
   def helpers_messages_v1(
     self,
-    message: Annotated[t.Dict[str, t.Any], MessagesConverterInput] = MessagesConverterInput(
-      add_generation_prompt=False,
-      messages=[
-        MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
-        MessageParam(role='user', content='Hi there!'),
-        MessageParam(role='assistant', content='Yes?'),
-      ],
+    message: Annotated[t.Dict[str, t.Any], MessagesConverterInput] = pydantic.Field(
+      default=MessagesConverterInput(
+        add_generation_prompt=False,
+        messages=[
+          MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
+          MessageParam(role='user', content='Hi there!'),
+          MessageParam(role='assistant', content='Yes?'),
+        ],
+      )
     ),
   ) -> str:
     return self.llm._tokenizer.apply_chat_template(
@@ -136,6 +130,7 @@ class LLMService:
         MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
         MessageParam(role='user', content='Hi there!'),
         MessageParam(role='assistant', content='Yes?'),
+        MessageParam(role='user', content='What is the meaning of life?'),
       ],
       model=core.utils.normalise_model_name(model_id),
       n=1,
