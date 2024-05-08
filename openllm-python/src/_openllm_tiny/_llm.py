@@ -10,7 +10,7 @@ from openllm_core.utils import (
   dict_filter_none,
 )
 from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype
-from openllm_core._schemas import GenerationOutput, GenerationInput
+from openllm_core._schemas import GenerationOutput
 
 Dtype = t.Union[LiteralDtype, t.Literal['auto', 'half', 'float']]
 
@@ -149,7 +149,7 @@ class LLM:
   ) -> t.AsyncGenerator[RequestOutput, None]:
     from vllm import SamplingParams
 
-    config = self.config.generation_config.model_copy(update=dict_filter_none(attrs))
+    config = self.config.model_construct_env(**dict_filter_none(attrs))
 
     stop_token_ids = stop_token_ids or []
     eos_token_id = attrs.get('eos_token_id', config['eos_token_id'])
@@ -172,12 +172,14 @@ class LLM:
     top_p = 1.0 if config['temperature'] <= 1e-5 else config['top_p']
     config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids, top_p=top_p))
 
-    params = {k: getattr(config, k, None) for k in set(inspect.signature(SamplingParams).parameters.keys())}
-    sampling_params = SamplingParams(**{k: v for k, v in params.items() if v is not None})
-
     try:
       async for it in self._model.generate(
-        prompt, sampling_params=sampling_params, request_id=request_id, prompt_token_ids=prompt_token_ids
+        prompt,
+        sampling_params=SamplingParams(**{
+          k: config.__getitem__(k) for k in set(inspect.signature(SamplingParams).parameters.keys())
+        }),
+        request_id=request_id,
+        prompt_token_ids=prompt_token_ids,
       ):
         yield it
     except Exception as err:
@@ -191,15 +193,13 @@ class LLM:
     stop_token_ids: list[int] | None = None,
     request_id: str | None = None,
     adapter_name: str | None = None,
-    *,
-    _generated: GenerationInput | None = None,
     **attrs: t.Any,
   ) -> GenerationOutput:
     if stop is not None:
       attrs.update({'stop': stop})
     if stop_token_ids is not None:
       attrs.update({'stop_token_ids': stop_token_ids})
-    config = self.config.model_copy(update=attrs)
+    config = self.config.model_construct_env(**attrs)
     texts, token_ids = [[]] * config['n'], [[]] * config['n']
     async for result in self.generate_iterator(
       prompt,

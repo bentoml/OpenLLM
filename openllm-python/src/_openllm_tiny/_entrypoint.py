@@ -289,7 +289,7 @@ def construct_python_options(llm_config, llm_fs):
 
   # TODO: Add this line back once 0.5 is out, for now depends on OPENLLM_DEV_BUILD
   # packages = ['scipy', 'bentoml[tracing]>=1.2.8', 'openllm[vllm]>0.4', 'vllm>=0.3']
-  packages = ['scipy', 'bentoml[tracing]>=1.2.8', 'vllm>=0.3']
+  packages = ['scipy', 'bentoml[tracing]>=1.2.8', 'vllm>=0.3', 'flash-attn']
   if llm_config['requirements'] is not None:
     packages.extend(llm_config['requirements'])
   built_wheels = [build_editable(llm_fs.getsyspath('/'), p) for p in ('openllm_core', 'openllm_client', 'openllm')]
@@ -462,7 +462,7 @@ def build_command(
           labels=labels,
           models=models,
           envs=[
-            EnvironmentEntry(name='OPENLLM_CONFIG', value=llm_config.model_dump_json()),
+            EnvironmentEntry(name='OPENLLM_CONFIG', value=f"'{llm_config.model_dump_json()}'"),
             EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility'),
           ],
           description=f"OpenLLM service for {llm_config['start_name']}",
