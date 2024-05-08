@@ -222,6 +222,7 @@ class GenerationConfig(pydantic.BaseModel):
   logprobs: t.Optional[int] = pydantic.Field(
     None, description='Number of log probabilities to return per output token.'
   )
+  detokenize: bool = pydantic.Field(True, description='Whether to detokenize the output.')
   prompt_logprobs: t.Optional[int] = pydantic.Field(
     None, description='Number of log probabilities to return per input token.'
   )
