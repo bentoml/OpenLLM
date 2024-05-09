@@ -1,4 +1,5 @@
 {% extends bento_base_template %}
-{% block SETUP_BENTO_BASE_IMAGE %}
+{% block SETUP_BENTO_COMPONENTS %}
+{% call common.RUN(__enable_buildkit__) -%} {{ __pip_cache__ }} {% endcall -%} bash -c 'pip install --no-color --progress-bar off "vllm==${VLLM_VERSION}" || true'
 {{ super() }}
 {% endblock %}
