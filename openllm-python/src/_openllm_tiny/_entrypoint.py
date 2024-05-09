@@ -461,10 +461,7 @@ def build_command(
           name=bento_tag.name,
           labels=labels,
           models=models,
-          envs=[
-            EnvironmentEntry(name='OPENLLM_CONFIG', value=f"'{llm_config.model_dump_json()}'"),
-            EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility'),
-          ],
+          envs=[EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility')],
           description=f"OpenLLM service for {llm_config['start_name']}",
           include=list(llm_fs.walk.files()),
           exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],
