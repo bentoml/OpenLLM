@@ -24,8 +24,15 @@ try:
 except Exception:
   bentomodel = None
   model_id = svars.model_id
-llm_config = core.AutoConfig.for_model(svars.model_name)
-GenerationInput = core.GenerationInput.from_config(llm_config)
+LLMConfig = core.AutoConfig.for_model(svars.model_name)
+GenerationInput = core.GenerationInput.from_config(LLMConfig)
+ChatMessages = [
+  MessageParam(
+    role='system',
+    content='You are acting as Ernest Hemmingway. All of your response will follow his and his writing style ONLY.',
+  ),
+  MessageParam(role='user', content='Write an essay about Nietzsche and absurdism.'),
+]
 
 app_v1 = FastAPI(
   debug=True,
@@ -37,7 +44,7 @@ app_v1 = FastAPI(
 
 
 @bentoml.mount_asgi_app(app_v1, path='/v1')
-@bentoml.service(name=f"llm-{llm_config['start_name']}-service", **svars.services_config)
+@bentoml.service(name=f"llm-{LLMConfig['start_name']}-service", **svars.services_config)
 class LLMService:
   bentomodel = bentomodel
 
@@ -48,7 +55,7 @@ class LLMService:
       bentomodel=bentomodel,
       serialisation=svars.serialisation,
       quantise=svars.quantise,
-      llm_config=llm_config,
+      llm_config=LLMConfig,
       trust_remote_code=svars.trust_remote_code,
       max_model_len=svars.max_model_len,
       gpu_memory_utilization=svars.gpu_memory_utilization,
@@ -63,7 +70,7 @@ class LLMService:
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=llm_config, description='LLM Config'),
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig, description='LLM Config'),
   ) -> core.GenerationOutput:
     llm_config.update(stop=stop, stop_token_ids=stop_token_ids)
     return await self.llm.generate(
@@ -78,19 +85,19 @@ class LLMService:
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=llm_config, description='LLM Config'),
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig, description='LLM Config'),
   ) -> t.AsyncGenerator[str, None]:
     llm_config.update(stop=stop, stop_token_ids=stop_token_ids)
 
-    previous_texts = [''] * llm_config['n']
-    previous_num_tokens = [0] * llm_config['n']
-    finish_reason_sent = [False] * llm_config['n']
+    _config = LLMConfig.model_construct_env(**core.utils.dict_filter_none(llm_config))
+    previous_texts = [''] * _config['n']
+    previous_num_tokens = [0] * _config['n']
+    finish_reason_sent = [False] * _config['n']
 
-    async for generated in self.llm.generate_iterator(
+    async for generations in self.llm.generate_iterator(
       prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
     ):
-      generations = core.GenerationOutput.from_vllm(generated)
-      for output in generated.outputs:
+      for output in generations.outputs:
         i = output.index
         if finish_reason_sent[i]:
           continue
@@ -98,11 +105,11 @@ class LLMService:
         delta_text = output.text[len(previous_texts[i]) :]
         previous_texts[i] = output.text
         previous_num_tokens[i] = len(output.token_ids)
-        if output.finish_reason is None:
-          yield f'data: {generations.model_copy(update=dict(prompt=prompt, outputs=[generations.outputs[i].model_copy(update=dict(text=delta_text, token_ids=delta_token_ids))])).model_dump_json()}\n\n'
-        else:
-          yield f'data: {generations.model_copy(update=dict(prompt=prompt, outputs=[generations.outputs[i].model_copy(update=dict(text=delta_text, token_ids=delta_token_ids))])).model_dump_json()}\n\n'
+        output.text = delta_text
+        output.token_ids = delta_token_ids
+        if output.finish_reason is not None:
           finish_reason_sent[i] = True
+      yield f'data: {core.GenerationOutput.from_vllm(generations).model_dump_json()}\n\n'
     yield 'data: [DONE]\n\n'
 
   @core.utils.api(route='/v1/metadata')
@@ -120,20 +127,14 @@ class LLMService:
     self,
     message: Annotated[
       t.Dict[str, t.Any],
-      pydantic.Field(
-        default=MessagesConverterInput(
-          add_generation_prompt=False,
-          messages=[
-            MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
-            MessageParam(role='user', content='Hi there!'),
-            MessageParam(role='assistant', content='Yes?'),
-          ],
-        )
-      ),
+      pydantic.Field(default=MessagesConverterInput(add_generation_prompt=True, messages=ChatMessages)),
     ],
+    tokenize: bool = pydantic.Field(
+      default=False, description='Whether to return tokenized version of resulted prompt.'
+    ),
   ) -> str:
     return self.llm._tokenizer.apply_chat_template(
-      message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
+      message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=tokenize
     )
 
   @app_v1.post(
@@ -147,15 +148,7 @@ class LLMService:
     self,
     raw_request: Request,
     request: ChatCompletionRequest = ChatCompletionRequest(
-      messages=[
-        MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
-        MessageParam(role='user', content='Hi there!'),
-        MessageParam(role='assistant', content='Yes?'),
-        MessageParam(role='user', content='What is the meaning of life?'),
-      ],
-      model=core.utils.normalise_model_name(model_id),
-      n=1,
-      stream=True,
+      messages=ChatMessages, model=core.utils.normalise_model_name(model_id), n=1, stream=True
     ),
   ):
     generator = await self.openai.chat_completions(request, raw_request)

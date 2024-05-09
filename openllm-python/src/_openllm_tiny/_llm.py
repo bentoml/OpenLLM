@@ -173,7 +173,7 @@ class LLM:
     config = config.model_copy(update=dict(stop=list(stop), stop_token_ids=stop_token_ids, top_p=top_p))
 
     try:
-      async for it in self._model.generate(
+      async for generations in self._model.generate(
         prompt,
         sampling_params=SamplingParams(**{
           k: config.__getitem__(k) for k in set(inspect.signature(SamplingParams).parameters.keys())
@@ -181,7 +181,7 @@ class LLM:
         request_id=request_id,
         prompt_token_ids=prompt_token_ids,
       ):
-        yield it
+        yield generations
     except Exception as err:
       raise RuntimeError(f'Failed to start generation task: {err}') from err
 
