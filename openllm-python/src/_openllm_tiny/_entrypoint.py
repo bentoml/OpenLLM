@@ -426,7 +426,7 @@ def build_command(
     labels = {'library': 'vllm'}
     service_config = dict(
       resources={
-        'gpu' if device else 'cpu': len(device) if device else 'cpu_count',
+        'gpu' if device else 'cpu': len(device) if device else '1',
         'gpu_type': recommended_instance_type(model_id, bentomodel),
       },
       traffic=dict(timeout=timeout),
