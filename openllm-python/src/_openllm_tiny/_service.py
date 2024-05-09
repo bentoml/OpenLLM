@@ -81,10 +81,28 @@ class LLMService:
     llm_config: t.Dict[str, t.Any] = pydantic.Field(default=llm_config, description='LLM Config'),
   ) -> t.AsyncGenerator[str, None]:
     llm_config.update(stop=stop, stop_token_ids=stop_token_ids)
+
+    previous_texts = [''] * llm_config['n']
+    previous_num_tokens = [0] * llm_config['n']
+    finish_reason_sent = [False] * llm_config['n']
+
     async for generated in self.llm.generate_iterator(
       prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
     ):
-      yield f'data: {core.GenerationOutput.from_vllm(generated).model_dump_json()}\n\n'
+      generations = core.GenerationOutput.from_vllm(generated)
+      for output in generated.outputs:
+        i = output.index
+        if finish_reason_sent[i]:
+          continue
+        delta_token_ids = output.token_ids[previous_num_tokens[i] :]
+        delta_text = output.text[len(previous_texts[i]) :]
+        previous_texts[i] = output.text
+        previous_num_tokens[i] = len(output.token_ids)
+        if output.finish_reason is None:
+          yield f'data: {generations.model_copy(update=dict(prompt=prompt, outputs=[generations.outputs[i].model_copy(update=dict(text=delta_text, token_ids=delta_token_ids))])).model_dump_json()}\n\n'
+        else:
+          yield f'data: {generations.model_copy(update=dict(prompt=prompt, outputs=[generations.outputs[i].model_copy(update=dict(text=delta_text, token_ids=delta_token_ids))])).model_dump_json()}\n\n'
+          finish_reason_sent[i] = True
     yield 'data: [DONE]\n\n'
 
   @core.utils.api(route='/v1/metadata')
@@ -100,16 +118,19 @@ class LLMService:
   @core.utils.api(route='/v1/helpers/messages')
   def helpers_messages_v1(
     self,
-    message: Annotated[t.Dict[str, t.Any], MessagesConverterInput] = pydantic.Field(
-      default=MessagesConverterInput(
-        add_generation_prompt=False,
-        messages=[
-          MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
-          MessageParam(role='user', content='Hi there!'),
-          MessageParam(role='assistant', content='Yes?'),
-        ],
-      )
-    ),
+    message: Annotated[
+      t.Dict[str, t.Any],
+      pydantic.Field(
+        default=MessagesConverterInput(
+          add_generation_prompt=False,
+          messages=[
+            MessageParam(role='system', content='You are acting as Ernest Hemmingway.'),
+            MessageParam(role='user', content='Hi there!'),
+            MessageParam(role='assistant', content='Yes?'),
+          ],
+        )
+      ),
+    ],
   ) -> str:
     return self.llm._tokenizer.apply_chat_template(
       message['messages'], add_generation_prompt=message['add_generation_prompt'], tokenize=False
