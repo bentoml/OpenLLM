@@ -52,6 +52,7 @@ max_model_len=orjson.loads(coreutils.getenv('max_model_len', default=orjson.dump
 gpu_memory_utilization=orjson.loads(coreutils.getenv('gpu_memory_utilization', default=orjson.dumps({__gpu_memory_utilization__}), var=['GPU_MEMORY_UTILISATION']))
 services_config=orjson.loads(coreutils.getenv('services_config',"""{__services_config__}"""))
 '''
+HF_HUB_DISABLE_PROGRESS_BARS = 'HF_HUB_DISABLE_PROGRESS_BARS'
 
 
 class ItemState(enum.Enum):
@@ -261,6 +262,7 @@ def start_command(
   os.environ.update({
     QUIET_ENV_VAR: str(openllm.utils.get_quiet_mode()),
     DEBUG_ENV_VAR: str(openllm.utils.get_debug_mode()),
+    HF_HUB_DISABLE_PROGRESS_BARS: str(not openllm.utils.get_debug_mode()),
     'MODEL_ID': model_id,
     'MODEL_NAME': model_name,
     'SERIALIZATION': serialisation,
@@ -468,6 +470,7 @@ def build_command(
           envs=[
             EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility'),
             EnvironmentEntry(name='VLLM_VERSION', value='0.4.2'),
+            EnvironmentEntry(name=HF_HUB_DISABLE_PROGRESS_BARS, value='TRUE'),
           ],
           description=f"OpenLLM service for {llm_config['start_name']}",
           include=list(llm_fs.walk.files()),
