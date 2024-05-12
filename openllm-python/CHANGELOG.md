@@ -18,6 +18,10 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.5.0-alpha.11](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.11)
+No significant changes.
+
+
 ## [0.5.0-alpha.10](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.10)
 No significant changes.
 
