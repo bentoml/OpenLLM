@@ -94,9 +94,12 @@ if [[ $release == 'major' ]]; then
   VNUM3=0
   ALPHA="" # Reset alpha for major release
 elif [[ $release == 'minor' ]]; then
-  VNUM2=$((VNUM2 + 1))
-  VNUM3=0
-  ALPHA="" # Reset alpha for minor release
+  if [[ -n $ALPHA ]]; then
+    ALPHA="" # Remove alpha suffix for minor release from an alpha version
+  else
+    VNUM2=$((VNUM2 + 1))
+    VNUM3=0
+  fi
 elif [[ $release == 'patch' ]]; then
   VNUM3=$((VNUM3 + 1))
   ALPHA="" # Reset alpha for patch release
