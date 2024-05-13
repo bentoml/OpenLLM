@@ -76,7 +76,7 @@ jobs:
       #     name: installers
       #     path: installers
       - name: Create release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # ratchet:softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # ratchet:softprops/action-gh-release@v2.0.5
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
