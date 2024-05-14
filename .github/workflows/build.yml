@@ -105,7 +105,7 @@ jobs:
           fetch-depth: 0
           ref: '${{ inputs.tags }}'
       - name: Inject slug/short variables
-        uses: rlespinasse/github-slug-action@102b1a064a9b145e56556e22b18b19c624538d94 # ratchet:rlespinasse/github-slug-action@v4.4.1
+        uses: rlespinasse/github-slug-action@797d68864753cbceedc271349d402da4590e6302 # ratchet:rlespinasse/github-slug-action@v4.5.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # ratchet:docker/setup-qemu-action@v3.0.0
       - name: Set up Docker Buildx
