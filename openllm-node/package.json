@@ -1,6 +1,6 @@
 {
   "name": "@bentoml/openllm-node",
-  "version": "0.5.0-alpha.11",
+  "version": "0.5.0-alpha.12",
   "description": "NodeJS library for OpenLLM",
   "type": "module",
   "repository": {
