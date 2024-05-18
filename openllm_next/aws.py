@@ -1,3 +1,7 @@
+"""
+Deprecated
+"""
+
 import typer
 import typing
 import collections
