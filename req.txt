@@ -1,0 +1,7 @@
+typer
+bentoml
+pyaml
+fastapi
+questionary
+psutil
+pathlib

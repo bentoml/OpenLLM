@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cllama"
+version = "0.0.1"
+description = "A description of your package."
+authors = [{name = "oasiszero", email = "oasis0.com@gmail.com"}]
+license = {file = "LICENSE"}
+dependencies = [
+    "typer",
+    "bentoml",
+    "pyaml",
+    "fastapi",
+    "questionary",
+    "psutil",
+    "pathlib"
+]
+
+[tool.typer]
+src-dir = "cllama"
