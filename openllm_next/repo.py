@@ -29,13 +29,13 @@ def list():
     pyaml.pprint(config.repos)
 
 
-def _parse_repo_url(repo_url):
+def parse_repo_url(repo_url):
     """
     parse the git repo url to server, owner, repo name, branch
-    >>> _parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
+    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
     ('github.com', 'bojiang', 'bentovllm', 'main')
 
-    >>> _parse_repo_url("git+https://github.com/bojiang/bentovllm")
+    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm")
     ('github.com', 'bojiang', 'bentovllm', 'main')
     """
     match = GIT_REPO_RE.match(repo_url)
@@ -89,7 +89,7 @@ def update():
     config = load_config()
     repos_in_use = set()
     for name, repo in config.repos.items():
-        server, owner, repo_name, branch = _parse_repo_url(repo)
+        server, owner, repo_name, branch = parse_repo_url(repo)
         repos_in_use.add((server, owner, repo_name))
         repo_dir = REPO_DIR / server / owner / repo_name
         if not repo_dir.exists():

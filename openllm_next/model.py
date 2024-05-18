@@ -13,7 +13,7 @@ from openllm_next.common import (
     RepoInfo,
     BentoInfo,
 )
-from openllm_next.repo import _parse_repo_url
+from openllm_next.repo import parse_repo_url
 
 
 app = typer.Typer()
@@ -23,7 +23,7 @@ def _load_model_map() -> dict[str, dict[str, ModelInfo]]:
     model_map = collections.defaultdict(dict)
     config = load_config()
     for repo_name, repo_url in config.repos.items():
-        server, owner, repo, branch = _parse_repo_url(repo_url)
+        server, owner, repo, branch = parse_repo_url(repo_url)
         repo_dir = REPO_DIR / server / owner / repo
         for path in repo_dir.glob("bentoml/bentos/*/*"):
             if path.is_dir():
