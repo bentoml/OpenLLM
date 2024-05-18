@@ -1,0 +1,3 @@
+torch==2.1.2
+vllm==0.4.0.post1
+transformers==4.39.3

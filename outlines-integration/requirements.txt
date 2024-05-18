@@ -1,0 +1,5 @@
+bentoml>=1.2.4
+torch==2.1.2
+transformers==4.38.2
+vllm==0.3.3
+outlines==0.0.37

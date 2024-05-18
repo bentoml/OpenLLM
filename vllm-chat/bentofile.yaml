@@ -1,0 +1,14 @@
+service: "service:VLLM"
+labels:
+  owner: bentoml-team
+  stage: demo
+include:
+- "*.py"
+- "bentovllm_openai/*.py"
+python:
+  packages:
+    - git+https://github.com/bentoml/simple_di.git@master
+envs:
+  - name: HF_TOKEN
+  - name: CLLAMA_MODEL
+    value: llama2
