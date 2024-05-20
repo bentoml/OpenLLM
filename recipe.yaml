@@ -56,13 +56,12 @@
       timeout: 300
     resources:
       gpu: 1
-      gpu_type: nvidia-tesla-t4
+      gpu_type: nvidia-rtx-3060
   engine_config:
     model: TheBloke/Llama-2-7B-Chat-AWQ
     max_model_len: 1024
     quantization: awq
     enforce_eager: true
-
   prompt:
     head: ~
     body: |-
@@ -70,4 +69,52 @@
       You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
       If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
       <</SYS>>
+      {user_prompt} [/INST] 
+"mistral:7b-instruct-awq-4bit":
+  alias: []
+  project: vllm-chat
+  service_config:
+    name: mistral
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-rtx-3060
+  engine_config:
+    model: TheBloke/Mistral-7B-Instruct-v0.1-AWQ
+    max_model_len: 1024
+    quantization: awq
+    enforce_eager: true
+    dtype: half
+  prompt:
+    head: ~
+    body: |-
+      <s>[INST]
+      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+      {user_prompt} [/INST] 
+"mistral:7b-instruct-fp16":
+  alias:
+    - 7b
+    - 7b-instruct
+    - 7b-instruct-v0.1
+  project: vllm-chat
+  service_config:
+    name: mistral
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-l4
+  engine_config:
+    model: mistralai/Mistral-7B-Instruct-v0.1
+    max_model_len: 1024
+    enforce_eager: true
+    dtype: half
+  prompt:
+    head: ~
+    body: |-
+      <s>[INST]
+      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
       {user_prompt} [/INST] 
