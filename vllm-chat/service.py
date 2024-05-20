@@ -21,19 +21,18 @@ SERVICE_CONFIG = CONSTANTS["service_config"]
 
 @functools.lru_cache(maxsize=1)
 def _get_gen_config():
-    import jinja2
-
     chat_template_path = os.path.join(
         os.path.dirname(__file__), "chat_templates", "chat_templates"
     )
     config_path = os.path.join(
         os.path.dirname(__file__), "chat_templates", "generation_configs"
     )
-    jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(chat_template_path))
     with open(os.path.join(config_path, f"{CHAT_TEMPLATE}.json")) as f:
         gen_config = json.load(f)
     chat_template_file = gen_config["chat_template"].split("/")[-1]
-    gen_config["template"] = jinja_env.get_template(chat_template_file)
+    with open(os.path.join(chat_template_path, chat_template_file)) as f:
+        chat_template = f.read()
+    gen_config["template"] = chat_template.replace("    ", "").replace("\n", "")
     return gen_config
 
 
@@ -45,9 +44,11 @@ def _get_gen_config():
 class VLLM:
     def __init__(self) -> None:
         from vllm import AsyncEngineArgs, AsyncLLMEngine
+        from transformers import AutoTokenizer
 
         ENGINE_ARGS = AsyncEngineArgs(**ENGINE_CONFIG)
         self.engine = AsyncLLMEngine.from_engine_args(ENGINE_ARGS)
+        self.tokenizer = AutoTokenizer.from_pretrained(ENGINE_CONFIG["model"])
 
     @bentoml.api
     async def generate(
@@ -98,6 +99,7 @@ class VLLM:
 
         gen_config = _get_gen_config()
 
+        # normalize inputs
         if stop_token_ids is None:
             stop_token_ids = gen_config["stop_token_ids"]
         if stop == "" or stop is None:
@@ -116,8 +118,10 @@ class VLLM:
                 dict(role="system", content=gen_config["system_prompt"])
             ] + messages
 
-        prompt = gen_config["template"].render(
-            messages=messages,
+        self.tokenizer.chat_template = gen_config["template"]
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
             add_generation_prompt=True,
         )
 
