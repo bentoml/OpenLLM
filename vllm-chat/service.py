@@ -101,7 +101,13 @@ class VLLM:
         stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
 
         cursor = 0
+        strip_flag = True
         async for request_output in stream:
             text = request_output.outputs[0].text
-            yield text[cursor:]
+            assistant_message = text[cursor:]
+            if not strip_flag:  # strip the leading whitespace
+                yield assistant_message
+            elif assistant_message.strip():
+                strip_flag = False
+                yield assistant_message.lstrip()
             cursor = len(text)
