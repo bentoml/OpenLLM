@@ -432,9 +432,6 @@ def serve(model: str, tag: str = "latest", force_rebuild: bool = False):
     envs = {}
     if len(bento_info.get("envs", [])) > 0:
         for env in bento_info["envs"]:
-            if env["name"] == "CLLAMA_MODEL":
-                envs[env["name"]] = f"{model}:{tag}"
-                continue
             if env["name"] in os.environ:
                 value = os.environ.get(env["name"])
                 questionary.print(f"Using environment value for {env['name']}")

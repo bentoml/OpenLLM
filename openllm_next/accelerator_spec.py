@@ -1,4 +1,4 @@
-accelerator_details = {
+ACCELERATOR_SPEC = {
     "nvidia-gtx-1650": {"model": "GTX 1650", "memory_size": 4.0},
     "nvidia-gtx-1060": {"model": "GTX 1060", "memory_size": 6.0},
     "nvidia-gtx-1080-ti": {"model": "GTX 1080 Ti", "memory_size": 11.0},

@@ -63,19 +63,31 @@ class BentoInfo(TypedDict):
     bento_yaml: dict
 
 
-def run_command(cmd, cwd=None, env=None, copy_env=True):
-    questionary.print("\n")
+def run_command(cmd, cwd=None, env=None, copy_env=True, bg=False):
     env = env or {}
-    if cwd:
-        questionary.print(f"$ cd {cwd}", style="bold")
-    if env:
-        for k, v in env.items():
-            questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
     if copy_env:
-        env = {**os.environ, **env}
-    questionary.print(f"$ {' '.join(cmd)}", style="bold")
+        merged_env = {**os.environ, **env}
+    else:
+        merged_env = env
+    if not bg:
+        questionary.print("\n")
+        if cwd:
+            questionary.print(f"$ cd {cwd}", style="bold")
+        if env:
+            for k, v in env.items():
+                questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
+        questionary.print(f"$ {' '.join(cmd)}", style="bold")
     try:
-        subprocess.run(cmd, cwd=cwd, env=env, check=True)
+        if bg:
+            return subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                env=merged_env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.run(cmd, cwd=cwd, env=merged_env, check=True)
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
         return
