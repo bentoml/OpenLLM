@@ -16,7 +16,7 @@ if t.TYPE_CHECKING:
 
 
 def openai_endpoints(
-    served_model: str,
+    served_model_names: list[str],
     response_role: str = "assistant",
     chat_template: t.Optional[str] = None,
     chat_template_model_id: t.Optional[str] = None,
@@ -48,13 +48,13 @@ def openai_endpoints(
                     def __init__(
                         self,
                         engine: AsyncLLMEngine,
-                        served_model: str,
+                        served_model_names: list[str],
                         response_role: str,
                         chat_template=None,
                     ):
                         super(OpenAIServingChat, self).__init__(
                             engine=engine,
-                            served_model=served_model,
+                            served_model_names=served_model_names,
                             lora_modules=None,
                         )
                         self.response_role = response_role
@@ -81,7 +81,7 @@ def openai_endpoints(
 
                 self.openai_serving_completion = OpenAIServingCompletion(
                     engine=self.engine,
-                    served_model=served_model,
+                    served_model_names=served_model_names,
                 )
 
                 self.chat_template = chat_template
@@ -93,7 +93,7 @@ def openai_endpoints(
 
                 self.openai_serving_chat = PatchedOpenAIServingChat(
                     engine=self.engine,
-                    served_model=served_model,
+                    served_model_names=served_model_names,
                     response_role=response_role,
                     chat_template=self.chat_template,
                 )

@@ -1,0 +1,24 @@
+"phi3:3.8b-mini-instruct-4k-fp16":
+  alias:
+    - latest
+    - 3.8b
+    - instruct
+    - mini
+  template: vllm-chat
+  service_config:
+    name: phi3
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-t4
+  engine_config:
+    model_id: microsoft/Phi-3-mini-4k-instruct
+    max_model_len: 4096
+    dtype: half
+  prompt:
+    head: ~
+    body: |-
+      <|user|>
+      {user_prompt}<|end|>
+      <|assistant|>

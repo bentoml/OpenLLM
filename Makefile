@@ -1,6 +1,6 @@
 PWD := $(shell pwd)
 
-BENTOML_HOME := $(PWD)/bentoml
+BENTOML_HOME := $(PWD)/../openllm-repo/bentoml
 
 .PHONY: all
 all:
