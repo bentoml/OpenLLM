@@ -11,12 +11,11 @@ import yaml
 CONFIG = yaml.safe_load(open("config.yaml"))
 
 ENGINE_CONFIG = CONFIG["engine_config"]
-MODEL_ID = ENGINE_CONFIG["model"]
 PROMPT_TEMPLATE = CONFIG["prompt"]
 SERVICE_CONFIG = CONFIG["service_config"]
 
 
-@openai_endpoints(served_model_names=[MODEL_ID])
+@openai_endpoints(served_model_names=[ENGINE_CONFIG["model"]])
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
     def __init__(self) -> None:
