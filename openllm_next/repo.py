@@ -113,6 +113,8 @@ def update():
                 run_command(cmd, cwd=repo_dir)
                 cmd = ["git", "reset", "--hard", f"origin/{branch}"]
                 run_command(cmd, cwd=repo_dir)
+                cmd = ["git", "clean", "-fdx"]
+                run_command(cmd, cwd=repo_dir)
             except:
                 shutil.rmtree(repo_dir, ignore_errors=True)
                 questionary.print(f"Failed to update repo {name}", style=ERROR_STYLE)

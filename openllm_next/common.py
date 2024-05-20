@@ -26,7 +26,7 @@ CONFIG_FILE = CLLAMA_HOME / "config.json"
 
 class Config(pydantic.BaseModel):
     repos: dict[str, str] = {
-        "default": "git+https://github.com/bojiang/bentovllm@main#subdirectory=bentoml"
+        "default": "git+https://github.com/bojiang/openllm-repo@main"
     }
     default_repo: str = "default"
 
