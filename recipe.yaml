@@ -17,12 +17,6 @@
     max_model_len: 4096
     dtype: half
   chat_template: phi-3
-  prompt:
-    head: ~
-    body: |-
-      <|user|>
-      {user_prompt}<|end|>
-      <|assistant|>
 "llama2:7b-chat-fp16":
   alias:
     - latest
@@ -40,14 +34,6 @@
     model: meta-llama/Llama-2-7b-chat-hf
     max_model_len: 1024
   chat_template: llama-2-chat
-  prompt:
-    head: ~
-    body: |-
-      <s>[INST] <<SYS>>
-      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
-      <</SYS>>
-      {user_prompt} [/INST] 
 "llama2:7b-chat-awq-4bit":
   alias:
     - 7b-chat-4bit
@@ -65,14 +51,6 @@
     quantization: awq
     enforce_eager: true
   chat_template: llama-2-chat
-  prompt:
-    head: ~
-    body: |-
-      <s>[INST] <<SYS>>
-      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
-      <</SYS>>
-      {user_prompt} [/INST] 
 "mistral:7b-instruct-awq-4bit":
   alias: []
   project: vllm-chat
@@ -90,13 +68,6 @@
     enforce_eager: true
     dtype: half
   chat_template: mistral-instruct
-  prompt:
-    head: ~
-    body: |-
-      <s>[INST]
-      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
-      {user_prompt} [/INST] 
 "mistral:7b-instruct-fp16":
   alias:
     - 7b
@@ -116,10 +87,3 @@
     enforce_eager: true
     dtype: half
   chat_template: mistral-instruct
-  prompt:
-    head: ~
-    body: |-
-      <s>[INST]
-      You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-      If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
-      {user_prompt} [/INST] 

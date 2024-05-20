@@ -14,7 +14,6 @@ from bento_constants import CONSTANT_YAML
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
 ENGINE_CONFIG = CONSTANTS["engine_config"]
-PROMPT_TEMPLATE = CONSTANTS["prompt"]
 CHAT_TEMPLATE = CONSTANTS["chat_template"]
 SERVICE_CONFIG = CONSTANTS["service_config"]
 
@@ -45,12 +44,13 @@ class VLLM:
             Ge(128),
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
+        stop: list[str] = [],
     ) -> AsyncGenerator[str, None]:
         from vllm import SamplingParams
 
-        SAMPLING_PARAM = SamplingParams(max_tokens=max_tokens)
-        prompt = (PROMPT_TEMPLATE["head"] or "") + PROMPT_TEMPLATE["body"].format(
-            user_prompt=prompt
+        SAMPLING_PARAM = SamplingParams(
+            max_tokens=max_tokens,
+            stop=stop,
         )
         stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
 

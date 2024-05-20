@@ -12,12 +12,6 @@ service_config:
   resources:
     gpu: 1
     gpu_type: nvidia-tesla-t4
-prompt:
-  head: ~
-  body: |-
-    <|user|>
-    {user_prompt}<|end|>
-    <|assistant|>
 chat_template: phi-3
 engine_config:
   model: microsoft/Phi-3-mini-4k-instruct
