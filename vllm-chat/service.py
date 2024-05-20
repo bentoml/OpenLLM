@@ -26,7 +26,10 @@ GEN_CONFIG_PATH = os.path.join(
 )
 
 
-@openai_endpoints(served_model_names=[ENGINE_CONFIG["model"]])
+@openai_endpoints(
+    served_model_names=[ENGINE_CONFIG["model"]],
+    chat_template_model_id=ENGINE_CONFIG["model"],
+)
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
     def __init__(self) -> None:
