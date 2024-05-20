@@ -6,6 +6,8 @@ include:
 - "*.py"
 - "config.yaml"
 - "bentovllm_openai/*.py"
+- "chat_templates/chat_templates/*.jinja"
+- "chat_templates/generation_configs/*.json"
 python:
   requirements_txt: "./requirements.txt"
   lock_packages: false

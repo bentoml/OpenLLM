@@ -16,6 +16,7 @@
     model: microsoft/Phi-3-mini-4k-instruct
     max_model_len: 4096
     dtype: half
+  chat_template: phi-3
   prompt:
     head: ~
     body: |-
@@ -38,6 +39,7 @@
   engine_config:
     model: meta-llama/Llama-2-7b-chat-hf
     max_model_len: 1024
+  chat_template: llama-2-chat
   prompt:
     head: ~
     body: |-
@@ -62,6 +64,7 @@
     max_model_len: 1024
     quantization: awq
     enforce_eager: true
+  chat_template: llama-2-chat
   prompt:
     head: ~
     body: |-
@@ -86,6 +89,7 @@
     quantization: awq
     enforce_eager: true
     dtype: half
+  chat_template: mistral-instruct
   prompt:
     head: ~
     body: |-
@@ -111,6 +115,7 @@
     max_model_len: 1024
     enforce_eager: true
     dtype: half
+  chat_template: mistral-instruct
   prompt:
     head: ~
     body: |-

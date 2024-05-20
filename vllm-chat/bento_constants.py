@@ -18,6 +18,7 @@ prompt:
     <|user|>
     {user_prompt}<|end|>
     <|assistant|>
+chat_template: phi-3
 engine_config:
   model: microsoft/Phi-3-mini-4k-instruct
   max_model_len: 4096
