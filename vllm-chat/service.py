@@ -30,7 +30,9 @@ class VLLM:
         self,
         prompt: str = "Explain superconductors like I'm five years old",
         max_tokens: Annotated[
-            int, Ge(128), Le(ENGINE_CONFIG["max_model_len"])
+            int,
+            Ge(128),
+            Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
     ) -> AsyncGenerator[str, None]:
         from vllm import SamplingParams
