@@ -1,3 +1,4 @@
+CONSTANT_YAML = """
 alias:
   - latest
   - 3.8b
@@ -11,14 +12,15 @@ service_config:
   resources:
     gpu: 1
     gpu_type: nvidia-tesla-t4
-engine_config:
-  model: microsoft/Phi-3-mini-4k-instruct
-  max_model_len: 4096
-  dtype: half
-  trust_remote_code: true
 prompt:
   head: ~
   body: |-
     <|user|>
     {user_prompt}<|end|>
     <|assistant|>
+engine_config:
+  model: microsoft/Phi-3-mini-4k-instruct
+  max_model_len: 4096
+  dtype: half
+  trust_remote_code: true
+"""

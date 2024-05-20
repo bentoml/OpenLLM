@@ -14,6 +14,13 @@ with open("recipe.yaml") as f:
 BENTOML_HOME = pathlib.Path(os.environ["BENTOML_HOME"])
 
 
+CONSTANT_YAML_TMPL = r"""
+CONSTANT_YAML = '''
+{}
+'''
+"""
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         specified_model = sys.argv[1]
@@ -30,8 +37,10 @@ if __name__ == "__main__":
         with tempfile.TemporaryDirectory() as tempdir:
             tempdir = pathlib.Path(tempdir)
             shutil.copytree(project, tempdir, dirs_exist_ok=True)
-            with open(tempdir / "config.yaml", "w") as f:
-                yaml.dump(config, f)
+
+            with open(tempdir / "bento_constants.py", "w") as f:
+                f.write(CONSTANT_YAML_TMPL.format(yaml.dump(config)))
+
             subprocess.run(
                 ["bentoml", "build", str(tempdir), "--version", model_version],
                 check=True,
@@ -44,8 +53,14 @@ if __name__ == "__main__":
 
             # link alias
             for alias in config.get("alias", []):
-                ALIAS_PATH = BENTOML_HOME / "bentos" / model_repo / alias
-                if ALIAS_PATH.exists():
-                    continue
-                with open(ALIAS_PATH, "w") as f:
-                    f.write(model_name)
+                if alias == "latest":
+                    ALIAS_PATH = BENTOML_HOME / "bentos" / model_repo / alias
+                    if ALIAS_PATH.exists():
+                        continue
+                    with open(ALIAS_PATH, "w") as f:
+                        f.write(model_name)
+                else:  # bentoml currently only support latest alias, copy to other alias
+                    shutil.copytree(
+                        BENTOML_HOME / "bentos" / model_repo / model_version,
+                        BENTOML_HOME / "bentos" / model_repo / alias,
+                    )

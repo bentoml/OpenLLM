@@ -6,13 +6,14 @@ import bentoml
 from annotated_types import Ge, Le
 from bentovllm_openai.utils import openai_endpoints
 import yaml
+from bento_constants import CONSTANT_YAML
 
 
-CONFIG = yaml.safe_load(open("config.yaml"))
+CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
-ENGINE_CONFIG = CONFIG["engine_config"]
-PROMPT_TEMPLATE = CONFIG["prompt"]
-SERVICE_CONFIG = CONFIG["service_config"]
+ENGINE_CONFIG = CONSTANTS["engine_config"]
+PROMPT_TEMPLATE = CONSTANTS["prompt"]
+SERVICE_CONFIG = CONSTANTS["service_config"]
 
 
 @openai_endpoints(served_model_names=[ENGINE_CONFIG["model"]])
