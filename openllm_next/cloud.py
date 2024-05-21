@@ -12,23 +12,23 @@ app = typer.Typer()
 def _ensure_cloud_context():
     cmd = ["bentoml", "cloud", "current-context"]
     try:
-        result = subprocess.check_output(cmd)
+        result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
         context = json.loads(result)
         questionary.print(
             f"BentoCloud already logged in: {context['endpoint']}", style="green"
         )
     except subprocess.CalledProcessError:
         action = questionary.select(
-            "bento cloud not logged in",
+            "BentoCloud not logged in",
             choices=[
                 "I have a BentoCloud account",
-                "Get an account in two minutes",
+                "get an account in two minutes",
             ],
         ).ask()
         if action is None:
             questionary.print("Cancelled", style=ERROR_STYLE)
             raise typer.Exit(1)
-        elif action == "Get an account in two minutes":
+        elif action == "get an account in two minutes":
             questionary.print(
                 "Please visit https://cloud.bentoml.com to get your token",
                 style="yellow",
