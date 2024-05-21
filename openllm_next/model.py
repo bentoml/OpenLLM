@@ -1,4 +1,5 @@
 import typer
+import os
 import collections
 
 import yaml
@@ -84,10 +85,36 @@ def get_deploy_cmd(model: str):
     if not bento_info:
         questionary.print(f"Model {model} not found", style=ERROR_STYLE)
         raise typer.Exit(1)
+
     cmd = ["bentoml", "deploy", model]
     env = {
         "BENTOML_HOME": bento_info["model"]["repo"]["path"] + "/bentoml",
     }
+
+    required_envs = bento_info["bento_yaml"].get("envs", [])
+    required_env_names = [env["name"] for env in required_envs if "name" in env]
+    if required_env_names:
+        questionary.print(
+            f"This model requires the following environment variables to run: {repr(required_env_names)}",
+            style="yellow",
+        )
+
+    for env_info in bento_info["bento_yaml"].get("envs", []):
+        if "name" not in env_info:
+            continue
+        if os.environ.get(env_info["name"]):
+            default = os.environ[env_info["name"]]
+        elif "value" in env_info:
+            default = env_info["value"]
+        else:
+            default = ""
+        value = questionary.text(
+            f"{env_info['name']}:",
+            default=default,
+        ).ask()
+        if value is None:
+            raise typer.Exit(1)
+        cmd += ["--env", f"{env_info['name']}={value}"]
     return cmd, env, None
 
 

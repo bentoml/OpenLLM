@@ -4,7 +4,7 @@ import subprocess
 import asyncio
 import questionary
 from openllm_next.common import ERROR_STYLE, run_command
-from openllm_next.model import get_bento_info, get_deploy_cmd
+from openllm_next.model import get_deploy_cmd
 
 app = typer.Typer()
 
@@ -14,32 +14,32 @@ def _ensure_cloud_context():
     try:
         result = subprocess.check_output(cmd)
         context = json.loads(result)
-        questionary.print(f"already logged in to {context['endpoint']}", style="green")
+        questionary.print(
+            f"BentoCloud already logged in: {context['endpoint']}", style="green"
+        )
     except subprocess.CalledProcessError:
         action = questionary.select(
             "bento cloud not logged in",
             choices=[
-                "I have a token",
-                "Get a token in two minutes",
+                "I have a BentoCloud account",
+                "Get an account in two minutes",
             ],
         ).ask()
         if action is None:
             questionary.print("Cancelled", style=ERROR_STYLE)
             raise typer.Exit(1)
-        elif action == "Get a token in two minutes":
+        elif action == "Get an account in two minutes":
             questionary.print(
                 "Please visit https://cloud.bentoml.com to get your token",
-                style="green",
+                style="yellow",
             )
-        token = questionary.text("Enter your token: (like cniluaxxxxxxxx)").ask()
+        token = questionary.text("Enter your token: (similar to cniluaxxxxxxxx)").ask()
         if token is None:
-            questionary.print("Cancelled", style=ERROR_STYLE)
             raise typer.Exit(1)
         endpoint = questionary.text(
-            "Enter the endpoint: (like https://my-org.cloud.bentoml.com)"
+            "Enter the endpoint: (similar to https://my-org.cloud.bentoml.com)"
         ).ask()
         if endpoint is None:
-            questionary.print("Cancelled", style=ERROR_STYLE)
             raise typer.Exit(1)
         cmd = [
             "bentoml",
