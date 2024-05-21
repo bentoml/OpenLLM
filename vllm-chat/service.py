@@ -15,19 +15,18 @@ from bento_constants import CONSTANT_YAML
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
 ENGINE_CONFIG = CONSTANTS["engine_config"]
-CHAT_TEMPLATE = CONSTANTS["chat_template"]
 SERVICE_CONFIG = CONSTANTS["service_config"]
 
 
 @functools.lru_cache(maxsize=1)
-def _get_gen_config():
+def _get_gen_config(community_chat_template: str) -> dict:
     chat_template_path = os.path.join(
         os.path.dirname(__file__), "chat_templates", "chat_templates"
     )
     config_path = os.path.join(
         os.path.dirname(__file__), "chat_templates", "generation_configs"
     )
-    with open(os.path.join(config_path, f"{CHAT_TEMPLATE}.json")) as f:
+    with open(os.path.join(config_path, f"{community_chat_template}.json")) as f:
         gen_config = json.load(f)
     chat_template_file = gen_config["chat_template"].split("/")[-1]
     with open(os.path.join(chat_template_path, chat_template_file)) as f:
@@ -97,28 +96,35 @@ class VLLM:
         """
         from vllm import SamplingParams
 
-        gen_config = _get_gen_config()
+        if CONSTANTS.get("chat_template"):  # community chat template
+            gen_config = _get_gen_config(CONSTANTS["chat_template"])
+            if not stop:
+                if gen_config["stop_str"]:
+                    stop = [gen_config["stop_str"]]
+                else:
+                    stop = []
+            system_prompt = gen_config["system_prompt"]
+            self.tokenizer.chat_template = gen_config["template"]
+        else:
+            if not stop:
+                if self.tokenizer.eos_token is not None:
+                    stop = [self.tokenizer.eos_token]
+                else:
+                    stop = []
+            system_prompt = None
 
         # normalize inputs
         if stop_token_ids is None:
-            stop_token_ids = gen_config["stop_token_ids"]
-        if stop == "" or stop is None:
-            if gen_config["stop_str"] is None:
-                stop = []
-            else:
-                stop = [gen_config["stop_str"]]
+            stop_token_ids = []
 
         SAMPLING_PARAM = SamplingParams(
             max_tokens=max_tokens,
             stop_token_ids=stop_token_ids,
             stop=stop,
         )
-        if gen_config["system_prompt"] and messages[0].get("role") != "system":
-            messages = [
-                dict(role="system", content=gen_config["system_prompt"])
-            ] + messages
+        if system_prompt and messages[0].get("role") != "system":
+            messages = [dict(role="system", content=system_prompt)] + messages
 
-        self.tokenizer.chat_template = gen_config["template"]
         prompt = self.tokenizer.apply_chat_template(
             messages,
             tokenize=False,

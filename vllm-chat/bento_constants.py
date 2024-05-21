@@ -4,7 +4,7 @@ alias:
   - 3.8b
   - instruct
   - mini
-template: vllm-chat
+project: vllm-chat
 service_config:
   name: phi3
   traffic:
