@@ -27,7 +27,7 @@ OpenLLM helps developers **run any open-source LLMs**, such as Llama 2 and Mistr
 - 🚂 Support a wide range of open-source LLMs including LLMs fine-tuned with your own data
 - ⛓️ OpenAI compatible API endpoints for seamless transition from your LLM app to open-source LLMs
 - 🔥 State-of-the-art serving and inference performance
-- 🎯 Simplified cloud deployment via [BentoML](www.bentoml.com)
+- 🎯 Simplified cloud deployment via [BentoML](https://www.bentoml.com)
 
 
 <!-- hatch-fancy-pypi-readme intro stop -->
