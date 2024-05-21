@@ -1,4 +1,5 @@
 import shlex
+import sys
 import os
 from typing_extensions import TypedDict
 import pydantic
@@ -63,13 +64,16 @@ class BentoInfo(TypedDict):
     bento_yaml: dict
 
 
-def run_command(cmd, cwd=None, env=None, copy_env=True, bg=False):
+def run_command(
+    cmd,
+    cwd=None,
+    env=None,
+    copy_env=True,
+    silent=False,
+    check=True,
+) -> subprocess.CompletedProcess | subprocess.Popen | None:
     env = env or {}
-    if copy_env:
-        merged_env = {**os.environ, **env}
-    else:
-        merged_env = env
-    if not bg:
+    if not silent:
         questionary.print("\n")
         if cwd:
             questionary.print(f"$ cd {cwd}", style="bold")
@@ -77,17 +81,24 @@ def run_command(cmd, cwd=None, env=None, copy_env=True, bg=False):
             for k, v in env.items():
                 questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
         questionary.print(f"$ {' '.join(cmd)}", style="bold")
+    if copy_env:
+        env = {**os.environ, **env}
+    if cmd and cmd[0] == "bentoml":
+        cmd = [sys.executable, "-m", "bentoml"] + cmd[1:]
+    if cmd and cmd[0] == "python":
+        cmd = [sys.executable] + cmd[1:]
     try:
-        if bg:
-            return subprocess.Popen(
+        if silent:
+            return subprocess.run(
                 cmd,
                 cwd=cwd,
-                env=merged_env,
+                env=env,
+                check=check,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
         else:
-            subprocess.run(cmd, cwd=cwd, env=merged_env, check=True)
+            return subprocess.run(cmd, cwd=cwd, env=env, check=check)
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
-        return
+        return None

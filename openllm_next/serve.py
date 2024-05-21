@@ -1,34 +1,29 @@
 import typer
+import subprocess
 import asyncio
+import os
 import questionary
-from openllm_next.common import ERROR_STYLE, run_command
-from openllm_next.model import _get_bento_info
+from openllm_next.common import run_command
+from openllm_next.model import get_serve_cmd
 
 app = typer.Typer()
 
 
-def _serve_model(model: str, bg: bool = False):
-    if ":" not in model:
-        model = f"{model}:latest"
-    bento_info = _get_bento_info(model)
-    if not bento_info:
-        questionary.print(f"Model {model} not found", style=ERROR_STYLE)
-        return
-    cmd = ["bentoml", "serve", model]
-    env = {
-        "BENTOML_HOME": bento_info["model"]["repo"]["path"] + "/bentoml",
-    }
-    return run_command(cmd, env=env, bg=bg)
-
-
 @app.command()
 def serve(model: str):
-    _serve_model(model)
+    cmd, env, cwd = get_serve_cmd(model)
+    run_command(cmd, env=env, cwd=cwd)
 
 
 async def _run_model(model: str, timeout: int = 600):
-    server_proc = _serve_model(model, bg=True)
-    assert server_proc is not None
+    cmd, env, cwd = get_serve_cmd(model)
+    server_proc = subprocess.Popen(
+        cmd,
+        env={**os.environ, **env},
+        cwd=cwd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
     import bentoml
 
@@ -64,6 +59,8 @@ async def _run_model(model: str, timeout: int = 600):
 
             except KeyboardInterrupt:
                 break
+    except asyncio.CancelledError:
+        pass
     finally:
         questionary.print("\nStopping model server...", style="green")
         server_proc.terminate()

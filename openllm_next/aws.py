@@ -210,7 +210,7 @@ def model_list():
     pyaml.pprint(_load_model_map())
 
 
-def _get_bento_info(tag):
+def get_bento_info(tag):
     model_map = _load_model_map()
     bento, version = tag.split(":")
     if bento not in model_map or version not in model_map[bento]:
@@ -227,7 +227,7 @@ def _get_bento_info(tag):
 
 @model_app.command(name="get")
 def model_get(tag: str):
-    bento_info = _get_bento_info(tag)
+    bento_info = get_bento_info(tag)
     if bento_info:
         pyaml.pprint(bento_info)
 
@@ -424,7 +424,7 @@ def serve(model: str, tag: str = "latest", force_rebuild: bool = False):
             shutil.rmtree(repo_dir, ignore_errors=True)
             raise
 
-    bento_info = _get_bento_info(f"{model}:{tag}", bento_project_dir)
+    bento_info = get_bento_info(f"{model}:{tag}", bento_project_dir)
 
     if len(bento_info["services"]) != 1:
         raise ValueError("Only support one service currently")

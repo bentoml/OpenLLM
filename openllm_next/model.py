@@ -63,7 +63,35 @@ def list():
     pyaml.pprint(_load_model_map())
 
 
-def _get_bento_info(tag):
+def get_serve_cmd(model: str):
+    if ":" not in model:
+        model = f"{model}:latest"
+    bento_info = get_bento_info(model)
+    if not bento_info:
+        questionary.print(f"Model {model} not found", style=ERROR_STYLE)
+        raise typer.Exit(1)
+    cmd = ["bentoml", "serve", model]
+    env = {
+        "BENTOML_HOME": bento_info["model"]["repo"]["path"] + "/bentoml",
+    }
+    return cmd, env, None
+
+
+def get_deploy_cmd(model: str):
+    if ":" not in model:
+        model = f"{model}:latest"
+    bento_info = get_bento_info(model)
+    if not bento_info:
+        questionary.print(f"Model {model} not found", style=ERROR_STYLE)
+        raise typer.Exit(1)
+    cmd = ["bentoml", "deploy", model]
+    env = {
+        "BENTOML_HOME": bento_info["model"]["repo"]["path"] + "/bentoml",
+    }
+    return cmd, env, None
+
+
+def get_bento_info(tag):
     model_map = _load_model_map()
     bento, version = tag.split(":")
     if bento not in model_map or version not in model_map[bento]:
@@ -82,6 +110,6 @@ def _get_bento_info(tag):
 
 @app.command()
 def get(tag: str):
-    bento_info = _get_bento_info(tag)
+    bento_info = get_bento_info(tag)
     if bento_info:
         pyaml.pprint(bento_info)
