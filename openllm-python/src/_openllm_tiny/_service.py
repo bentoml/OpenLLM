@@ -70,7 +70,7 @@ class LLMService:
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig, description='LLM Config'),
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig.model_dump(), description='LLM Config'),
   ) -> core.GenerationOutput:
     if stop:
       llm_config.update(stop=stop)
@@ -89,7 +89,7 @@ class LLMService:
     stop: t.Optional[t.List[str]] = None,
     stop_token_ids: t.Optional[t.List[int]] = None,
     request_id: t.Optional[str] = None,
-    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig, description='LLM Config'),
+    llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig.model_dump(), description='LLM Config'),
   ) -> t.AsyncGenerator[str, None]:
     if stop:
       llm_config.update(stop=stop)

@@ -211,12 +211,14 @@ def shared_decorator(fn):
 @cli.command(name='start')
 @shared_decorator
 @click.option('--timeout', type=int, default=360000, help='Timeout for the model executor in seconds')
+@click.option('--port', type=int, default=3000, help='Port to serve the LLM. Default to 3000.')
 @optimization_decorator
 def start_command(
   model_id: str,
   model_version: str | None,
   model_tag: str | None,
   timeout: int,
+  port: int,
   device: t.Tuple[str, ...],
   quantize: LiteralQuantise | None,
   serialisation: LiteralSerialisation | None,
@@ -283,7 +285,9 @@ def start_command(
   if sys.path[0] != working_dir:
     sys.path.insert(0, working_dir)
   load('.', working_dir=working_dir).inject_config()
-  serve_http('.', working_dir=working_dir, reload=check_bool_env('RELOAD', default=False), development_mode=DEBUG)
+  serve_http(
+    '.', working_dir=working_dir, reload=check_bool_env('RELOAD', default=False), development_mode=DEBUG, port=port
+  )
 
 
 def construct_python_options(llm_config, llm_fs):
