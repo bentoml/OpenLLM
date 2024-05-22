@@ -68,7 +68,7 @@ repos:
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.2.0
+    rev: v9.3.0
     hooks:
       - id: eslint
         verbose: true
