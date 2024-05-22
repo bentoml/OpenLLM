@@ -58,7 +58,7 @@ if __name__ == "__main__":
                     if ALIAS_PATH.exists():
                         continue
                     with open(ALIAS_PATH, "w") as f:
-                        f.write(model_name)
+                        f.write(model_version)
                 else:  # bentoml currently only support latest alias, copy to other alias
                     shutil.copytree(
                         BENTOML_HOME / "bentos" / model_repo / model_version,

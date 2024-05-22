@@ -59,14 +59,12 @@ class VLLM:
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
         stop: list[str] = [],
-        **kwargs,
     ) -> AsyncGenerator[str, None]:
         from vllm import SamplingParams
 
         SAMPLING_PARAM = SamplingParams(
             max_tokens=max_tokens,
             stop=stop,
-            **kwargs,
         )
         stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
 
