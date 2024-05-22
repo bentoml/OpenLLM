@@ -1,8 +1,10 @@
-import typer
+import asyncio
 import json
 import subprocess
-import asyncio
+
 import questionary
+import typer
+
 from openllm_next.common import ERROR_STYLE, run_command
 from openllm_next.model import get_deploy_cmd
 

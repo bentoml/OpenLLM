@@ -1,20 +1,38 @@
-import typer
 import os
+import typing
 
-import questionary
 import pyaml
-from openllm_next.common import (
-    ERROR_STYLE,
-    load_config,
-    BentoInfo,
-)
-from openllm_next.repo import parse_repo_url
+import questionary
+import typer
 
+from openllm_next.common import ERROR_STYLE, VERBOSE_LEVEL, BentoInfo, load_config
+from openllm_next.repo import parse_repo_url
 
 app = typer.Typer()
 
 
-def list_bento(tag: str | None = None) -> list[BentoInfo]:
+@app.command()
+def get(tag: str):
+    bento_info = pick_bento(tag)
+    if bento_info:
+        with VERBOSE_LEVEL.patch(1):
+            pyaml.pprint(
+                bento_info,
+                sort_dicts=False,
+                sort_keys=False,
+            )
+
+
+@app.command()
+def list():
+    pyaml.pprint(
+        list_bento(),
+        sort_dicts=False,
+        sort_keys=False,
+    )
+
+
+def list_bento(tag: str | None = None) -> typing.List[BentoInfo]:
     if tag is None:
         glob_pattern = "bentoml/bentos/*/*"
     elif ":" in tag:
@@ -45,6 +63,7 @@ def list_bento(tag: str | None = None) -> list[BentoInfo]:
                 model = None
             if model:
                 model_list.append(model)
+    model_list.sort(key=lambda x: x.tag)
     return model_list
 
 
@@ -62,15 +81,6 @@ def pick_bento(tag) -> BentoInfo:
     if model is None:
         raise typer.Exit(1)
     return model
-
-
-@app.command()
-def list():
-    pyaml.pprint(
-        list_bento(),
-        sort_dicts=False,
-        sort_keys=False,
-    )
 
 
 def get_serve_cmd(tag: str):
@@ -119,14 +129,3 @@ def get_deploy_cmd(tag: str):
             raise typer.Exit(1)
         cmd += ["--env", f"{env_info['name']}={value}"]
     return cmd, env, None
-
-
-@app.command()
-def get(tag: str):
-    bento_info = pick_bento(tag)
-    if bento_info:
-        pyaml.pprint(
-            bento_info.tolist(),
-            sort_dicts=False,
-            sort_keys=False,
-        )

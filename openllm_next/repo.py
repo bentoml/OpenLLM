@@ -1,88 +1,32 @@
+import re
+import shutil
+import subprocess
+
+import pyaml
+import questionary
 import typer
 
-import shutil
-import questionary
-import re
-import subprocess
-import pyaml
 from openllm_next.common import (
     ERROR_STYLE,
-    SUCCESS_STYLE,
     REPO_DIR,
-    load_config,
-    save_config,
-    run_command,
+    SUCCESS_STYLE,
     RepoInfo,
+    load_config,
+    run_command,
+    save_config,
 )
-
 
 app = typer.Typer()
-
-
-GIT_REPO_RE = re.compile(
-    r"git\+https://(?P<server>.+)/(?P<owner>.+)/(?P<repo>.+?)(@(?P<branch>.+))?$"
-)
 
 
 @app.command()
 def list():
     config = load_config()
     pyaml.pprint(
-        config.repos,
+        [parse_repo_url(repo, name) for name, repo in config.repos.items()],
         sort_dicts=False,
         sort_keys=False,
     )
-
-
-def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
-    """
-    parse the git repo url to server, owner, repo name, branch
-    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
-    ('github.com', 'bojiang', 'bentovllm', 'main')
-
-    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm")
-    ('github.com', 'bojiang', 'bentovllm', 'main')
-    """
-    match = GIT_REPO_RE.match(repo_url)
-    if not match:
-        raise ValueError(f"Invalid git repo url: {repo_url}")
-    server = match.group("server")
-    owner = match.group("owner")
-    repo = match.group("repo")
-    branch = match.group("branch") or "main"
-    path = REPO_DIR / server / owner / repo
-    return RepoInfo(
-        name=repo if repo_name is None else repo_name,
-        url=repo_url,
-        server=server,
-        owner=owner,
-        repo=repo,
-        branch=branch,
-        path=path,
-    )
-
-
-@app.command()
-def add(name: str, repo: str):
-    name = name.lower()
-    if not name.isidentifier():
-        questionary.print(
-            f"Invalid repo name: {name}, should only contain letters, numbers and underscores",
-            style=ERROR_STYLE,
-        )
-        return
-
-    config = load_config()
-    if name in config.repos:
-        override = questionary.confirm(
-            f"Repo {name} already exists({config.repos[name]}), override?"
-        ).ask()
-        if not override:
-            return
-
-    config.repos[name] = repo
-    save_config(config)
-    questionary.print(f"Repo {name} added", style=SUCCESS_STYLE)
 
 
 @app.command()
@@ -139,6 +83,62 @@ def update():
             shutil.rmtree(c, ignore_errors=True)
             questionary.print(f"Removed unused repo cache {c}")
     questionary.print("Repos updated", style=SUCCESS_STYLE)
+
+
+GIT_REPO_RE = re.compile(
+    r"git\+https://(?P<server>.+)/(?P<owner>.+)/(?P<repo>.+?)(@(?P<branch>.+))?$"
+)
+
+
+def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
+    """
+    parse the git repo url to server, owner, repo name, branch
+    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
+    ('github.com', 'bojiang', 'bentovllm', 'main')
+
+    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm")
+    ('github.com', 'bojiang', 'bentovllm', 'main')
+    """
+    match = GIT_REPO_RE.match(repo_url)
+    if not match:
+        raise ValueError(f"Invalid git repo url: {repo_url}")
+    server = match.group("server")
+    owner = match.group("owner")
+    repo = match.group("repo")
+    branch = match.group("branch") or "main"
+    path = REPO_DIR / server / owner / repo
+    return RepoInfo(
+        name=repo if repo_name is None else repo_name,
+        url=repo_url,
+        server=server,
+        owner=owner,
+        repo=repo,
+        branch=branch,
+        path=path,
+    )
+
+
+@app.command()
+def add(name: str, repo: str):
+    name = name.lower()
+    if not name.isidentifier():
+        questionary.print(
+            f"Invalid repo name: {name}, should only contain letters, numbers and underscores",
+            style=ERROR_STYLE,
+        )
+        return
+
+    config = load_config()
+    if name in config.repos:
+        override = questionary.confirm(
+            f"Repo {name} already exists({config.repos[name]}), override?"
+        ).ask()
+        if not override:
+            return
+
+    config.repos[name] = repo
+    save_config(config)
+    questionary.print(f"Repo {name} added", style=SUCCESS_STYLE)
 
 
 if __name__ == "__main__":

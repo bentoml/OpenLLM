@@ -1,14 +1,14 @@
-import sys
 import functools
-import os
-import typing
-from types import SimpleNamespace
 import json
-from contextlib import contextmanager
-import questionary
-import subprocess
+import os
 import pathlib
+import subprocess
+import sys
+import typing
+from contextlib import contextmanager
+from types import SimpleNamespace
 
+import questionary
 
 ERROR_STYLE = "red"
 SUCCESS_STYLE = "green"
@@ -41,6 +41,14 @@ class ContextVar(typing.Generic[T]):
 
     def set(self, value):
         self._stack.append(value)
+
+    @contextmanager
+    def patch(self, value):
+        self._stack.append(value)
+        try:
+            yield
+        finally:
+            self._stack.pop()
 
 
 VERBOSE_LEVEL = ContextVar(0)
@@ -76,12 +84,18 @@ class RepoInfo(SimpleNamespace):
 
     def tolist(self):
         if VERBOSE_LEVEL.get() <= 0:
-            return self.name
+            return f"{self.name} ({self.url})"
+        if VERBOSE_LEVEL.get() <= 1:
+            return dict(
+                name=self.name,
+                url=self.url,
+                path=str(self.path),
+            )
         if VERBOSE_LEVEL.get() <= 2:
             return dict(
                 name=self.name,
-                path=str(self.path),
                 url=self.url,
+                path=str(self.path),
                 server=self.server,
                 owner=self.owner,
                 repo=self.repo,
@@ -135,6 +149,8 @@ class BentoInfo(SimpleNamespace):
     def tolist(self):
         verbose = VERBOSE_LEVEL.get()
         if verbose <= 0:
+            return str(self)
+        if verbose <= 1:
             return dict(
                 tag=self.tag,
                 repo=self.repo.tolist(),
@@ -168,7 +184,7 @@ def run_command(
         if env:
             for k, v in env.items():
                 questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
-        questionary.print(f"> {' '.join(cmd)}", style="bold")
+        questionary.print(f"$ {' '.join(cmd)}", style="bold")
     if copy_env:
         env = {**os.environ, **env}
     if cmd and cmd[0] == "bentoml":

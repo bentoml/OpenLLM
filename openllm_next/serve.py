@@ -1,8 +1,10 @@
-import typer
-import subprocess
 import asyncio
 import os
+import subprocess
+
 import questionary
+import typer
+
 from openllm_next.common import run_command
 from openllm_next.model import get_serve_cmd
 
