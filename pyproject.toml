@@ -9,13 +9,14 @@ description = "A description of your package."
 authors = [{name = "oasiszero", email = "oasis0.com@gmail.com"}]
 license = {file = "LICENSE"}
 dependencies = [
-    "typer",
     "bentoml",
-    "pyaml",
-    "fastapi",
+    "typer",
     "questionary",
+    "pyaml",
     "psutil",
     "pathlib"
+    "pip_requirements_parser",
+    "venv",
 ]
 
 [tool.typer]

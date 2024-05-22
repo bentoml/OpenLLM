@@ -1,4 +1,5 @@
 import typer
+import pathlib
 
 import shutil
 import questionary
@@ -12,6 +13,7 @@ from openllm_next.common import (
     load_config,
     save_config,
     run_command,
+    RepoInfo,
 )
 
 
@@ -29,7 +31,7 @@ def list():
     pyaml.pprint(config.repos)
 
 
-def parse_repo_url(repo_url):
+def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
     """
     parse the git repo url to server, owner, repo name, branch
     >>> parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
@@ -41,11 +43,19 @@ def parse_repo_url(repo_url):
     match = GIT_REPO_RE.match(repo_url)
     if not match:
         raise ValueError(f"Invalid git repo url: {repo_url}")
-    return (
-        match.group("server"),
-        match.group("owner"),
-        match.group("repo"),
-        match.group("branch") or "main",
+    server = match.group("server")
+    owner = match.group("owner")
+    repo = match.group("repo")
+    branch = match.group("branch") or "main"
+    cache_path = REPO_DIR / server / owner / repo
+    return RepoInfo(
+        name=repo if repo_name is None else repo_name,
+        url=repo_url,
+        server=server,
+        owner=owner,
+        repo=repo,
+        branch=branch,
+        cache_path=cache_path,
     )
 
 
@@ -88,40 +98,39 @@ def remove(name: str):
 def update():
     config = load_config()
     repos_in_use = set()
-    for name, repo in config.repos.items():
-        server, owner, repo_name, branch = parse_repo_url(repo)
-        repos_in_use.add((server, owner, repo_name))
-        repo_dir = REPO_DIR / server / owner / repo_name
-        if not repo_dir.exists():
-            repo_dir.parent.mkdir(parents=True, exist_ok=True)
+    for repo_name, repo in config.repos.items():
+        repo = parse_repo_url(repo, repo_name)
+        repos_in_use.add((repo.server, repo.owner, repo.repo))
+        if not repo.cache_path.exists():
+            repo.cache_path.parent.mkdir(parents=True, exist_ok=True)
             try:
                 cmd = [
                     "git",
                     "clone",
                     "--branch",
-                    branch,
-                    f"https://{server}/{owner}/{repo_name}.git",
-                    str(repo_dir),
+                    repo.branch,
+                    f"https://{repo.server}/{repo.owner}/{repo.repo}.git",
+                    str(repo.cache_path),
                 ]
                 run_command(cmd)
             except subprocess.CalledProcessError:
-                shutil.rmtree(repo_dir, ignore_errors=True)
-                questionary.print(f"Failed to clone repo {name}", style=ERROR_STYLE)
+                shutil.rmtree(repo.cache_path, ignore_errors=True)
+                questionary.print(f"Failed to clone repo {repo.name}", style=ERROR_STYLE)
         else:
             try:
-                cmd = ["git", "fetch", "origin", branch]
-                run_command(cmd, cwd=repo_dir)
-                cmd = ["git", "reset", "--hard", f"origin/{branch}"]
-                run_command(cmd, cwd=repo_dir)
+                cmd = ["git", "fetch", "origin", repo.branch]
+                run_command(cmd, cwd=repo.cache_path)
+                cmd = ["git", "reset", "--hard", f"origin/{repo.branch}"]
+                run_command(cmd, cwd=repo.cache_path)
                 cmd = ["git", "clean", "-fdx"]
-                run_command(cmd, cwd=repo_dir)
+                run_command(cmd, cwd=repo.cache_path)
             except:
-                shutil.rmtree(repo_dir, ignore_errors=True)
-                questionary.print(f"Failed to update repo {name}", style=ERROR_STYLE)
-    for repo_dir in REPO_DIR.glob("*/*/*"):
-        if tuple(repo_dir.parts[-3:]) not in repos_in_use:
-            shutil.rmtree(repo_dir, ignore_errors=True)
-            questionary.print(f"Removed unused repo {repo_dir}")
+                shutil.rmtree(repo.cache_path, ignore_errors=True)
+                questionary.print(f"Failed to update repo {repo.name}", style=ERROR_STYLE)
+    for c in REPO_DIR.glob("*/*/*"):
+        if tuple(c.parts[-3:]) not in repos_in_use:
+            shutil.rmtree(c, ignore_errors=True)
+            questionary.print(f"Removed unused repo cache {c}")
     questionary.print("Repos updated", style=SUCCESS_STYLE)
 
 

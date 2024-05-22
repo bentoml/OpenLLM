@@ -3,6 +3,7 @@ from openllm_next.model import app as model_app
 from openllm_next.repo import app as repo_app
 from openllm_next.serve import serve as local_serve, run as local_run
 from openllm_next.cloud import app as cloud_app
+from openllm_next.common import VERBOSE_LEVEL
 
 
 app = typer.Typer()
@@ -22,5 +23,11 @@ def run(model: str):
     local_run(model)
 
 
+def main_callback(verbose: int = 0):
+    if verbose:
+        VERBOSE_LEVEL.set(verbose)
+
+
 if __name__ == "__main__":
+    app.callback()(main_callback)
     app()
