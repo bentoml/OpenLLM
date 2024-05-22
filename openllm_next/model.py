@@ -1,15 +1,11 @@
 import typer
 import os
-import collections
 
-import yaml
 import questionary
 import pyaml
-import pathlib
 from openllm_next.common import (
     ERROR_STYLE,
     load_config,
-    ModelInfo,
     BentoInfo,
 )
 from openllm_next.repo import parse_repo_url
@@ -18,61 +14,87 @@ from openllm_next.repo import parse_repo_url
 app = typer.Typer()
 
 
-def _load_model_map() -> dict[str, dict[str, ModelInfo]]:
-    model_map = collections.defaultdict(dict)
+def list_bento(tag: str | None = None) -> list[BentoInfo]:
+    if tag is None:
+        glob_pattern = "bentoml/bentos/*/*"
+    elif ":" in tag:
+        repo_name, version = tag.split(":")
+        glob_pattern = f"bentoml/bentos/{repo_name}/{version}"
+    else:
+        glob_pattern = f"bentoml/bentos/{tag}/*"
+
+    model_list = []
     config = load_config()
     for repo_name, repo_url in config.repos.items():
         repo = parse_repo_url(repo_url, repo_name)
-        for path in repo.cache_path.glob("bentoml/bentos/*/*"):
-            if path.is_dir():
-                model_map[path.parent.name][path.name] = ModelInfo(
+        for path in repo.path.glob(glob_pattern):
+            if path.is_dir() and (path / "bento.yaml").exists():
+                model = BentoInfo(
                     repo=repo,
-                    path=str(path),
+                    path=path,
                 )
             elif path.is_file():
                 with open(path) as f:
                     origin_name = f.read().strip()
                 origin_path = path.parent / origin_name
-                model_map[path.parent.name][path.name] = ModelInfo(
+                model = BentoInfo(
                     repo=repo,
-                    path=str(origin_path),
+                    path=origin_path,
                 )
-    return model_map
+            else:
+                model = None
+            if model:
+                model_list.append(model)
+    return model_list
+
+
+def pick_bento(tag) -> BentoInfo:
+    model_list = list_bento(tag)
+    if len(model_list) == 0:
+        questionary.print("No models found", style=ERROR_STYLE)
+        raise typer.Exit(1)
+    if len(model_list) == 1:
+        return model_list[0]
+    model = questionary.select(
+        "Select a model",
+        choices=[questionary.Choice(str(model), value=model) for model in model_list],
+    ).ask()
+    if model is None:
+        raise typer.Exit(1)
+    return model
 
 
 @app.command()
 def list():
-    pyaml.pprint(_load_model_map())
+    pyaml.pprint(
+        list_bento(),
+        sort_dicts=False,
+        sort_keys=False,
+    )
 
 
-def get_serve_cmd(model: str):
-    if ":" not in model:
-        model = f"{model}:latest"
-    bento_info = get_bento_info(model)
-    if not bento_info:
-        questionary.print(f"Model {model} not found", style=ERROR_STYLE)
-        raise typer.Exit(1)
-    cmd = ["bentoml", "serve", model]
+def get_serve_cmd(tag: str):
+    if ":" not in tag:
+        tag = f"{tag}:latest"
+    bento = pick_bento(tag)
+    cmd = ["bentoml", "serve", bento.tag]
     env = {
-        "BENTOML_HOME": bento_info.model.repo.path + "/bentoml",
+        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
     }
     return cmd, env, None
 
 
-def get_deploy_cmd(model: str):
-    if ":" not in model:
-        model = f"{model}:latest"
-    bento_info = get_bento_info(model)
-    if not bento_info:
-        questionary.print(f"Model {model} not found", style=ERROR_STYLE)
-        raise typer.Exit(1)
+def get_deploy_cmd(tag: str):
+    if ":" not in tag:
+        tag = f"{tag}:latest"
+    bento = pick_bento(tag)
 
-    cmd = ["bentoml", "deploy", model]
+    cmd = ["bentoml", "deploy", bento.tag]
     env = {
-        "BENTOML_HOME": bento_info.model.repo.path + "/bentoml",
+        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
     }
 
-    required_envs = bento_info.bento_yaml.get("envs", [])
+    required_envs = bento.bento_yaml.get("envs", [])
     required_env_names = [env["name"] for env in required_envs if "name" in env]
     if required_env_names:
         questionary.print(
@@ -80,7 +102,7 @@ def get_deploy_cmd(model: str):
             style="yellow",
         )
 
-    for env_info in bento_info.bento_yaml.get("envs", []):
+    for env_info in bento.bento_yaml.get("envs", []):
         if "name" not in env_info:
             continue
         if os.environ.get(env_info["name"]):
@@ -99,25 +121,12 @@ def get_deploy_cmd(model: str):
     return cmd, env, None
 
 
-def get_bento_info(tag):
-    model_map = _load_model_map()
-    bento, version = tag.split(":")
-    if bento not in model_map or version not in model_map[bento]:
-        questionary.print(f"Model {tag} not found", style=ERROR_STYLE)
-        return
-    model_info = model_map[bento][version]
-    path = pathlib.Path(model_info.path)
-
-    bento_file = path / "bento.yaml"
-    bento_info = yaml.safe_load(bento_file.read_text())
-    return BentoInfo(
-        model=model_info,
-        bento_yaml=bento_info,
-    )
-
-
 @app.command()
 def get(tag: str):
-    bento_info = get_bento_info(tag)
+    bento_info = pick_bento(tag)
     if bento_info:
-        pyaml.pprint(bento_info)
+        pyaml.pprint(
+            bento_info.tolist(),
+            sort_dicts=False,
+            sort_keys=False,
+        )

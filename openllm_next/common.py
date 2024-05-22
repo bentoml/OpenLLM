@@ -1,4 +1,5 @@
 import sys
+import functools
 import os
 import typing
 from types import SimpleNamespace
@@ -26,6 +27,7 @@ CONFIG_FILE = CLLAMA_HOME / "config.json"
 
 
 T = typing.TypeVar("T")
+
 
 class ContextVar(typing.Generic[T]):
     def __init__(self, default: T):
@@ -65,7 +67,7 @@ def save_config(config):
 
 class RepoInfo(SimpleNamespace):
     name: str
-    cache_path: pathlib.Path
+    path: pathlib.Path
     url: str
     server: str
     owner: str
@@ -78,7 +80,7 @@ class RepoInfo(SimpleNamespace):
         if VERBOSE_LEVEL.get() <= 2:
             return dict(
                 name=self.name,
-                cache_path=str(self.cache_path),
+                path=str(self.path),
                 url=self.url,
                 server=self.server,
                 owner=self.owner,
@@ -87,30 +89,63 @@ class RepoInfo(SimpleNamespace):
             )
 
 
-class ModelInfo(SimpleNamespace):
-    repo: RepoInfo
-    path: str
-
-    def tolist(self):
-        if VERBOSE_LEVEL.get() <= 0:
-            return f"{self.repo.name}"
-        if VERBOSE_LEVEL.get() <= 2:
-            return dict(
-                repo=self.repo.tolist(),
-                path=self.path,
-            )
-
-
 class BentoInfo(SimpleNamespace):
-    model: ModelInfo
-    bento_yaml: dict
+    repo: RepoInfo
+    path: pathlib.Path
+
+    @property
+    def tag(self) -> str:
+        return f"{self.path.parent.name}:{self.path.name}"
+
+    @functools.cached_property
+    def bento_yaml(self) -> dict:
+        import yaml
+
+        bento_file = self.path / "bento.yaml"
+        return yaml.safe_load(bento_file.read_text())
+
+    @functools.cached_property
+    def pretty_yaml(self) -> dict:
+        def _pretty_routes(routes):
+            return {
+                route["route"]: {
+                    "input": {
+                        k: v["type"] for k, v in route["input"]["properties"].items()
+                    },
+                    "output": route["output"]["type"],
+                }
+                for route in routes
+            }
+
+        if len(self.bento_yaml["services"]) == 1:
+            pretty_yaml = {
+                "apis": _pretty_routes(self.bento_yaml["schema"]["routes"]),
+                "resources": self.bento_yaml["services"][0]["config"]["resources"],
+                "envs": self.bento_yaml["envs"],
+            }
+            return pretty_yaml
+        return self.bento_yaml
+
+    def __str__(self):
+        if self.repo.name == "default":
+            return f"{self.tag}"
+        else:
+            return f"{self.tag} ({self.repo.name})"
 
     def tolist(self):
-        if VERBOSE_LEVEL.get() <= 0:
-            return f"{self.model.repo.name}"
-        if VERBOSE_LEVEL.get() <= 2:
+        verbose = VERBOSE_LEVEL.get()
+        if verbose <= 0:
             return dict(
-                model=self.model.tolist(),
+                tag=self.tag,
+                repo=self.repo.tolist(),
+                path=str(self.path),
+                model_card=self.pretty_yaml,
+            )
+        if verbose <= 2:
+            return dict(
+                tag=self.tag,
+                repo=self.repo.tolist(),
+                path=str(self.path),
                 bento_yaml=self.bento_yaml,
             )
 

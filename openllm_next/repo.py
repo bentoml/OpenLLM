@@ -1,5 +1,4 @@
 import typer
-import pathlib
 
 import shutil
 import questionary
@@ -28,7 +27,11 @@ GIT_REPO_RE = re.compile(
 @app.command()
 def list():
     config = load_config()
-    pyaml.pprint(config.repos)
+    pyaml.pprint(
+        config.repos,
+        sort_dicts=False,
+        sort_keys=False,
+    )
 
 
 def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
@@ -47,7 +50,7 @@ def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
     owner = match.group("owner")
     repo = match.group("repo")
     branch = match.group("branch") or "main"
-    cache_path = REPO_DIR / server / owner / repo
+    path = REPO_DIR / server / owner / repo
     return RepoInfo(
         name=repo if repo_name is None else repo_name,
         url=repo_url,
@@ -55,7 +58,7 @@ def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
         owner=owner,
         repo=repo,
         branch=branch,
-        cache_path=cache_path,
+        path=path,
     )
 
 
@@ -79,7 +82,7 @@ def add(name: str, repo: str):
 
     config.repos[name] = repo
     save_config(config)
-    pyaml.pprint(config.repos)
+    questionary.print(f"Repo {name} added", style=SUCCESS_STYLE)
 
 
 @app.command()
@@ -91,7 +94,7 @@ def remove(name: str):
 
     del config.repos[name]
     save_config(config)
-    pyaml.pprint(config.repos)
+    questionary.print(f"Repo {name} removed", style=SUCCESS_STYLE)
 
 
 @app.command()
@@ -101,8 +104,8 @@ def update():
     for repo_name, repo in config.repos.items():
         repo = parse_repo_url(repo, repo_name)
         repos_in_use.add((repo.server, repo.owner, repo.repo))
-        if not repo.cache_path.exists():
-            repo.cache_path.parent.mkdir(parents=True, exist_ok=True)
+        if not repo.path.exists():
+            repo.path.parent.mkdir(parents=True, exist_ok=True)
             try:
                 cmd = [
                     "git",
@@ -110,23 +113,27 @@ def update():
                     "--branch",
                     repo.branch,
                     f"https://{repo.server}/{repo.owner}/{repo.repo}.git",
-                    str(repo.cache_path),
+                    str(repo.path),
                 ]
                 run_command(cmd)
             except subprocess.CalledProcessError:
-                shutil.rmtree(repo.cache_path, ignore_errors=True)
-                questionary.print(f"Failed to clone repo {repo.name}", style=ERROR_STYLE)
+                shutil.rmtree(repo.path, ignore_errors=True)
+                questionary.print(
+                    f"Failed to clone repo {repo.name}", style=ERROR_STYLE
+                )
         else:
             try:
                 cmd = ["git", "fetch", "origin", repo.branch]
-                run_command(cmd, cwd=repo.cache_path)
+                run_command(cmd, cwd=repo.path)
                 cmd = ["git", "reset", "--hard", f"origin/{repo.branch}"]
-                run_command(cmd, cwd=repo.cache_path)
+                run_command(cmd, cwd=repo.path)
                 cmd = ["git", "clean", "-fdx"]
-                run_command(cmd, cwd=repo.cache_path)
+                run_command(cmd, cwd=repo.path)
             except:
-                shutil.rmtree(repo.cache_path, ignore_errors=True)
-                questionary.print(f"Failed to update repo {repo.name}", style=ERROR_STYLE)
+                shutil.rmtree(repo.path, ignore_errors=True)
+                questionary.print(
+                    f"Failed to update repo {repo.name}", style=ERROR_STYLE
+                )
     for c in REPO_DIR.glob("*/*/*"):
         if tuple(c.parts[-3:]) not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
