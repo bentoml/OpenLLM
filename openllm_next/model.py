@@ -7,6 +7,7 @@ import typer
 
 from openllm_next.common import ERROR_STYLE, VERBOSE_LEVEL, BentoInfo, load_config
 from openllm_next.repo import parse_repo_url
+from openllm_next.venv import ensure_venv
 
 app = typer.Typer()
 
@@ -83,10 +84,7 @@ def pick_bento(tag) -> BentoInfo:
     return model
 
 
-def get_serve_cmd(tag: str):
-    if ":" not in tag:
-        tag = f"{tag}:latest"
-    bento = pick_bento(tag)
+def get_serve_cmd(bento: BentoInfo):
     cmd = ["bentoml", "serve", bento.tag]
     env = {
         "BENTOML_HOME": f"{bento.repo.path}/bentoml",

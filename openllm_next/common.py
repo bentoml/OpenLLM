@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import json
 import os
 import pathlib
@@ -9,6 +10,7 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 
 import questionary
+import typer
 
 ERROR_STYLE = "red"
 SUCCESS_STYLE = "green"
@@ -107,6 +109,9 @@ class BentoInfo(SimpleNamespace):
     repo: RepoInfo
     path: pathlib.Path
 
+    def __hash__(self):
+        return md5(str(self.path))
+
     @property
     def tag(self) -> str:
         return f"{self.path.parent.name}:{self.path.name}"
@@ -166,17 +171,47 @@ class BentoInfo(SimpleNamespace):
             )
 
 
+@typing.overload
 def run_command(
     cmd,
     cwd=None,
     env=None,
     copy_env=True,
+    venv=None,
     silent=False,
-    check=True,
-) -> subprocess.CompletedProcess | subprocess.Popen | None:
+    background: typing.Literal[False] = False,
+) -> subprocess.CompletedProcess: ...
+
+
+@typing.overload
+def run_command(
+    cmd,
+    cwd=None,
+    env=None,
+    copy_env=True,
+    venv=None,
+    silent=False,
+    background: typing.Literal[True] = True,
+) -> subprocess.Popen: ...
+
+
+def run_command(
+    cmd,
+    cwd=None,
+    env=None,
+    copy_env=True,
+    venv=None,
+    silent=False,
+    background=False,
+) -> subprocess.CompletedProcess | subprocess.Popen:
+    if background:
+        run_func = subprocess.Popen
+    else:
+        run_func = subprocess.run
     import shlex
 
     env = env or {}
+    cmd = [str(c) for c in cmd]
     if not silent:
         questionary.print("\n")
         if cwd:
@@ -184,25 +219,41 @@ def run_command(
         if env:
             for k, v in env.items():
                 questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
+        if venv:
+            questionary.print(f"$ source {venv / 'bin' / 'activate'}", style="bold")
         questionary.print(f"$ {' '.join(cmd)}", style="bold")
+
+    if venv:
+        py = venv / "bin" / "python"
+    else:
+        py = sys.executable
+
     if copy_env:
         env = {**os.environ, **env}
+
     if cmd and cmd[0] == "bentoml":
-        cmd = [sys.executable, "-m", "bentoml"] + cmd[1:]
+        cmd = [py, "-m", "bentoml"] + cmd[1:]
     if cmd and cmd[0] == "python":
-        cmd = [sys.executable] + cmd[1:]
+        cmd = [py] + cmd[1:]
+
     try:
         if silent:
-            return subprocess.run(
+            return run_func(  # type: ignore
                 cmd,
                 cwd=cwd,
                 env=env,
-                check=check,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
         else:
-            return subprocess.run(cmd, cwd=cwd, env=env, check=check)
+            return run_func(cmd, cwd=cwd, env=env)
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
-        return None
+        raise typer.Exit(1)
+
+
+def md5(*strings: str) -> int:
+    m = hashlib.md5()
+    for s in strings:
+        m.update(s.encode())
+    return int(m.hexdigest(), 16)

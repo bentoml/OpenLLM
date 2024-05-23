@@ -79,6 +79,7 @@ async def _run_model(model: str, timeout: int = 600):
     )
 
     import bentoml
+    from httpx import ReadError
 
     try:
         questionary.print("Model loading...", style="green")
@@ -91,6 +92,8 @@ async def _run_model(model: str, timeout: int = 600):
                 if resp.status_code == 200:
                     break
             except bentoml.exceptions.BentoMLException:
+                await asyncio.sleep(1)
+            except ReadError:
                 await asyncio.sleep(1)
         else:
             questionary.print("Model failed to load", style="red")

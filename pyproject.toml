@@ -16,7 +16,6 @@ dependencies = [
     "psutil",
     "pathlib",
     "pip_requirements_parser",
-    "venv",
 ]
 
 [tool.typer]

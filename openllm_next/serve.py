@@ -1,30 +1,38 @@
 import asyncio
-import os
-import subprocess
 
 import questionary
 import typer
 
 from openllm_next.common import run_command
-from openllm_next.model import get_serve_cmd
+from openllm_next.model import get_serve_cmd, pick_bento
+from openllm_next.venv import ensure_venv
 
 app = typer.Typer()
 
 
 @app.command()
 def serve(model: str):
-    cmd, env, cwd = get_serve_cmd(model)
-    run_command(cmd, env=env, cwd=cwd)
+    if ":" not in model:
+        model = f"{model}:latest"
+    bento = pick_bento(model)
+    venv = ensure_venv(bento)
+    cmd, env, cwd = get_serve_cmd(bento)
+    run_command(cmd, env=env, cwd=cwd, venv=venv)
 
 
 async def _run_model(model: str, timeout: int = 600):
-    cmd, env, cwd = get_serve_cmd(model)
-    server_proc = subprocess.Popen(
+    if ":" not in model:
+        model = f"{model}:latest"
+    bento = pick_bento(model)
+    venv = ensure_venv(bento)
+    cmd, env, cwd = get_serve_cmd(bento)
+    server_proc = run_command(
         cmd,
-        env={**os.environ, **env},
+        env=env,
         cwd=cwd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        venv=venv,
+        silent=True,
+        background=True,
     )
 
     import bentoml
