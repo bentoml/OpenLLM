@@ -77,7 +77,7 @@ jobs:
           bash local.sh
           python -m build -sw openllm-python/
       - name: Upload artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v3
         with:
           name: binary-artefacts
           path: openllm-python/dist/*
@@ -211,14 +211,14 @@ jobs:
           done
       - name: Upload staged archive
         if: runner.os != 'Linux'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v3
         with:
           name: staged-${{ runner.os }}
           path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: openllm-python/packaging/*
@@ -274,13 +274,13 @@ jobs:
           mkdir installers
           mv build/*/release/*/*.{exe,msi} installers
       - name: Upload binaries
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v3
         with:
           name: standalone
           path: openllm-python/archives/*
           if-no-files-found: error
       - name: Upload installers
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v3
         with:
           name: installers
           path: openllm-python/installers/*
