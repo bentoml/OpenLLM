@@ -436,7 +436,7 @@ def build_command(
     service_config = dict(
       resources={
         'gpu' if device else 'cpu': len(device) if device else '1',
-        'gpu_type': recommended_instance_type(model_id, bentomodel),
+        'gpu_type': recommended_instance_type(model_id, bentomodel, serialisation),
       },
       traffic=dict(timeout=timeout),
     )

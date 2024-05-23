@@ -18,8 +18,9 @@ from openllm_core.protocol.openai import (
   LogProbs,
   UsageInfo,
 )
+from openllm_core._typing_compat import LiteralSerialisation
 from starlette.requests import Request
-from huggingface_hub import scan_cache_dir
+from huggingface_hub import HfApi
 
 if t.TYPE_CHECKING:
   import bentoml
@@ -328,12 +329,21 @@ class OpenAI:
 RECOMMENDED_MAPPING = {'nvidia-l4': 24e9, 'nvidia-a10g': 24e9, 'nvidia-tesla-a100': 40e9, 'nvidia-a100-80gb': 80e9}
 
 
-def recommended_instance_type(model_id: str, bentomodel: bentoml.Model | None = None):
+def recommended_instance_type(
+  model_id: str, bentomodel: bentoml.Model | None = None, serialisation: LiteralSerialisation = 'safetensors'
+):
+  extensions = 'safetensors' if serialisation == 'safetensors' else 'pt'
+  api = HfApi()
+
   if bentomodel is not None:
     size = sum(f.stat().st_size for f in pathlib.Path(resolve_filepath(model_id)).glob('**/*') if f.is_file())
   else:
-    info = next(filter(lambda repo: repo.repo_id == model_id, scan_cache_dir().repos))
-    size = info.size_on_disk
+    size = sum(
+      i.size
+      for i in api.get_paths_info(
+        model_id, list(filter(lambda x: x.endswith(f'.{extensions}'), api.list_repo_files(model_id)))
+      )
+    )
 
   # find the first occurence of the gpu_type in the recommended mapping such that "size" should be less than or equal to 70% of the recommended size
   for gpu, max_size in RECOMMENDED_MAPPING.items():
