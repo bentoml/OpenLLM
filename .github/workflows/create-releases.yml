@@ -88,7 +88,7 @@ jobs:
           token: ${{ secrets.OPENLLM_PAT }}
       # NOTE: Keep this section in sync with build-pypi.yml
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v3
         with:
           name: python-artefacts
           path: dist
