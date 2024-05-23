@@ -1,10 +1,12 @@
 from __future__ import annotations
-import uuid
+import uuid, os
 from typing import Any, AsyncGenerator, Dict, TypedDict, Union
 
 from bentoml import Service
 from bentoml.io import JSON, Text
 from openllm import LLM
+
+os.environ['IMPLEMENTATION'] = 'deprecated'
 
 llm = LLM[Any, Any]('HuggingFaceH4/zephyr-7b-alpha', backend='vllm')
 

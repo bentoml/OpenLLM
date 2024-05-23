@@ -55,8 +55,7 @@ skip-install = false
 template = "tests"
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml -vv"
-distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -n 3 -r aR {args:openllm-python/tests}"
-python = "_run_script -r aR {args:openllm-python/tests}"
+python = "_run_script -r aR -x {args:openllm-python/tests}"
 [envs.tests.overrides]
 env.GITHUB_ACTIONS.env-vars = "COVERAGE_REPORT="
 [envs.coverage]

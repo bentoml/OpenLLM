@@ -1,13 +1,6 @@
 from __future__ import annotations
 
 import pytest, typing as t
-from bentoml._internal.utils import reserve_free_port
-
-
-@pytest.fixture(scope='function', autouse=True, name='server_port')
-def fixture_server_port() -> t.Generator[int, None, None]:
-  with reserve_free_port() as port:
-    yield port
 
 
 @pytest.fixture(
