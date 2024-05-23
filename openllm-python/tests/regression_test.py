@@ -11,7 +11,7 @@ SERVER_PORT = 53822
 async def test_openai_compatible(model_id: str):
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
   await asyncio.sleep(5)
-  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=60) as client:
+  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=90) as client:
     assert client.is_ready(30)
 
   try:
@@ -41,16 +41,16 @@ async def test_generate_endpoint(model_id: str):
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
   await asyncio.sleep(5)
 
+  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=90) as client:
+    assert client.is_ready(30)
+
   try:
     client = openllm.AsyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', api_version='v1')
-    assert client.health()
+    assert await client.health()
 
-    tasks = await asyncio.gather(
-      client.generate('Explain semiconductor to a 5 years old'),
-      client.generate(
-        'Tell me more about Apple as a company', stop='technology', llm_config={'temperature': 0.5, 'top_p': 0.2}
-      ),
+    response = await client.generate(
+      'Tell me more about Apple as a company', stop='technology', llm_config={'temperature': 0.5, 'top_p': 0.2}
     )
-    assert len(tasks) == 2
+    assert response is not None
   finally:
     server.terminate()

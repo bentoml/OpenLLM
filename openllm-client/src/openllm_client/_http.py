@@ -35,6 +35,10 @@ class HTTPClient(Client):
     self._helpers = Helpers(client=self)
     self._api_version, self._verify = api_version, verify
 
+  @property
+  def helpers(self):
+    return self._helpers
+
   def _build_auth_headers(self) -> t.Dict[str, str]:
     env = os.getenv('OPENLLM_AUTH_TOKEN')
     if env is not None:
@@ -123,7 +127,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
   __config: t.Optional[t.Dict[str, t.Any]] = None
 
   def __repr__(self):
-    return f'<AsyncHTTPClient address={self.address} timeout={self.timeout} api_version={self.api_version} verify={self.verify}>'
+    return f'<AsyncHTTPClient address={self.address} timeout={self.timeout} api_version={self._api_version} verify={self._verify}>'
 
   def __init__(self, address=None, timeout=30, verify=False, max_retries=MAX_RETRIES, api_version='v1'):
     if address is None:
@@ -134,8 +138,12 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
     super().__init__(_address_converter(address), VERSION, timeout=timeout, max_retries=max_retries)
 
     # mk messages to be async here
-    self.helpers = Helpers.permute(messages=Helpers.async_messages)(async_client=self)
+    self._helpers = Helpers.permute(messages=Helpers.async_messages)(async_client=self)
     self._api_version, self._verify = api_version, verify
+
+  @property
+  def helpers(self):
+    return self._helpers
 
   def _build_auth_headers(self) -> t.Dict[str, str]:
     env = os.getenv('OPENLLM_AUTH_TOKEN')
@@ -147,7 +155,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
   async def _metadata(self) -> t.Awaitable[Metadata]:
     if self.__metadata is None:
       self.__metadata = await self._post(
-        f'/{self.api_version}/metadata', response_cls=Metadata, json={}, options={'max_retries': self.max_retries}
+        f'/{self._api_version}/metadata', response_cls=Metadata, json={}, options={'max_retries': self.max_retries}
       )
     return self.__metadata
 
@@ -172,7 +180,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
     if timeout is None:
       timeout = self.timeout
     if verify is None:
-      verify = self.verify  # XXX: need to support this again
+      verify = self._verify  # XXX: need to support this again
     _metadata = await self._metadata
     _config = await self._config
     if llm_config is not None:
@@ -180,7 +188,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
     else:
       llm_config = {**_config, **attrs}
     return await self._post(
-      f'/{self.api_version}/generate',
+      f'/{self._api_version}/generate',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
       options={'max_retries': self.max_retries},
@@ -200,7 +208,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
     if timeout is None:
       timeout = self.timeout
     if verify is None:
-      verify = self.verify  # XXX: need to support this again
+      verify = self._verify  # XXX: need to support this again
     _metadata = await self._metadata
     _config = await self._config
     if llm_config is not None:
@@ -209,7 +217,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
       llm_config = {**_config, **attrs}
 
     async for response_chunk in await self._post(
-      f'/{self.api_version}/generate_stream',
+      f'/{self._api_version}/generate_stream',
       response_cls=Response,
       json=dict(prompt=prompt, llm_config=llm_config, stop=stop, adapter_name=adapter_name),
       options={'max_retries': self.max_retries},

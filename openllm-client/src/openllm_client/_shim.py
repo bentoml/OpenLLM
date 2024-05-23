@@ -408,7 +408,7 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
         )
       # If the response is streamed then we need to explicitly read the completed response
       exc.response.read()
-      raise ValueError(exc.message) from None
+      raise ValueError(exc) from None
     except httpx.TimeoutException:
       if retries > 0:
         return self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
@@ -543,7 +543,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
         )
       # If the response is streamed then we need to explicitly read the completed response
       await exc.response.aread()
-      raise ValueError(exc.message) from None
+      raise ValueError(exc) from None
     except httpx.ConnectTimeout as err:
       if retries > 0:
         return await self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
