@@ -744,7 +744,7 @@ You can specify any of the following OPT models via `openllm start`:
 Run the following command to quickly spin up a Phi server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2
+TRUST_REMOTE_CODE=True openllm start microsoft/Phi-3-mini-4k-instruct
 ```
 In a different terminal, run the following command to interact with the server:
 
@@ -763,8 +763,12 @@ openllm query 'What are large language models?'
 You can specify any of the following Phi models via `openllm start`:
 
 
-- [microsoft/phi-2](https://huggingface.co/microsoft/phi-2)
-- [microsoft/phi-1_5](https://huggingface.co/microsoft/phi-1_5)
+- [microsoft/Phi-3-mini-4k-instruct](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct)
+- [microsoft/Phi-3-mini-128k-instruct](https://huggingface.co/microsoft/Phi-3-mini-128k-instruct)
+- [microsoft/Phi-3-small-8k-instruct](https://huggingface.co/microsoft/Phi-3-small-8k-instruct)
+- [microsoft/Phi-3-small-128k-instruct](https://huggingface.co/microsoft/Phi-3-small-128k-instruct)
+- [microsoft/Phi-3-medium-4k-instruct](https://huggingface.co/microsoft/Phi-3-medium-4k-instruct)
+- [microsoft/Phi-3-medium-128k-instruct](https://huggingface.co/microsoft/Phi-3-medium-128k-instruct)
 
 </details>
 
