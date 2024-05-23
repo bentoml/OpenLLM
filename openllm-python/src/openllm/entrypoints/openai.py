@@ -70,7 +70,7 @@ def error_response(status_code, message):
   )
 
 
-async def check_model(request, model):
+async def check_model(request, model):  # noqa
   if request.model == model:
     return None
   return error_response(

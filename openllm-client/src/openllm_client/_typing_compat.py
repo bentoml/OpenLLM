@@ -7,6 +7,7 @@ from openllm_core._typing_compat import (
   Required as Required,
   Self as Self,
   TypeGuard as TypeGuard,
+  TypedDict as TypedDict,
   dataclass_transform as dataclass_transform,
   overload as overload,
 )

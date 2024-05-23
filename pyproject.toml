@@ -157,7 +157,7 @@ toplevel = ["openllm"]
 
 
 [tool.pytest.ini_options]
-addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
+addopts = ["-rfEX", "-pno:warnings"]
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["openllm-python/tests"]
 

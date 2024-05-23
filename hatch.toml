@@ -1,4 +1,6 @@
 [envs.default]
+installer = "uv"
+type = "virtual"
 dependencies = [
     "openllm-core @ {root:uri}/openllm-core",
     "openllm-client @ {root:uri}/openllm-client",
@@ -29,12 +31,12 @@ setup = [
 quality = ["bash ./all.sh", "- pre-commit run --all-files", "- pnpm format"]
 tool = ["quality", "bash ./clean.sh", 'python ./cz.py']
 [envs.tests]
+installer = "uv"
+type = "virtual"
 dependencies = [
+    "openllm[vllm] @ {root:uri}/openllm-python",
     "openllm-core @ {root:uri}/openllm-core",
     "openllm-client @ {root:uri}/openllm-client",
-    "openllm[chatglm,fine-tune] @ {root:uri}/openllm-python",
-    # NOTE: interact with docker for container tests.
-    "docker",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
     "coverage[toml]>=6.5",
     "filelock>=3.7.1",
@@ -53,10 +55,7 @@ skip-install = false
 template = "tests"
 [envs.tests.scripts]
 _run_script = "pytest --cov --cov-report={env:COVERAGE_REPORT:term-missing} --cov-config=pyproject.toml -vv"
-distributed = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -n 3 -r aR {args:openllm-python/tests}"
-models = "_run_script -s {args:openllm-python/tests/models}"
-python = "_run_script --reruns 5 --reruns-delay 3 --ignore openllm-python/tests/models -r aR {args:openllm-python/tests}"
-snapshot-models = "_run_script -s --snapshot-update {args:openllm-python/tests/models}"
+python = "_run_script -r aR -x {args:openllm-python/tests}"
 [envs.tests.overrides]
 env.GITHUB_ACTIONS.env-vars = "COVERAGE_REPORT="
 [envs.coverage]

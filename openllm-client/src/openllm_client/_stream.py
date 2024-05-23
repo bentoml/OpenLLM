@@ -1,26 +1,23 @@
 from __future__ import annotations
-import typing as t
 
-import attr
-import httpx
-import orjson
+import pydantic, httpx, orjson, typing as t
 
 if t.TYPE_CHECKING:
   from ._shim import AsyncClient, Client
 
-Response = t.TypeVar('Response', bound=attr.AttrsInstance)
+Response = t.TypeVar('Response', bound=pydantic.BaseModel)
 
 
-@attr.define(auto_attribs=True)
-class Stream(t.Generic[Response]):
-  _response_cls: t.Type[Response]
-  _response: httpx.Response
-  _client: Client
-  _decoder: SSEDecoder = attr.field(factory=lambda: SSEDecoder())
-  _iterator: t.Iterator[Response] = attr.field(init=False)
+class Stream(pydantic.BaseModel, t.Generic[Response]):
+  model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+  response_cls: t.Type[Response]
+  response: pydantic.SkipValidation[httpx.Response]
+  client: Client
+  _decoder: SSEDecoder = pydantic.PrivateAttr(default_factory=lambda: SSEDecoder())
+  _iterator: t.Iterator[Response] = pydantic.PrivateAttr()
 
-  def __init__(self, response_cls, response, client):
-    self.__attrs_init__(response_cls, response, client)
+  def __init__(self, **data):
+    super().__init__(**data)
     self._iterator = self._stream()
 
   def __next__(self):
@@ -31,28 +28,28 @@ class Stream(t.Generic[Response]):
       yield item
 
   def _iter_events(self) -> t.Iterator[SSE]:
-    yield from self._decoder.iter(self._response.iter_lines())
+    yield from self._decoder.iter(self.response.iter_lines())
 
   def _stream(self) -> t.Iterator[Response]:
     for sse in self._iter_events():
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self._client._process_response_data(
-          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
+        yield self.client._process_response_data(
+          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
         )
 
 
-@attr.define(auto_attribs=True)
-class AsyncStream(t.Generic[Response]):
-  _response_cls: t.Type[Response]
-  _response: httpx.Response
-  _client: AsyncClient
-  _decoder: SSEDecoder = attr.field(factory=lambda: SSEDecoder())
-  _iterator: t.Iterator[Response] = attr.field(init=False)
+class AsyncStream(pydantic.BaseModel, t.Generic[Response]):
+  model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+  response_cls: t.Type[Response]
+  response: pydantic.SkipValidation[httpx.Response]
+  client: AsyncClient
+  _decoder: SSEDecoder = pydantic.PrivateAttr(default_factory=lambda: SSEDecoder())
+  _iterator: t.Iterator[Response] = pydantic.PrivateAttr()
 
-  def __init__(self, response_cls, response, client):
-    self.__attrs_init__(response_cls, response, client)
+  def __init__(self, **data):
+    super().__init__(**data)
     self._iterator = self._stream()
 
   async def __anext__(self):
@@ -63,7 +60,7 @@ class AsyncStream(t.Generic[Response]):
       yield item
 
   async def _iter_events(self):
-    async for sse in self._decoder.aiter(self._response.aiter_lines()):
+    async for sse in self._decoder.aiter(self.response.aiter_lines()):
       yield sse
 
   async def _stream(self) -> t.AsyncGenerator[Response, None]:
@@ -71,31 +68,23 @@ class AsyncStream(t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self._client._process_response_data(
-          data=sse.model_dump(), response_cls=self._response_cls, raw_response=self._response
+        yield self.client._process_response_data(
+          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
         )
 
 
-@attr.define
-class SSE:
-  data: str = attr.field(default='')
-  id: t.Optional[str] = attr.field(default=None)
-  event: t.Optional[str] = attr.field(default=None)
-  retry: t.Optional[int] = attr.field(default=None)
-
-  def model_dump(self) -> t.Dict[str, t.Any]:
-    try:
-      return orjson.loads(self.data)
-    except orjson.JSONDecodeError:
-      raise
+class SSE(pydantic.BaseModel):
+  data: str = pydantic.Field(default='')
+  id: t.Optional[str] = pydantic.Field(default=None)
+  event: t.Optional[str] = pydantic.Field(default=None)
+  retry: t.Optional[int] = pydantic.Field(default=None)
 
 
-@attr.define(auto_attribs=True)
-class SSEDecoder:
-  _data: t.List[str] = attr.field(factory=list)
-  _event: t.Optional[str] = None
-  _retry: t.Optional[int] = None
-  _last_event_id: t.Optional[str] = None
+class SSEDecoder(pydantic.BaseModel):
+  _data: t.List[str] = pydantic.PrivateAttr(default_factory=list)
+  event: t.Optional[str] = None
+  retry: t.Optional[int] = None
+  last_event_id: t.Optional[str] = None
 
   def iter(self, iterator: t.Iterator[str]) -> t.Iterator[SSE]:
     for line in iterator:
@@ -112,10 +101,10 @@ class SSEDecoder:
   def decode(self, line: str) -> SSE | None:
     # NOTE: https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation
     if not line:
-      if all(not a for a in [self._event, self._data, self._retry, self._last_event_id]):
+      if all(not a for a in [self.event, self._data, self.retry, self.last_event_id]):
         return None
-      sse = SSE(data='\n'.join(self._data), event=self._event, retry=self._retry, id=self._last_event_id)
-      self._event, self._data, self._retry = None, [], None
+      sse = SSE(data='\n'.join(self._data), event=self.event, retry=self.retry, id=self.last_event_id)
+      self.event, self._data, self.retry = None, [], None
       return sse
     if line.startswith(':'):
       return None
@@ -123,17 +112,17 @@ class SSEDecoder:
     if value.startswith(' '):
       value = value[1:]
     if field == 'event':
-      self._event = value
+      self.event = value
     elif field == 'data':
       self._data.append(value)
     elif field == 'id':
       if '\0' in value:
         pass
       else:
-        self._last_event_id = value
+        self.last_event_id = value
     elif field == 'retry':
       try:
-        self._retry = int(value)
+        self.retry = int(value)
       except (TypeError, ValueError):
         pass
     else:

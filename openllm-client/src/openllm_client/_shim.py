@@ -1,22 +1,11 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
 
-import asyncio
-import email.utils
-import logging
-import platform
-import random
-import time
-import typing as t
+import asyncio, logging, platform, random, time, typing as t
+import email.utils, anyio, distro, httpx, pydantic
 
-import anyio
-import attr
-import distro
-import httpx
-
-from ._stream import AsyncStream, Response, Stream
+from ._stream import AsyncStream, Stream, Response
 from ._typing_compat import Annotated, Architecture, LiteralString, Platform
-from ._utils import converter
 
 logger = logging.getLogger(__name__)
 
@@ -92,15 +81,16 @@ def _architecture() -> Architecture:
 
 
 @t.final
-@attr.frozen(auto_attribs=True)
-class RequestOptions:
-  method: str = attr.field(converter=str.lower)
+class RequestOptions(pydantic.BaseModel):
+  model_config = pydantic.ConfigDict(extra='forbid', protected_namespaces=())
+
+  method: pydantic.constr(to_lower=True)
   url: str
-  json: t.Optional[t.Dict[str, t.Any]] = attr.field(default=None)
-  params: t.Optional[t.Mapping[str, t.Any]] = attr.field(default=None)
-  headers: t.Optional[t.Dict[str, str]] = attr.field(default=None)
-  max_retries: int = attr.field(default=MAX_RETRIES)
-  return_raw_response: bool = attr.field(default=False)
+  json: t.Optional[t.Dict[str, t.Any]] = pydantic.Field(default=None)
+  params: t.Optional[t.Mapping[str, t.Any]] = pydantic.Field(default=None)
+  headers: t.Optional[t.Dict[str, str]] = pydantic.Field(default=None)
+  max_retries: int = pydantic.Field(default=MAX_RETRIES)
+  return_raw_response: bool = pydantic.Field(default=False)
 
   def get_max_retries(self, max_retries: int | None) -> int:
     return max_retries if max_retries is not None else self.max_retries
@@ -111,95 +101,97 @@ class RequestOptions:
 
 
 @t.final
-@attr.frozen(auto_attribs=True)
-class APIResponse(t.Generic[Response]):
-  _raw_response: httpx.Response
-  _client: BaseClient[t.Any, t.Any]
-  _response_cls: type[Response]
-  _stream: bool
-  _stream_cls: t.Optional[t.Union[t.Type[Stream[t.Any]], t.Type[AsyncStream[t.Any]]]]
-  _options: RequestOptions
+class APIResponse(pydantic.BaseModel, t.Generic[Response]):
+  model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-  _parsed: t.Optional[Response] = attr.field(default=None, repr=False)
+  raw_response: httpx.Response
+  client: t.Union[AsyncClient, Client]
+  response_cls: t.Optional[type[Response]]
+  stream: bool
+  stream_cls: t.Optional[t.Union[t.Type[Stream[t.Any]], t.Type[AsyncStream[t.Any]]]]
+  options: RequestOptions
+  _parsed: t.Optional[Response] = pydantic.PrivateAttr(default=None)
 
   def parse(self):
-    if self._options.return_raw_response:
-      return self._raw_response
+    if self.options.return_raw_response:
+      return self.raw_response
+
+    if self.response_cls is None:
+      raise ValueError('Response class cannot be None.')
+
     if self._parsed is not None:
       return self._parsed
-    if self._stream:
-      stream_cls = self._stream_cls or self._client._default_stream_cls
-      return stream_cls(response_cls=self._response_cls, response=self._raw_response, client=self._client)
 
-    if self._response_cls is str:
-      return self._raw_response.text
+    if self.stream:
+      stream_cls = self.stream_cls or self.client.default_stream_cls
+      return stream_cls(response_cls=self.response_cls, response=self.raw_response, client=self.client)
 
-    content_type, *_ = self._raw_response.headers.get('content-type', '').split(';')
+    if self.response_cls is str:
+      return self.raw_response.text
+
+    content_type, *_ = self.raw_response.headers.get('content-type', '').split(';')
     if content_type != 'application/json':
       # Since users specific different content_type, then we return the raw binary text without and deserialisation
-      return self._raw_response.text
+      return self.raw_response.text
 
-    data = self._raw_response.json()
+    data = self.raw_response.json()
     try:
-      return self._client._process_response_data(
-        data=data, response_cls=self._response_cls, raw_response=self._raw_response
+      return self.client._process_response_data(
+        data=data, response_cls=self.response_cls, raw_response=self.raw_response
       )
     except Exception as exc:
       raise ValueError(exc) from None  # validation error here
 
   @property
   def headers(self):
-    return self._raw_response.headers
+    return self.raw_response.headers
 
   @property
   def status_code(self):
-    return self._raw_response.status_code
+    return self.raw_response.status_code
 
   @property
   def request(self):
-    return self._raw_response.request
+    return self.raw_response.request
 
   @property
   def url(self):
-    return self._raw_response.url
+    return self.raw_response.url
 
   @property
   def content(self):
-    return self._raw_response.content
+    return self.raw_response.content
 
   @property
   def text(self):
-    return self._raw_response.text
+    return self.raw_response.text
 
   @property
   def http_version(self):
-    return self._raw_response.http_version
+    return self.raw_response.http_version
 
 
-@attr.define(init=False)
-class BaseClient(t.Generic[InnerClient, StreamType]):
-  _base_url: httpx.URL = attr.field(converter=_address_converter)
-  _version: LiteralVersion
-  _timeout: httpx.Timeout = attr.field(converter=httpx.Timeout)
-  _max_retries: int
-  _inner: InnerClient
-  _default_stream_cls: t.Type[StreamType]
-  _auth_headers: t.Dict[str, str] = attr.field(init=False)
+class BaseClient(pydantic.BaseModel, t.Generic[InnerClient, StreamType]):
+  model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-  def __init__(
-    self,
-    *,
-    base_url: str | httpx.URL,
-    version: str,
-    timeout: int | httpx.Timeout = DEFAULT_TIMEOUT,
-    max_retries: int = MAX_RETRIES,
-    client: InnerClient,
-    _default_stream_cls: t.Type[StreamType],
-    _internal: bool = False,
-  ):
-    if not _internal:
-      raise RuntimeError('Client is reserved to be used internally only.')
-    self.__attrs_init__(base_url, version, timeout, max_retries, client, _default_stream_cls)
+  _base_url: httpx.URL = pydantic.PrivateAttr()
+  version: pydantic.SkipValidation[LiteralVersion]
+  timeout: httpx.Timeout
+  max_retries: int
+  inner: InnerClient
+  default_stream_cls: pydantic.SkipValidation[t.Type[StreamType]]
+  _auth_headers: t.Dict[str, str] = pydantic.PrivateAttr()
+
+  @pydantic.field_validator('timeout', mode='before')
+  @classmethod
+  def convert_timeout(cls, value: t.Any) -> httpx.Timeout:
+    return httpx.Timeout(value)
+
+  def __init__(self, base_url: str, **data: t.Any):
+    super().__init__(**data)
+    self._base_url = _address_converter(base_url)
+
+  def model_post_init(self, *_: t.Any):
     self._auth_headers = self._build_auth_headers()
 
   def _prepare_url(self, url: str) -> httpx.URL:
@@ -212,7 +204,7 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
 
   @property
   def is_closed(self):
-    return self._inner.is_closed
+    return self.inner.is_closed
 
   @property
   def is_ready(self):
@@ -239,7 +231,7 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
 
   @property
   def user_agent(self):
-    return f'{self.__class__.__name__}/Python {self._version}'
+    return f'{self.__class__.__name__}/Python {self.version}'
 
   @property
   def auth_headers(self):
@@ -258,7 +250,7 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
   @property
   def platform_headers(self):
     return {
-      'X-OpenLLM-Client-Package-Version': self._version,
+      'X-OpenLLM-Client-Package-Version': self.version,
       'X-OpenLLM-Client-Language': 'Python',
       'X-OpenLLM-Client-Runtime': platform.python_implementation(),
       'X-OpenLLM-Client-Runtime-Version': platform.python_version(),
@@ -267,13 +259,13 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
     }
 
   def _remaining_retries(self, remaining_retries: int | None, options: RequestOptions) -> int:
-    return remaining_retries if remaining_retries is not None else options.get_max_retries(self._max_retries)
+    return remaining_retries if remaining_retries is not None else options.get_max_retries(self.max_retries)
 
   def _build_headers(self, options: RequestOptions) -> httpx.Headers:
     return httpx.Headers(_merge_mapping(self._default_headers, options.headers or {}))
 
   def _build_request(self, options: RequestOptions) -> httpx.Request:
-    return self._inner.build_request(
+    return self.inner.build_request(
       method=options.method,
       headers=self._build_headers(options),
       url=self._prepare_url(options.url),
@@ -284,7 +276,7 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
   def _calculate_retry_timeout(
     self, remaining_retries: int, options: RequestOptions, headers: t.Optional[httpx.Headers] = None
   ) -> float:
-    max_retries = options.get_max_retries(self._max_retries)
+    max_retries = options.get_max_retries(self.max_retries)
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
     try:
       if headers is not None:
@@ -327,7 +319,7 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
   def _process_response_data(
     self, *, response_cls: type[Response], data: t.Dict[str, t.Any], raw_response: httpx.Response
   ) -> Response:
-    return converter.structure(data, response_cls)
+    return response_cls(**data)
 
   def _process_response(
     self,
@@ -348,7 +340,6 @@ class BaseClient(t.Generic[InnerClient, StreamType]):
     ).parse()
 
 
-@attr.define(init=False)
 class Client(BaseClient[httpx.Client, Stream[t.Any]]):
   def __init__(
     self,
@@ -362,18 +353,17 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
       version=version,
       timeout=timeout,
       max_retries=max_retries,
-      client=httpx.Client(base_url=base_url, timeout=timeout),
-      _default_stream_cls=Stream,
-      _internal=True,
+      inner=httpx.Client(base_url=base_url, timeout=timeout),
+      default_stream_cls=Stream,
     )
 
   def close(self):
-    self._inner.close()
+    self.inner.close()
 
   def __enter__(self):
     return self
 
-  def __exit__(self, *args) -> None:
+  def __exit__(self, *args: t.Any) -> None:
     self.close()
 
   def __del__(self):
@@ -408,7 +398,7 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
     retries = self._remaining_retries(remaining_retries, options)
     request = self._build_request(options)
     try:
-      response = self._inner.send(request, auth=self.auth, stream=stream)
+      response = self.inner.send(request, auth=self.auth, stream=stream)
       logger.debug('HTTP [%s, %s]: %i [%s]', request.method, request.url, response.status_code, response.reason_phrase)
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
@@ -418,7 +408,7 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
         )
       # If the response is streamed then we need to explicitly read the completed response
       exc.response.read()
-      raise ValueError(exc.message) from None
+      raise ValueError(exc) from None
     except httpx.TimeoutException:
       if retries > 0:
         return self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
@@ -481,7 +471,6 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
     )
 
 
-@attr.define(init=False)
 class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
   def __init__(
     self,
@@ -495,18 +484,17 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
       version=version,
       timeout=timeout,
       max_retries=max_retries,
-      client=httpx.AsyncClient(base_url=base_url, timeout=timeout),
-      _default_stream_cls=AsyncStream,
-      _internal=True,
+      inner=httpx.AsyncClient(base_url=base_url, timeout=timeout),
+      default_stream_cls=AsyncStream,
     )
 
   async def close(self):
-    await self._inner.aclose()
+    await self.inner.aclose()
 
   async def __aenter__(self):
     return self
 
-  async def __aexit__(self, *args) -> None:
+  async def __aexit__(self, *args: t.Any) -> None:
     await self.close()
 
   def __del__(self):
@@ -545,7 +533,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
     request = self._build_request(options)
 
     try:
-      response = await self._inner.send(request, auth=self.auth, stream=stream)
+      response = await self.inner.send(request, auth=self.auth, stream=stream)
       logger.debug('HTTP [%s, %s]: %i [%s]', request.method, request.url, response.status_code, response.reason_phrase)
       response.raise_for_status()
     except httpx.HTTPStatusError as exc:
@@ -555,7 +543,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
         )
       # If the response is streamed then we need to explicitly read the completed response
       await exc.response.aread()
-      raise ValueError(exc.message) from None
+      raise ValueError(exc) from None
     except httpx.ConnectTimeout as err:
       if retries > 0:
         return await self._retry_request(response_cls, options, retries, stream=stream, stream_cls=stream_cls)
@@ -622,3 +610,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
     return await self.request(
       response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls
     )
+
+
+Stream.model_rebuild()
+AsyncStream.model_rebuild()

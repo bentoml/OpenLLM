@@ -52,7 +52,7 @@ keywords = [
     "PyTorch",
     "Transformers",
 ]
-dependencies = ["openllm-core", "attrs>=23.2.0", "httpx", "distro", "anyio"]
+dependencies = ["openllm-core", "httpx", "distro", "anyio"]
 license = "Apache-2.0"
 name = "openllm-client"
 requires-python = ">=3.8"
