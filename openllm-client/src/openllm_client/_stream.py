@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pydantic, httpx, typing as t
+import pydantic, httpx, orjson, typing as t
 
 if t.TYPE_CHECKING:
   from ._shim import AsyncClient, Client
@@ -36,7 +36,7 @@ class Stream(pydantic.BaseModel, t.Generic[Response]):
         break
       if sse.event is None:
         yield self.client._process_response_data(
-          data=sse.model_dump(), response_cls=self.response_cls, raw_response=self.response
+          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
         )
 
 
@@ -69,7 +69,7 @@ class AsyncStream(pydantic.BaseModel, t.Generic[Response]):
         break
       if sse.event is None:
         yield self.client._process_response_data(
-          data=sse.model_dump(), response_cls=self.response_cls, raw_response=self.response
+          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
         )
 
 

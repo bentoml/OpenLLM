@@ -42,16 +42,15 @@ async def test_generate_endpoint(model_id: str):
   await asyncio.sleep(5)
 
   try:
-    with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=60) as client:
-      assert client.is_ready(30)
+    client = openllm.AsyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', api_version='v1')
+    assert client.health()
 
-    async with bentoml.AsyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=60) as async_client:
-      tasks = await asyncio.gather(
-        async_client.generate_v1('Explain semiconductor to a 5 years old'),
-        async_client.generate_v1(
-          'Tell me more about Apple as a company', stop='technology', llm_config={'temperature': 0.5, 'top_p': 0.2}
-        ),
-      )
-      assert len(tasks) == 2
+    tasks = await asyncio.gather(
+      client.generate('Explain semiconductor to a 5 years old'),
+      client.generate(
+        'Tell me more about Apple as a company', stop='technology', llm_config={'temperature': 0.5, 'top_p': 0.2}
+      ),
+    )
+    assert len(tasks) == 2
   finally:
     server.terminate()

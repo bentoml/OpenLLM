@@ -23,12 +23,12 @@ class StreamingResponse(pydantic.BaseModel):
   token_ids: int
 
   @classmethod
-  def from_response_chunk(cls, response: Response) -> StreamingResponse:
+  def from_response_chunk(cls, response: Response, index: int = 0) -> StreamingResponse:
     return cls(
       request_id=response.request_id,
-      index=response.outputs[0].index,
-      text=response.outputs[0].text,
-      token_ids=response.outputs[0].token_ids[0],
+      index=response.outputs[index].index,
+      text=response.outputs[index].text,
+      token_ids=response.outputs[index].token_ids[0],
     )
 
 

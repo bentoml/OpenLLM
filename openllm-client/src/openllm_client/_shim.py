@@ -319,7 +319,7 @@ class BaseClient(pydantic.BaseModel, t.Generic[InnerClient, StreamType]):
   def _process_response_data(
     self, *, response_cls: type[Response], data: t.Dict[str, t.Any], raw_response: httpx.Response
   ) -> Response:
-    return response_cls.model_construct(**data)
+    return response_cls(**data)
 
   def _process_response(
     self,

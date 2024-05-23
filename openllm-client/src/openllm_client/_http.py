@@ -187,12 +187,12 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
     )
 
   async def generate_stream(
-    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
+    self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, index=0, **attrs
   ) -> t.AsyncGenerator[StreamingResponse, t.Any]:
     async for response_chunk in self.generate_iterator(
       prompt, llm_config, stop, adapter_name, timeout, verify, **attrs
     ):
-      yield StreamingResponse.from_response_chunk(response_chunk)
+      yield StreamingResponse.from_response_chunk(response_chunk, index=index)
 
   async def generate_iterator(
     self, prompt, llm_config=None, stop=None, adapter_name=None, timeout=None, verify=None, **attrs
