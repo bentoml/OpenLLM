@@ -28,7 +28,7 @@ check_membership() {
 }
 
 for cmd in gh jq hatch; do
-  if ! command -v "$cmd" @ >&1 > /dev/null; then
+  if ! command -v "$cmd" @ >&1 >/dev/null; then
     echo "ERROR: $cmd not installed. Aborting..."
     exit 1
   fi
@@ -68,9 +68,9 @@ ALPHA_NUM=0
 
 # Check if current version is an alpha version and split accordingly
 if [[ $VERSION =~ -alpha ]]; then
-  IFS='-' read -r BASE_VERSION ALPHA <<< "$VERSION"
+  IFS='-' read -r BASE_VERSION ALPHA <<<"$VERSION"
   if [[ $ALPHA =~ [.] ]]; then
-    IFS='.' read -r ALPHA ALPHA_NUM <<< "$ALPHA"
+    IFS='.' read -r ALPHA ALPHA_NUM <<<"$ALPHA"
   fi
 else
   BASE_VERSION="$VERSION"
@@ -79,7 +79,7 @@ fi
 # Save the current value of IFS to restore it later and split the base version
 OLD_IFS=$IFS
 IFS='.'
-read -ra VERSION_BITS <<< "$BASE_VERSION"
+read -ra VERSION_BITS <<<"$BASE_VERSION"
 IFS=$OLD_IFS
 
 # Assign split version numbers
@@ -127,6 +127,10 @@ fi
 
 echo "Releasing version: $RELEASE_TAG"
 
+if [[ -v DRYRUN ]]; then
+  exit 0
+fi
+
 echo "Running release actions (create-releases.yml)..."
 echo '{"release_type": "'"$release"'"}' | gh workflow run create-releases.yml --repo bentoml/openllm --json
 
@@ -137,7 +141,7 @@ set -x
 echo "Waiting for new tags to be released from 'create-releases.yml'"
 while true; do
   git pull --autostash --no-edit --gpg-sign --ff origin main
-  if git ls-remote -t --exit-code origin "refs/tags/${RELEASE_TAG}" &> /dev/null; then
+  if git ls-remote -t --exit-code origin "refs/tags/${RELEASE_TAG}" &>/dev/null; then
     break
   fi
   sleep 10
