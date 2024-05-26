@@ -19,8 +19,8 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push'|| github.event_name == 'workflow_call' }}
     name: General API tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v4
+      - uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # ratchet:actions/setup-python@v4
         with:
           python-version-file: '.python-version-default'
       - name: setup tooling
@@ -30,7 +30,7 @@ jobs:
       - name: startup machine
         run: python tools/machines.py --start ${{ secrets.PAPERSPACE_MACHINE_ID }} || true
       - name: executing remote ssh commands using password
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         with:
           host: ${{secrets.PAPERSPACE_HOST}}
           username: ${{secrets.PAPERSPACE_USERNAME}}

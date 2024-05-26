@@ -86,7 +86,7 @@ jobs:
         run: hatch build
         working-directory: ${{ matrix.directory }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v4
         with:
           name: python-artefacts-${{ matrix.directory }}
           path: ${{ matrix.directory }}/dist/*
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v4
         with:
           pattern: python-artefacts-*
           merge-multiple: true
@@ -114,7 +114,7 @@ jobs:
     needs: [pure-wheels-sdist]
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v4
         with:
           pattern: python-artefacts-*
           merge-multiple: true
