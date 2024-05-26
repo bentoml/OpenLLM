@@ -163,8 +163,8 @@ testpaths = ["openllm-python/tests"]
 
 [tool.coverage.paths]
 openllm = [
-    "openllm-python/src/openllm",
-    "*/openllm-python/src/openllm",
+    "openllm-python/src/_openllm_tiny",
+    "*/openllm-python/src/_openllm_tiny",
     "openllm-client/src/openllm_client",
     "*/openllm-client/src/openllm_client",
     "openllm-core/src/openllm_core",
@@ -174,13 +174,11 @@ openllm = [
 branch = true
 omit = [
     "__pypackages__/*",
-    "openllm-python/src/openllm/_version.py",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/__main__.py",
     "openllm-core/src/openllm_core/_typing_compat.py",
-    "openllm-client/src/openllm_client/pb/**",
+    "openllm-core/src/openllm_core/_version.py",
+    "openllm-client/src/openllm_client/_version.py",
 ]
-source_pkgs = ["openllm", "openllm_core", "openllm_client"]
+source_pkgs = ["_openllm_tiny", "openllm_core", "openllm_client"]
 [tool.coverage.report]
 exclude_lines = [
     "no cov",
@@ -204,11 +202,9 @@ exclude_lines = [
 ]
 omit = [
     "__pypackages__/*",
-    "openllm-python/src/openllm/_version.py",
-    "openllm-python/src/openllm/__init__.py",
-    "openllm-python/src/openllm/__main__.py",
     "openllm-core/src/openllm_core/_typing_compat.py",
-    "openllm-client/src/openllm_client/pb/**",
+    "openllm-core/src/openllm_core/_version.py",
+    "openllm-client/src/openllm_client/_version.py",
 ]
 precision = 2
 show_missing = true

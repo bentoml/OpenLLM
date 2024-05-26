@@ -52,7 +52,7 @@ class GenerationInput(pydantic.BaseModel):
       raise RuntimeError('This class is not meant to be used directly. Use "from_config" instead')
     super().__init__(**data)
 
-  @pydantic.field_validator('stop')
+  @pydantic.field_validator('stop', mode='before')
   @classmethod
   def stop_validator(cls, data: str | list[str] | t.Iterable[str] | None) -> list[str] | None:
     if data is None:

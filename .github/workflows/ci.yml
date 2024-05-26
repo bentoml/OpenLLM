@@ -1,31 +1,12 @@
-name: Continuous Integration
+name: CI
 on:
   workflow_call:
   push:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
-      - '*.md'
-      - 'changelog.d/**'
-      - 'assets/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
-      - '*.md'
-      - 'changelog.d/**'
-      - 'assets/**'
 env:
-  LINES: 120
-  COLUMNS: 120
-  OPENLLM_DO_NOT_TRACK: True
-  PYTHONUNBUFFERED: '1'
-  HATCH_VERBOSE: 2
-# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
+  PAPERSPACE_API_KEY: ${{secrets.PAPERSPACE_API_KEY}}
 defaults:
   run:
     shell: bash --noprofile --norc -exo pipefail {0}
@@ -34,111 +15,35 @@ concurrency:
   cancel-in-progress: true
 jobs:
   tests:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'push'|| github.event_name == 'workflow_call' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.9', '3.12']
-    name: tests (${{ matrix.python-version }}.${{ matrix.os }})
+    name: General API tests
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v4.1.6
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v4
+      - uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # ratchet:actions/setup-python@v4
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
+          python-version-file: '.python-version-default'
+      - name: setup tooling
+        run: |
+          python -m pip install uv
+          uv pip install --system httpx
+      - name: startup machine
+        run: python tools/machines.py --start ${{ secrets.PAPERSPACE_MACHINE_ID }} || true
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         with:
-          bentoml-version: 'main'
-          python-version: ${{ matrix.python-version }}
-      # - name: Run tests
-      #   run: hatch run tests:python
-      # - name: Disambiguate coverage filename
-      #   run: mv .coverage ".coverage.${{ matrix.os }}.${{ matrix.python-version }}"
-      # - name: Upload coverage data
-      #   uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
-      #   with:
-      #     name: coverage-data
-      #     path: .coverage.*
-  # coverage:
-  #   name: report-coverage
-  #   runs-on: ubuntu-latest
-  #   if: false
-  #   needs: tests
-  #   steps:
-  #     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
-  #       with:
-  #         fetch-depth: 0
-  #         ref: ${{ github.event.pull_request.head.sha }}
-  #     - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
-  #       with:
-  #         bentoml-version: 'main'
-  #         python-version-file: .python-version-default
-  #     - name: Download coverage data
-  #       uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-  #       with:
-  #         name: coverage-data
-  #     - name: Combine coverage data
-  #       run: hatch run coverage:combine
-  #     - name: Export coverage reports
-  #       run: |
-  #         hatch run coverage:report-xml openllm-python
-  #         hatch run coverage:report-uncovered-html openllm-python
-  #     - name: Upload uncovered HTML report
-  #       uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
-  #       with:
-  #         name: uncovered-html-report
-  #         path: htmlcov
-  #     - name: Generate coverage summary
-  #       run: hatch run coverage:generate-summary
-  #     - name: Write coverage summary report
-  #       if: github.event_name == 'pull_request'
-  #       run: hatch run coverage:write-summary-report
-  #     - name: Update coverage pull request comment
-  #       if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
-  #       uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # ratchet:marocchino/sticky-pull-request-comment@v2
-  #       with:
-  #         path: coverage-report.md
-  # cli-benchmark:
-  #   name: Check for CLI responsiveness
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     HYPERFINE_VERSION: '1.12.0'
-  #   steps:
-  #     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # ratchet:actions/checkout@v4.1.1
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Install hyperfine
-  #       run: |
-  #         wget https://github.com/sharkdp/hyperfine/releases/download/v${HYPERFINE_VERSION}/hyperfine_${HYPERFINE_VERSION}_amd64.deb
-  #         sudo dpkg -i hyperfine_${HYPERFINE_VERSION}_amd64.deb
-  #     - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
-  #       with:
-  #         bentoml-version: 'main'
-  #         python-version-file: .python-version-default
-  #     - name: Install self
-  #       run: bash local.sh
-  #     - name: Speed
-  #       run: hyperfine -m 100 --warmup 10 openllm
-  # brew-dry-run:
-  #   name: Running dry-run tests for brew
-  #   runs-on: macos-latest
-  #   steps:
-  #     - name: Install tap and dry-run
-  #       run: |
-  #         brew tap bentoml/openllm https://github.com/bentoml/openllm
-  #         brew install openllm
-  #         openllm --help
-  #         openllm models --show-available
-  # evergreen: # https://github.com/marketplace/actions/alls-green#why
-  #   if: always()
-  #   needs:
-  #     - tests
-  #     # - cli-benchmark
-  #     # - brew-dry-run
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Decide whether the needed jobs succeeded or failed
-  #       uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
-  #       with:
-  #         jobs: ${{ toJSON(needs) }}
+          host: ${{secrets.PAPERSPACE_HOST}}
+          username: ${{secrets.PAPERSPACE_USERNAME}}
+          key: ${{secrets.PAPERSPACE_SSH_KEY}}
+          port: ${{secrets.PAPERSPACE_PORT}}
+          script: bash ci.sh --pr ${{github.event.number}}
+  evergreen: # https://github.com/marketplace/actions/alls-green#why
+    if: always()
+    needs:
+      - tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # ratchet:re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
