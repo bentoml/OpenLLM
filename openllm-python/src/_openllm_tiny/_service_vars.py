@@ -4,7 +4,7 @@ from _openllm_tiny._llm import Dtype
 
 (
   model_id,
-  model_name,
+  revision,
   quantise,
   serialisation,
   dtype,
@@ -14,7 +14,7 @@ from _openllm_tiny._llm import Dtype
   services_config,
 ) = (
   coreutils.getenv('model_id', var=['MODEL_ID'], return_type=str),
-  coreutils.getenv('model_name', return_type=str),
+  orjson.loads(coreutils.getenv('revision', return_type=str)),
   coreutils.getenv('quantize', var=['QUANTISE'], return_type=LiteralQuantise),
   coreutils.getenv('serialization', default='safetensors', var=['SERIALISATION'], return_type=LiteralSerialisation),
   coreutils.getenv('dtype', default='auto', var=['TORCH_DTYPE'], return_type=Dtype),

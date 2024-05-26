@@ -218,3 +218,16 @@ class AutoConfig:
     raise ValueError(
       f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )
+
+  @classmethod
+  def from_id(cls, model_id: str, *, trust_remote_code: bool = False, **attrs: t.Any) -> openllm_core.LLMConfig:
+    import transformers
+
+    config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=trust_remote_code)
+    for arch in config.architectures:
+      if arch in cls._architecture_mappings:
+        return cls.for_model(cls._architecture_mappings[arch]).model_construct_env(**attrs)
+    else:
+      raise RuntimeError(
+        f'Failed to determine config class for {model_id}. Got {config.architectures}, which is not yet supported (Supported: {list(cls._architecture_mappings.keys())})'
+      )

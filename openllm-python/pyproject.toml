@@ -38,7 +38,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "bentoml[io]>=1.2",
+    "bentoml[io]>=1.2.16",
     "transformers[torch,tokenizers]>=4.36.0",
     "openllm-client>=0.5.0-alpha.14",
     "openllm-core>=0.5.0-alpha.14",
@@ -112,7 +112,7 @@ gemma = ["xformers"]
 ggml = ["ctransformers"]
 gpt-neox = ["xformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.2"]
+grpc = ["bentoml[grpc]>=1.2.16"]
 llama = ["xformers"]
 mistral = ["xformers"]
 mixtral = ["xformers"]

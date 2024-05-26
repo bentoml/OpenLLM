@@ -9,6 +9,7 @@ WARNING_ENV_VAR = 'OPENLLM_DISABLE_WARNING'
 DEV_DEBUG_VAR = 'DEBUG'
 
 ENV_VARS_TRUE_VALUES = {'1', 'ON', 'YES', 'TRUE'}
+OPENLLM_DEV_BUILD = 'OPENLLM_DEV_BUILD'
 
 
 def check_bool_env(env: str, default: bool = True):

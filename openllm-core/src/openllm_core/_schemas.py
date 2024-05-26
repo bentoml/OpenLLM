@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pydantic, inflection, orjson, typing as t
+import pydantic, orjson, typing as t
 from ._configuration import LLMConfig
 from .utils import gen_random_uuid
 from ._typing_compat import Required, TypedDict, LiteralString
@@ -47,14 +47,10 @@ class GenerationInput(pydantic.BaseModel):
   request_id: t.Optional[str] = pydantic.Field(default=None)
   adapter_name: t.Optional[str] = pydantic.Field(default=None)
 
-  _class_ref: t.ClassVar[type[LLMConfig]] = pydantic.PrivateAttr()
-
-  @pydantic.field_validator('llm_config')
-  @classmethod
-  def llm_config_validator(cls, v: LLMConfig | dict[str, t.Any]) -> LLMConfig:
-    if isinstance(v, dict):
-      return cls._class_ref.model_construct_env(**v)
-    return v
+  def __init__(self, *, _internal=False, **data: t.Any):
+    if not _internal:
+      raise RuntimeError('This class is not meant to be used directly. Use "from_config" instead')
+    super().__init__(**data)
 
   @pydantic.field_validator('stop')
   @classmethod
@@ -81,35 +77,9 @@ class GenerationInput(pydantic.BaseModel):
       flattened['stop_token_ids'] = self.stop_token_ids
     return flattened
 
-  def __init__(self, /, *, _internal: bool = False, **data: t.Any) -> None:
-    if not _internal:
-      raise RuntimeError(
-        f'Cannot instantiate GenerationInput directly. Use "{self.__class__.__qualname__}.from_dict" instead.'
-      )
-    super().__init__(**data)
-
-  @classmethod
-  def from_dict(cls, structured: GenerationInputDict) -> GenerationInput:
-    if not hasattr(cls, '_class_ref'):
-      raise ValueError(
-        'Cannot use "from_dict" from a raw GenerationInput class. Currently only supports class created from "from_config".'
-      )
-    filtered: dict[str, t.Any] = {k: v for k, v in structured.items() if v is not None}
-    llm_config: dict[str, t.Any] | None = filtered.pop('llm_config', None)
-    if llm_config is not None:
-      filtered['llm_config'] = cls._class_ref.model_construct_env(**llm_config)
-
-    return cls(_internal=True, **filtered)
-
   @classmethod
   def from_config(cls, llm_config: LLMConfig) -> type[GenerationInput]:
-    klass = pydantic.create_model(
-      inflection.camelize(llm_config['start_name']) + 'GenerationInput',
-      __base__=cls,
-      llm_config=(type(llm_config), llm_config),
-      _class_ref=(llm_config.__class__, pydantic.PrivateAttr(default=llm_config.__class__)),
-    )
-    return klass
+    return cls(_internal=True, llm_config=llm_config)
 
 
 # NOTE: parameters from vllm.RequestOutput and vllm.CompletionOutput since vllm is not available on CPU.
