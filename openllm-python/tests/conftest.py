@@ -8,7 +8,7 @@ import pytest, typing as t
   name='model_id',
   params={
     'meta-llama/Meta-Llama-3-8B-Instruct',
-    'casperhansen/llama-3-70b-instruct-awq',
+    'microsoft/Phi-3-mini-4k-instruct',
     'TheBloke/Nous-Hermes-2-Mixtral-8x7B-DPO-AWQ',
   },
 )

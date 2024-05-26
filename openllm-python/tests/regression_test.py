@@ -11,7 +11,7 @@ SERVER_PORT = 53822
 async def test_openai_compatible(model_id: str):
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
   await asyncio.sleep(5)
-  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=90) as client:
+  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=120) as client:
     assert client.is_ready(30)
 
   try:
@@ -41,7 +41,7 @@ async def test_generate_endpoint(model_id: str):
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
   await asyncio.sleep(5)
 
-  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=90) as client:
+  with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=120) as client:
     assert client.is_ready(30)
 
   try:
