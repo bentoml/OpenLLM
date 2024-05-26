@@ -347,6 +347,8 @@ def build_sdist(target_path: str, package: t.Literal['openllm', 'openllm-core', 
   with tarfile.open(pathlib.Path(target_path, sdist_filename), 'w:gz') as tar:
     for file in files_to_include:
       tar.add(project_path / file, arcname=f'{base_name}/{file}', filter=exclude_pycache)
+    if package == 'openllm':
+      tar.add(project_path / 'CHANGELOG.md', arcname=f'{base_name}/CHANGELOG.md', filter=exclude_pycache)
     tarinfo = tar.gettarinfo(project_path / 'pyproject.toml', arcname=f'{base_name}/pyproject.toml')
     tarinfo.size = pyproject_io.tell()
     pyproject_io.seek(0)
@@ -478,7 +480,10 @@ def build_command(
     labels = {'runtime': 'vllm'}
     # XXX: right now we just enable GPU by default. will revisit this if we decide to support TPU later.
     service_config = dict(
-      resources={'gpu': '1', 'gpu_type': recommended_instance_type(model_id, bentomodel, serialisation)},
+      resources=dict(
+        gpu=len(openllm.utils.available_devices()),
+        gpu_type=recommended_instance_type(model_id, bentomodel, serialisation),
+      ),
       traffic=dict(timeout=timeout, concurrency=concurrency),
     )
     with fs.open_fs(f'temp://{gen_random_uuid()}') as llm_fs, fs.open_fs(
