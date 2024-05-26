@@ -35,46 +35,11 @@ jobs:
       - name: Create release notes
         run: ./.github/actions/create_release_and_archive.sh ${{ inputs.tags }}
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
         with:
-          name: python-artefacts
+          pattern: python-artefacts-*
+          merge-multiple: true
           path: dist
-      # - name: Download Linux x86_64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: linux-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS x86_64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-x86_64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS arm64 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-arm64-mypyc-wheels
-      #     path: dist
-      # - name: Download MacOS universal2 compiled artifacts
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: macos-universal2-mypyc-wheels
-      #     path: dist
-      - name: Download binaries
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: standalone
-          path: archives
-      - name: Download standalone MacOS
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
-        with:
-          name: staged-macOS
-          path: archives
-      # TODO: Uncomment me when I decided to bring back Windows support
-      # - name: Download installers
-      #   uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4 # ratchet:actions/download-artifact@v3
-      #   with:
-      #     name: installers
-      #     path: installers
       - name: Create release
         uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # ratchet:softprops/action-gh-release@v2.0.5
         with:
@@ -83,7 +48,7 @@ jobs:
           body_path: release_notes.txt
           fail_on_unmatched_files: true
           tag_name: '${{ inputs.tags }}'
-          # TODO: add instasllers/* once windows support is back
+          # TODO: add installers/* archives/* once windows support is back
           files: |-
             dist/*
             archives/*

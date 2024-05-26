@@ -86,9 +86,9 @@ jobs:
         run: hatch build
         working-directory: ${{ matrix.directory }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
-          name: python-artefacts
+          name: python-artefacts-${{ matrix.directory }}
           path: ${{ matrix.directory }}/dist/*
           if-no-files-found: error
   check-download-artefacts:
@@ -98,9 +98,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
         with:
-          name: python-artefacts
+          pattern: python-artefacts-*
+          merge-multiple: true
           path: dist
       - name: dry ls
         run: ls -rthlaR
@@ -110,13 +111,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-    # needs: [pure-wheels-sdist, mypyc]
     needs: [pure-wheels-sdist]
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
         with:
-          name: python-artefacts
+          pattern: python-artefacts-*
+          merge-multiple: true
           path: dist
       - name: Publish nightly wheels to test.pypi.org
         uses: pypa/gh-action-pypi-publish@81e9d935c883d0b210363ab89cf05f3894778450 # ratchet:pypa/gh-action-pypi-publish@release/v1

@@ -8,8 +8,6 @@ on:
     paths-ignore:
       - '*.md'
       - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
       - 'changelog.d/**'
       - 'assets/**'
       - 'openllm-node/**'
@@ -19,8 +17,6 @@ on:
     paths-ignore:
       - '*.md'
       - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
       - 'changelog.d/**'
       - 'assets/**'
       - 'openllm-node/**'
@@ -74,10 +70,10 @@ jobs:
         run: python -m pip install --upgrade build
       - name: Build
         run: |
-          bash local.sh
+          bash local.sh -e vllm
           python -m build -sw openllm-python/
       - name: Upload artifacts
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
           name: binary-artefacts
           path: openllm-python/dist/*
@@ -165,7 +161,7 @@ jobs:
           fi
       - name: Download Python artifacts
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
         with:
           name: binary-artefacts
           path: openllm-python/dist
@@ -211,14 +207,14 @@ jobs:
           done
       - name: Upload staged archive
         if: runner.os != 'Linux'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
           name: staged-${{ runner.os }}
           path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
           name: standalone
           path: openllm-python/packaging/*
@@ -245,7 +241,7 @@ jobs:
       - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
         run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
       - name: Download staged binaries
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v4
         with:
           name: staged-${{ runner.os }}
           path: openllm-python/archives
@@ -274,13 +270,13 @@ jobs:
           mkdir installers
           mv build/*/release/*/*.{exe,msi} installers
       - name: Upload binaries
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
           name: standalone
           path: openllm-python/archives/*
           if-no-files-found: error
       - name: Upload installers
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # ratchet:actions/upload-artifact@v4
         with:
           name: installers
           path: openllm-python/installers/*
