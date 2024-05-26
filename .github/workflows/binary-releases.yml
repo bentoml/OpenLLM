@@ -63,6 +63,7 @@ jobs:
       - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
+          python-version-file: .python-version-default
       - name: Pull latest change
         if: ${{ github.event_name != 'pull_request' }}
         run: git pull --autostash --no-edit --gpg-sign --ff origin main
