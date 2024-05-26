@@ -29,14 +29,24 @@ jobs:
           uv pip install --system httpx
       - name: startup machine
         run: python tools/machines.py --start ${{ secrets.PAPERSPACE_MACHINE_ID }} || true
-      - name: executing remote ssh commands using password
+      - name: running regression tests (PR)
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
+        if: github.event_name == 'pull_request'
         with:
           host: ${{secrets.PAPERSPACE_HOST}}
           username: ${{secrets.PAPERSPACE_USERNAME}}
           key: ${{secrets.PAPERSPACE_SSH_KEY}}
           port: ${{secrets.PAPERSPACE_PORT}}
           script: bash ci.sh --pr ${{github.event.number}}
+      - name: running regression tests (main)
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
+        if: ${{ !github.event.repository.fork && github.event_name == 'push' }}
+        with:
+          host: ${{secrets.PAPERSPACE_HOST}}
+          username: ${{secrets.PAPERSPACE_USERNAME}}
+          key: ${{secrets.PAPERSPACE_SSH_KEY}}
+          port: ${{secrets.PAPERSPACE_PORT}}
+          script: bash ci.sh --head
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
