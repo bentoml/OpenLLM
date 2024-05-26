@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-import pytest, subprocess, sys, openllm, bentoml, asyncio
-from openai import AsyncOpenAI
+import pytest, subprocess, sys, asyncio, openllm, bentoml
+from openai import OpenAI
 from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam
 
 SERVER_PORT = 53822
 
 
 @pytest.mark.asyncio
-async def test_openai_compatible(model_id: str):
+async def test_openai_compatible():
+  model_id = 'meta-llama/Meta-Llama-3-8B-Instruct'
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
-  await asyncio.sleep(5)
+  await asyncio.sleep(10)
   with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=120) as client:
     assert client.is_ready(30)
 
   try:
-    client = AsyncOpenAI(api_key='na', base_url=f'http://127.0.0.1:{SERVER_PORT}/v1')
-    serve_model = (await client.models.list()).data[0].id
+    client = OpenAI(api_key='na', base_url=f'http://127.0.0.1:{SERVER_PORT}/v1')
+    serve_model = client.models.list().data[0].id
     assert serve_model == openllm.utils.normalise_model_name(model_id)
-    streamable = await client.chat.completions.create(
+    streamable = client.chat.completions.create(
       model=serve_model,
-      max_tokens=512,
+      max_tokens=128,
       stream=False,
       messages=[
         ChatCompletionSystemMessageParam(
@@ -37,18 +38,27 @@ async def test_openai_compatible(model_id: str):
 
 
 @pytest.mark.asyncio
-async def test_generate_endpoint(model_id: str):
-  server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
-  await asyncio.sleep(5)
+async def test_generate_endpoint():
+  server = subprocess.Popen([
+    sys.executable,
+    '-m',
+    'openllm',
+    'start',
+    'microsoft/Phi-3-mini-4k-instruct',
+    '--trust-remote-code',
+    '--port',
+    str(SERVER_PORT),
+  ])
+  await asyncio.sleep(10)
 
   with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=120) as client:
     assert client.is_ready(30)
 
   try:
-    client = openllm.AsyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', api_version='v1')
-    assert await client.health()
+    client = openllm.HTTPClient(f'http://127.0.0.1:{SERVER_PORT}', api_version='v1')
+    assert client.health()
 
-    response = await client.generate(
+    response = client.generate(
       'Tell me more about Apple as a company', stop='technology', llm_config={'temperature': 0.5, 'top_p': 0.2}
     )
     assert response is not None

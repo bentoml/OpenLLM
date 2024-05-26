@@ -86,6 +86,12 @@ class HTTPClient(Client):
     else:
       llm_config = {**self._config, **attrs}
 
+    if stop is not None:
+      if isinstance(stop, str):
+        stop = [stop]
+      else:
+        stop = list(stop)
+
     return self._post(
       f'/{self._api_version}/generate',
       response_cls=Response,
@@ -110,6 +116,13 @@ class HTTPClient(Client):
       llm_config = {**self._config, **llm_config, **attrs}
     else:
       llm_config = {**self._config, **attrs}
+
+    if stop is not None:
+      if isinstance(stop, str):
+        stop = [stop]
+      else:
+        stop = list(stop)
+
     return self._post(
       f'/{self._api_version}/generate_stream',
       response_cls=Response,
@@ -181,12 +194,18 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
       timeout = self.timeout
     if verify is None:
       verify = self._verify  # XXX: need to support this again
-    _metadata = await self._metadata
     _config = await self._config
     if llm_config is not None:
       llm_config = {**_config, **llm_config, **attrs}
     else:
       llm_config = {**_config, **attrs}
+
+    if stop is not None:
+      if isinstance(stop, str):
+        stop = [stop]
+      else:
+        stop = list(stop)
+
     return await self._post(
       f'/{self._api_version}/generate',
       response_cls=Response,
@@ -209,12 +228,17 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
       timeout = self.timeout
     if verify is None:
       verify = self._verify  # XXX: need to support this again
-    _metadata = await self._metadata
     _config = await self._config
     if llm_config is not None:
       llm_config = {**_config, **llm_config, **attrs}
     else:
       llm_config = {**_config, **attrs}
+
+    if stop is not None:
+      if isinstance(stop, str):
+        stop = [stop]
+      else:
+        stop = list(stop)
 
     async for response_chunk in await self._post(
       f'/{self._api_version}/generate_stream',

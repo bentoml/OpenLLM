@@ -36,11 +36,7 @@ jobs:
           username: ${{secrets.PAPERSPACE_USERNAME}}
           key: ${{secrets.PAPERSPACE_SSH_KEY}}
           port: ${{secrets.PAPERSPACE_PORT}}
-          script: |
-            whoami
-            bash ci.sh --pr ${{github.event.number}}
-      - name: stop machine
-        run: python tools/machines.py --stop ${{ secrets.PAPERSPACE_MACHINE_ID }} || true
+          script: bash ci.sh --pr ${{github.event.number}}
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
