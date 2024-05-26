@@ -24,14 +24,14 @@ try:
 except Exception:
   bentomodel = None
   model_id = svars.model_id
-LLMConfig = core.AutoConfig.for_model(svars.model_name)
+LLMConfig = core.AutoConfig.from_id(model_id, trust_remote_code=svars.trust_remote_code)
 GenerationInput = core.GenerationInput.from_config(LLMConfig)
 ChatMessages = [
   MessageParam(
     role='system',
     content='You are acting as Ernest Hemmingway. All of your response will follow his and his writing style ONLY.',
   ),
-  MessageParam(role='user', content='Write an essay about Nietzsche and absurdism.'),
+  MessageParam(role='user', content='Write an essay on absurdism and its impact in the 20th century.'),
 ]
 
 app_v1 = FastAPI(
@@ -41,6 +41,9 @@ app_v1 = FastAPI(
   description='OpenAI Compatible API support',
   contact={'name': 'BentoML Team', 'email': 'contact@bentoml.com'},
 )
+
+if core.utils.get_debug_mode():
+  logger.info('service_config: %s', svars.services_config)
 
 
 @bentoml.mount_asgi_app(app_v1, path='/v1')
@@ -53,6 +56,7 @@ class LLMService:
       model_id,
       dtype=svars.dtype,
       bentomodel=bentomodel,
+      revision=svars.revision,
       serialisation=svars.serialisation,
       quantise=svars.quantise,
       llm_config=LLMConfig,
