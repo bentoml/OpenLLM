@@ -172,7 +172,12 @@ openllm = [
 ]
 [tool.coverage.run]
 branch = true
-omit = ["__pypackages__/*", "openllm-core/src/openllm_core/_typing_compat.py"]
+omit = [
+    "__pypackages__/*",
+    "openllm-core/src/openllm_core/_typing_compat.py",
+    "openllm-core/src/openllm_core/_version.py",
+    "openllm-client/src/openllm_client/_version.py",
+]
 source_pkgs = ["_openllm_tiny", "openllm_core", "openllm_client"]
 [tool.coverage.report]
 exclude_lines = [
@@ -194,6 +199,12 @@ exclude_lines = [
     'raise NotImplementedError',
     'raise NotImplemented',
     'except MissingDependencyError:',
+]
+omit = [
+    "__pypackages__/*",
+    "openllm-core/src/openllm_core/_typing_compat.py",
+    "openllm-core/src/openllm_core/_version.py",
+    "openllm-client/src/openllm_client/_version.py",
 ]
 precision = 2
 show_missing = true
