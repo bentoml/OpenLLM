@@ -154,3 +154,51 @@
   engine_config:
     model: meta-llama/Meta-Llama-3-70B-Instruct
     max_model_len: 2048
+"gemma:2b-instruct-fp16":
+  alias:
+    - latest
+    - 2b
+    - 2b-instruct
+  project: vllm-chat
+  service_config:
+    name: gemma
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-rtx-3060
+  engine_config:
+    model: google/gemma-2b-it
+    max_model_len: 2048
+"gemma:7b-instruct-fp16":
+  alias:
+    - latest
+    - 7b
+    - 7b-instruct
+  project: vllm-chat
+  service_config:
+    name: gemma
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-l4
+  engine_config:
+    model: google/gemma-7b-it
+    max_model_len: 2048
+"gemma:7b-instruct-awq-4bit":
+  alias:
+    - 7b-4bit
+    - 7b-instruct-4bit
+  project: vllm-chat
+  service_config:
+    name: gemma
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-rtx-3060
+  engine_config:
+    model: casperhansen/gemma-7b-it-awq
+    max_model_len: 2048
+    quantization: awq
