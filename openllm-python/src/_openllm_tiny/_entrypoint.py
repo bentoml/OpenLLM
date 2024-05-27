@@ -402,7 +402,7 @@ def build_command(
   trust_remote_code: bool,
   debug: bool,
 ):
-  """Package a given LLM into a servable artefacts.
+  """Package a given LLM into a BentoLLM.
 
   \b
   ```bash
