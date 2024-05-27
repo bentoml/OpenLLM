@@ -36,6 +36,7 @@
   chat_template: llama-2-chat
 "llama2:7b-chat-awq-4bit":
   alias:
+    - 7b-4bit
     - 7b-chat-4bit
   project: vllm-chat
   service_config:
@@ -52,7 +53,9 @@
     enforce_eager: true
   chat_template: llama-2-chat
 "mistral:7b-instruct-awq-4bit":
-  alias: []
+  alias:
+    - 7b-4bit
+    - 7b-instruct-4bit
   project: vllm-chat
   service_config:
     name: mistral
@@ -87,3 +90,67 @@
     enforce_eager: true
     dtype: half
   chat_template: mistral-instruct
+"llama3:8b-instruct-awq-4bit":
+  alias:
+    - 8b-4bit
+    - 8b-instruct-4bit
+  project: vllm-chat
+  service_config:
+    name: llama3
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-rtx-3060
+  engine_config:
+    model: casperhansen/llama-3-8b-instruct-awq
+    max_model_len: 2048
+    quantization: awq
+"llama3:70b-instruct-awq-4bit":
+  alias:
+    - 70b-4bit
+    - 70b-instruct-4bit
+  project: vllm-chat
+  service_config:
+    name: llama3
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-a100-80g
+  engine_config:
+    model: meta-llama/Meta-Llama-3-8B
+    max_model_len: 2048
+    quantization: awq
+"llama3:8b-instruct-fp16":
+  alias:
+    - latest
+    - 8b
+    - 8b-instruct
+  project: vllm-chat
+  service_config:
+    name: llama3
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-l4
+  engine_config:
+    model: meta-llama/Meta-Llama-3-8B-Instruct
+    max_model_len: 2048
+"llama3:70b-instruct-fp16":
+  alias:
+    - latest
+    - 70b
+    - 70b-instruct
+  project: vllm-chat
+  service_config:
+    name: llama3
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 2
+      gpu_type: nvidia-a100-80g
+  engine_config:
+    model: meta-llama/Meta-Llama-3-70B-Instruct
+    max_model_len: 2048
