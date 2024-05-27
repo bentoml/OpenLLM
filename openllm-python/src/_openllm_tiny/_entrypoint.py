@@ -527,7 +527,6 @@ def build_command(
           else [],
           envs=[
             EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility'),
-            EnvironmentEntry(name='VLLM_VERSION', value='0.4.2'),
             EnvironmentEntry(name=HF_HUB_DISABLE_PROGRESS_BARS, value='TRUE'),
           ],
           description=service_readme,
