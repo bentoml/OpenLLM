@@ -27,7 +27,7 @@ check_membership() {
   fi
 }
 
-for cmd in gh jq hatch; do
+for cmd in gh jq; do
   if ! command -v "$cmd" @ >&1 >/dev/null; then
     echo "ERROR: $cmd not installed. Aborting..."
     exit 1
