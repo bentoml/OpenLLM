@@ -202,3 +202,4 @@
     model: casperhansen/gemma-7b-it-awq
     max_model_len: 2048
     quantization: awq
+  chat_template: gemma-it
