@@ -48,9 +48,9 @@ fi
 release_package() {
   local version="$1"
   echo "Releasing version ${version}..."
-  jq --arg release_version "${version}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+  jq --arg release_version "${version}" '.version = $release_version' <package.json >package.json.tmp && mv package.json.tmp package.json
   pushd openllm-node &>/dev/null
-  jq --arg release_version "${version}" '.version = $release_version' < package.json > package.json.tmp && mv package.json.tmp package.json
+  jq --arg release_version "${version}" '.version = $release_version' <package.json >package.json.tmp && mv package.json.tmp package.json
   popd &>/dev/null
   towncrier build --yes --version "${version}"
   ./tools/dependencies.py --release-version "${version}"
@@ -73,9 +73,9 @@ ALPHA_NUM=0
 
 # Check if current version is an alpha version and split accordingly
 if [[ $VERSION =~ -alpha ]]; then
-  IFS='-' read -r BASE_VERSION ALPHA <<< "$VERSION"
+  IFS='-' read -r BASE_VERSION ALPHA <<<"$VERSION"
   if [[ $ALPHA =~ [.] ]]; then
-    IFS='.' read -r ALPHA ALPHA_NUM <<< "$ALPHA"
+    IFS='.' read -r ALPHA ALPHA_NUM <<<"$ALPHA"
   fi
 else
   BASE_VERSION="$VERSION"
@@ -84,7 +84,7 @@ fi
 # Save the current value of IFS to restore it later and split the base version
 OLD_IFS=$IFS
 IFS='.'
-read -ra VERSION_BITS <<< "$BASE_VERSION"
+read -ra VERSION_BITS <<<"$BASE_VERSION"
 IFS=$OLD_IFS
 
 # Assign split version numbers
@@ -99,9 +99,12 @@ if [[ $release == 'major' ]]; then
   VNUM3=0
   ALPHA="" # Reset alpha for major release
 elif [[ $release == 'minor' ]]; then
-  VNUM2=$((VNUM2 + 1))
-  VNUM3=0
-  ALPHA="" # Reset alpha for minor release
+  if [[ -n $ALPHA ]]; then
+    ALPHA="" # Remove alpha suffix for minor release from an alpha version
+  else
+    VNUM2=$((VNUM2 + 1))
+    VNUM3=0
+  fi
 elif [[ $release == 'patch' ]]; then
   VNUM3=$((VNUM3 + 1))
   ALPHA="" # Reset alpha for patch release
