@@ -17,13 +17,7 @@ from openllm_core.utils import (
   get_quiet_mode,
   normalise_model_name,
 )
-from openllm_core._typing_compat import (
-  LiteralQuantise,
-  LiteralSerialisation,
-  LiteralDtype,
-  get_literal_args,
-  TypedDict,
-)
+from openllm_core._typing_compat import LiteralQuantise, LiteralSerialisation, LiteralDtype, get_literal_args
 from . import _termui as termui
 
 if sys.version_info >= (3, 11):
@@ -356,11 +350,6 @@ def build_sdist(target_path: str, package: t.Literal['openllm', 'openllm-core', 
   return sdist_filename
 
 
-class EnvironmentEntry(TypedDict):
-  name: str
-  value: str
-
-
 @cli.command(name='build', context_settings={'token_normalize_func': inflection.underscore})
 @shared_decorator
 @click.option(
@@ -525,10 +514,6 @@ def build_command(
           models=[ModelSpec.from_item({'tag': str(bentomodel.tag), 'alias': bentomodel.tag.name})]
           if bentomodel is not None
           else [],
-          envs=[
-            EnvironmentEntry(name='NVIDIA_DRIVER_CAPABILITIES', value='compute,utility'),
-            EnvironmentEntry(name=HF_HUB_DISABLE_PROGRESS_BARS, value='TRUE'),
-          ],
           description=service_readme,
           include=list(llm_fs.walk.files()),
           exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],

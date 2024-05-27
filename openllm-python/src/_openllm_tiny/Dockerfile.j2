@@ -1,5 +1,9 @@
 {% extends bento_base_template %}
 {% block SETUP_BENTO_COMPONENTS %}
+ARG NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NVIDIA_DRIVER_CAPABILITIES=$NVIDIA_DRIVER_CAPABILITIES
+ARG HF_HUB_DISABLE_PROGRESS_BARS=TRUE
+ENV HF_HUB_DISABLE_PROGRESS_BARS=$HF_HUB_DISABLE_PROGRESS_BARS
 {% call common.RUN(__enable_buildkit__) -%} {{ __pip_cache__ }} {% endcall -%} bash -c 'pip install --no-color --progress-bar off "vllm==0.4.2" || true'
 {{ super() }}
 {% endblock %}
