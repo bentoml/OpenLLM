@@ -44,15 +44,6 @@ To learn more about OpenLLM, please visit <a href="https://github.com/bentoml/Op
 This package holds the underlying client implementation for OpenLLM. If you are
 coming from OpenLLM, the client can be accessed via `openllm.client`.
 
-It provides somewhat of a "similar" APIs to [`bentoml.Client`](https://docs.bentoml.com/en/latest/guides/client.html)
-(via `openllm_client.min`) for interacting with OpenLLM server. This can also be extended to use with general
-BentoML server as well.
-
-> [!NOTE]
-> The component of interop with generic BentoML server will be considered as _EXPERIMENTAL_ and
-> will be refactored to new client implementation soon!
-> If you are just using this package for interacting with OpenLLM server, The API should be the same as `openllm.client` namespace.
-
 ```python
 import openllm
 

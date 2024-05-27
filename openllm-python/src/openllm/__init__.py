@@ -27,14 +27,11 @@ __lazy = utils.LazyModule(  # NOTE: update this to sys.modules[__name__] once my
     'exceptions': [],
     'client': ['HTTPClient', 'AsyncHTTPClient'],
     'bundle': [],
-    'testing': [],
     'utils': ['api'],
-    'entrypoints': ['mount_entrypoints'],
     'serialisation': ['ggml', 'transformers', 'vllm'],
     '_llm': ['LLM'],
     '_deprecated': ['Runner'],
     '_runners': ['runner'],
-    '_quantisation': ['infer_quantisation_config'],
     '_strategies': ['CascadingResourceStrategy', 'get_resource'],
   },
   extra_objects={'COMPILED': COMPILED},
@@ -44,7 +41,7 @@ __all__, __dir__ = __lazy.__all__, __lazy.__dir__
 _BREAKING_INTERNAL = ['_service', '_service_vars']
 _NEW_IMPL = ['LLM', *_BREAKING_INTERNAL]
 
-if (_BENTOML_VERSION := utils.pkg.pkg_version_info('bentoml')) > (1, 2):
+if utils.pkg.pkg_version_info('bentoml') > (1, 2):
   import _openllm_tiny as _tiny
 else:
   _tiny = None
@@ -58,7 +55,7 @@ def __getattr__(name: str) -> _t.Any:
           f'"{name}" is an internal implementation and considered breaking with older OpenLLM. Please migrate your code if you depend on this.'
         )
       _warnings.warn(
-        f'"{name}" is considered deprecated implementation and will be removed in the future. Make sure to upgrade to OpenLLM 0.5.x',
+        f'"{name}" is considered deprecated implementation and could be breaking. See https://github.com/bentoml/OpenLLM for more information on upgrading instruction.',
         DeprecationWarning,
         stacklevel=3,
       )

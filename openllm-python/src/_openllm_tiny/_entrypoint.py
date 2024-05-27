@@ -24,7 +24,7 @@ from openllm_core._typing_compat import (
   get_literal_args,
   TypedDict,
 )
-from openllm_cli import termui
+from . import _termui as termui
 
 if sys.version_info >= (3, 11):
   import tomllib

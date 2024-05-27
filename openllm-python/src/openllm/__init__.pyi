@@ -26,7 +26,6 @@ from . import (
   exceptions as exceptions,
   serialisation as serialisation,
   utils as utils,
-  entrypoints as entrypoints,
 )
 from .serialisation import ggml as ggml, transformers as transformers, vllm as vllm
 from ._deprecated import Runner as Runner

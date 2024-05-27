@@ -15,13 +15,12 @@ from ._typing_compat import (
   Annotated,
 )
 from .exceptions import ForbiddenAttributeError, MissingDependencyError
-from .utils import field_env_key, first_not_none, is_vllm_available, is_transformers_available
+from .utils import field_env_key, is_vllm_available, is_transformers_available
 
 if t.TYPE_CHECKING:
   import transformers, vllm, openllm, torch
 
   from ._schemas import MessageParam
-  from .protocol.openai import ChatCompletionRequest, CompletionRequest
 
 __all__ = ['GenerationConfig', 'LLMConfig', 'field_env_key']
 
@@ -590,31 +589,6 @@ class LLMConfig(pydantic.BaseModel, abc.ABC):
     @staticmethod
     def build(config: LLMConfig) -> transformers.GenerationConfig:
       return config.generation_config.build('pt')
-
-  def compatible_options(self, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
-    from .protocol.openai import ChatCompletionRequest, CompletionRequest
-
-    if isinstance(request, (ChatCompletionRequest, CompletionRequest)):
-      return self.openai.build(self, request)
-    raise TypeError(f'Unknown request type {type(request)}')
-
-  class openai:
-    @staticmethod
-    def build(config: LLMConfig, request: ChatCompletionRequest | CompletionRequest) -> dict[str, t.Any]:
-      d = dict(
-        temperature=first_not_none(request.temperature, config['temperature']),
-        top_p=first_not_none(request.top_p, config['top_p']),
-        top_k=first_not_none(request.top_k, config['top_k']),
-        best_of=first_not_none(request.best_of, config['best_of']),
-        n=first_not_none(request.n, default=config['n']),
-        stop=first_not_none(request.stop, default=None),
-        max_new_tokens=first_not_none(request.max_tokens, default=config['max_tokens']),
-        presence_penalty=first_not_none(request.presence_penalty, default=config['presence_penalty']),
-        frequency_penalty=first_not_none(request.frequency_penalty, default=config['frequency_penalty']),
-      )
-      if hasattr(request, 'logprobs'):
-        d['logprobs'] = first_not_none(request.logprobs, default=config['logprobs'])
-      return d
 
   @property
   def template(self) -> str:
