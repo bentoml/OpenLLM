@@ -43,7 +43,7 @@ class EnvSpec(SimpleNamespace):
 
     def __hash__(self):
         return md5(
-            self.python_version,
+            # self.python_version,
             *sorted(self.python_packages.values()),
         )
 
