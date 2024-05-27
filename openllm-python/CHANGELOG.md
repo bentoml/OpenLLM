@@ -18,6 +18,10 @@ This changelog is managed by towncrier and is compiled at release time.
 
 <!-- towncrier release notes start -->
 
+## [0.5.0](https://github.com/bentoml/openllm/tree/v0.5.0)
+No significant changes.
+
+
 ## [0.5.0-alpha.15](https://github.com/bentoml/openllm/tree/v0.5.0-alpha.15)
 
 ### Backwards-incompatible Changes
