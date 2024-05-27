@@ -18,5 +18,8 @@ dependencies = [
     "pip_requirements_parser",
 ]
 
+[project.scripts]
+openllm = "openllm_next.__main__:main"
+
 [tool.typer]
 src-dir = "openllm_next"

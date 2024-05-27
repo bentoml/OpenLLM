@@ -1,10 +1,11 @@
 import typer
-from openllm_next.model import app as model_app
-from openllm_next.repo import app as repo_app
-from openllm_next.serve import serve as local_serve, run as local_run
+
 from openllm_next.cloud import app as cloud_app
 from openllm_next.common import VERBOSE_LEVEL
-
+from openllm_next.model import app as model_app
+from openllm_next.repo import app as repo_app
+from openllm_next.serve import run as local_run
+from openllm_next.serve import serve as local_serve
 
 app = typer.Typer()
 
@@ -23,11 +24,15 @@ def run(model: str):
     local_run(model)
 
 
-def main_callback(verbose: int = 0):
+def typer_callback(verbose: int = 0):
     if verbose:
         VERBOSE_LEVEL.set(verbose)
 
 
-if __name__ == "__main__":
-    app.callback()(main_callback)
+def main():
+    app.callback()(typer_callback)
     app()
+
+
+if __name__ == "__main__":
+    main()
