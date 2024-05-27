@@ -116,6 +116,14 @@ class BentoInfo(SimpleNamespace):
     def tag(self) -> str:
         return f"{self.path.parent.name}:{self.path.name}"
 
+    @property
+    def name(self) -> str:
+        return self.path.parent.name
+
+    @property
+    def version(self) -> str:
+        return self.path.name
+
     @functools.cached_property
     def bento_yaml(self) -> dict:
         import yaml

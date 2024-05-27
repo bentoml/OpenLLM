@@ -1,3 +1,4 @@
+import collections
 import os
 import typing
 
@@ -7,7 +8,6 @@ import typer
 
 from openllm_next.common import ERROR_STYLE, VERBOSE_LEVEL, BentoInfo, load_config
 from openllm_next.repo import parse_repo_url
-from openllm_next.venv import ensure_venv
 
 app = typer.Typer()
 
@@ -24,10 +24,14 @@ def get(tag: str):
             )
 
 
-@app.command()
-def list():
+@app.command(name="list")
+def list_():
+    bentos = list_bento()
+    output: dict[str, list[str]] = collections.defaultdict(list)
+    for bento in bentos:
+        output[bento.name].append(bento.version)
     pyaml.pprint(
-        list_bento(),
+        output,
         sort_dicts=False,
         sort_keys=False,
     )
