@@ -40,6 +40,18 @@ jobs:
           pattern: python-artefacts-*
           merge-multiple: true
           path: dist
+      - name: Download binaries
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        with:
+          pattern: standalone-*
+          merge-multiple: true
+          path: archives
+      - name: Download standalone MacOS
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # ratchet:actions/download-artifact@v3
+        with:
+          pattern: staged-*
+          merge-multiple: true
+          path: archives
       - name: Create release
         uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # ratchet:softprops/action-gh-release@v2.0.5
         with:
@@ -48,7 +60,7 @@ jobs:
           body_path: release_notes.txt
           fail_on_unmatched_files: true
           tag_name: '${{ inputs.tags }}'
-          # TODO: add installers/* archives/* once windows support is back
+          # TODO: add installers/* once windows support is back
           files: |-
             dist/*
             archives/*

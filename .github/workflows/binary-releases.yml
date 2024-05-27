@@ -107,11 +107,6 @@ jobs:
           - target: powerpc64le-unknown-linux-gnu
             os: ubuntu-22.04
             cross: true
-          # Windows
-          # - target: x86_64-pc-windows-msvc
-          #   os: windows-2022
-          # - target: i686-pc-windows-msvc
-          #   os: windows-2022
           # macOS
           - target: aarch64-apple-darwin
             os: macos-12
@@ -210,14 +205,14 @@ jobs:
         if: runner.os != 'Linux'
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v4
         with:
-          name: staged-${{ runner.os }}
+          name: staged-${{ runner.os }}-${{ matrix.job.target }}
           path: openllm-python/packaging/*
           if-no-files-found: error
       - name: Upload archive
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v4
         with:
-          name: standalone
+          name: standalone-${{ runner.os }}-${{ matrix.job.target }}
           path: openllm-python/packaging/*
           if-no-files-found: error
   windows-packaging:

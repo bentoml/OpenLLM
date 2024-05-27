@@ -102,6 +102,7 @@ jobs:
     needs:
       - release
       - publish-python
+      - binary-distribution
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -154,11 +155,17 @@ jobs:
           popd &>/dev/null
           git add package.json openllm-node/package.json && git commit -S -sm "infra: bump to dev version of ${DEV_VERSION} [generated] [skip ci]"
           git push origin HEAD:main
+  binary-distribution:
+    if: github.repository_owner == 'bentoml'
+    needs: build-pypi
+    name: Create binary/wheels distribution
+    uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main # ratchet:exclude
   release-notes:
     if: github.repository_owner == 'bentoml'
     needs:
       - release
       - publish-python
+      - binary-distribution
     name: Create release notes and setup for next cycle
     uses: bentoml/OpenLLM/.github/workflows/release-notes.yml@main # ratchet:exclude
     with:
