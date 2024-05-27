@@ -64,6 +64,8 @@ dependencies = [
     "inflection",
     "typing_extensions",
     "mypy_extensions",
+    "packaging",
+    "deepmerge",
 ]
 license = "Apache-2.0"
 name = "openllm-core"
