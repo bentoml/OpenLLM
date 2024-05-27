@@ -534,7 +534,7 @@ def build_command(
           include=list(llm_fs.walk.files()),
           exclude=['/venv', '/.venv', '__pycache__/', '*.py[cod]', '*$py.class'],
           python=PythonOptions(
-            packages=['scipy', 'bentoml[tracing]>=1.2.16', 'openllm[vllm]'],
+            packages=['scipy', 'bentoml[tracing]>=1.2.16', 'openllm>=0.5'],
             pip_args='--no-color --progress-bar off',
             wheels=[wheel_fs.getsyspath(f"/{i.split('/')[-1]}") for i in built_wheels]
             if all(i for i in built_wheels)
