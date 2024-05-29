@@ -15,7 +15,6 @@ from .config import (
   ChatGLMConfig as ChatGLMConfig,
   DollyV2Config as DollyV2Config,
   FalconConfig as FalconConfig,
-  FlanT5Config as FlanT5Config,
   GPTNeoXConfig as GPTNeoXConfig,
   LlamaConfig as LlamaConfig,
   MistralConfig as MistralConfig,

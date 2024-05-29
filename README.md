@@ -68,10 +68,10 @@ $ openllm -h
 
 ### Start a LLM server
 
-OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start a [Llama 3 8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B) server, run the following:
+OpenLLM allows you to quickly spin up an LLM server using `openllm start`. For example, to start a [Phi-3](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) server, run the following:
 
 ```bash
-openllm start meta-llama/Meta-Llama-3-8B
+openllm start microsoft/Phi-3-mini-4k-instruct --trust-remote-code
 ```
 
 To interact with the server, you can visit the web UI at [http://0.0.0.0:3000/](http://0.0.0.0:3000/) or send a request using `curl`. You can also use OpenLLM’s built-in Python client to interact with the server:
@@ -88,12 +88,6 @@ OpenLLM seamlessly supports many models and their variants. You can specify diff
 ```bash
 openllm start <model_id> --<options>
 ```
-
-> [!NOTE]
-> OpenLLM supports specifying fine-tuning weights and quantized weights
-> for any of the supported models as long as they can be loaded with the model
-> architecture. Use the `openllm models` command to see the complete list of supported
-> models, their architectures, and their variants.
 
 ## 🧩 Supported models
 
@@ -308,43 +302,6 @@ You can specify any of the following Falcon models via `openllm start`:
 - [tiiuae/falcon-40b](https://huggingface.co/tiiuae/falcon-40b)
 - [tiiuae/falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)
 - [tiiuae/falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)
-
-</details>
-
-<details>
-
-<summary>FlanT5</summary>
-
-
-### Quickstart
-
-Run the following command to quickly spin up a FlanT5 server:
-
-```bash
-TRUST_REMOTE_CODE=True openllm start google/flan-t5-large
-```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
-```
-
-
-> **Note:** Any FlanT5 variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=flan_t5) to see more FlanT5-compatible models.
-
-
-
-### Supported models
-
-You can specify any of the following FlanT5 models via `openllm start`:
-
-
-- [google/flan-t5-small](https://huggingface.co/google/flan-t5-small)
-- [google/flan-t5-base](https://huggingface.co/google/flan-t5-base)
-- [google/flan-t5-large](https://huggingface.co/google/flan-t5-large)
-- [google/flan-t5-xl](https://huggingface.co/google/flan-t5-xl)
-- [google/flan-t5-xxl](https://huggingface.co/google/flan-t5-xxl)
 
 </details>
 
@@ -883,39 +840,6 @@ You can specify any of the following Yi models via `openllm start`:
 
 More models will be integrated with OpenLLM and we welcome your contributions if you want to incorporate your custom LLMs into the ecosystem. Check out [Adding a New Model Guide](https://github.com/bentoml/OpenLLM/blob/main/ADDING_NEW_MODEL.md) to learn more.
 
-## 💻 Run your model on multiple GPUs
-
-OpenLLM allows you to start your model server on multiple GPUs and specify the number of workers per resource assigned using the `--workers-per-resource` option. For example, if you have 4 available GPUs, you set the value as one divided by the number as only one instance of the Runner server will be spawned.
-
-```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --workers-per-resource 0.25
-```
-
-> [!NOTE]
-> The amount of GPUs required depends on the model size itself.
-> You can use [the Model Memory Calculator from Hugging Face](https://huggingface.co/spaces/hf-accelerate/model-memory-usage) to
-> calculate how much vRAM is needed to train and perform big model
-> inference on a model and then plan your GPU strategy based on it.
-
-When using the `--workers-per-resource` option with the `openllm build` command, the environment variable is saved into the resulting Bento.
-
-For more information, see [Resource scheduling strategy](https://docs.bentoml.org/en/latest/guides/scheduling.html#).
-
-## 🛞 Runtime implementations
-
-Different LLMs may support multiple runtime implementations. Models that have `vLLM` (`vllm`) supports will use vLLM by default, otherwise it fallback to use `PyTorch` (`pt`).
-
-To specify a specific runtime for your chosen model, use the `--backend` option. For example:
-
-```bash
-openllm start meta-llama/Llama-2-7b-chat-hf --backend vllm
-```
-
-Note:
-
-1. To use the vLLM backend, you need a GPU with at least the Ampere architecture or newer and CUDA version 11.8.
-2. To see the backend options of each model supported by OpenLLM, see the Supported models section or run `openllm models`.
-
 ## 📐 Quantization
 
 Quantization is a technique to reduce the storage and computation requirements for machine learning models, particularly during inference. By approximating floating-point numbers as integers (quantized values), quantization allows for faster computations, reduced memory footprint, and can make it feasible to deploy large models on resource-constrained devices.
@@ -929,104 +853,8 @@ OpenLLM supports the following quantization techniques
 - [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323)
 - [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629).
 
-### PyTorch backend
-
-With PyTorch backend, OpenLLM supports `int8`, `int4`, and `gptq`.
-
-For using int8 and int4 quantization through `bitsandbytes`, you can use the following command:
-
-```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/phi-2 --quantize int8
-```
-
-To run inference with `gptq`, simply pass `--quantize gptq`:
-
-```bash
-openllm start TheBloke/Llama-2-7B-Chat-GPTQ --quantize gptq
-```
-
 > [!NOTE]
-> In order to run GPTQ, make sure you run `pip install "openllm[gptq]"`
-> first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
-> See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
-
-### vLLM backend
-
-With vLLM backend, OpenLLM supports `awq`, `squeezellm`
-
-To run inference with `awq`, simply pass `--quantize awq`:
-
-```bash
-openllm start TheBloke/zephyr-7B-alpha-AWQ --quantize awq
-```
-
-To run inference with `squeezellm`, simply pass `--quantize squeezellm`:
-
-```bash
-openllm start squeeze-ai-lab/sq-llama-2-7b-w4-s0 --quantize squeezellm --serialization legacy
-```
-
-> [!IMPORTANT]
-> Since both `squeezellm` and `awq` are weight-aware quantization methods, meaning the quantization is done during training, all pre-trained weights needs to get quantized before inference time. Make sure to find compatible weights on HuggingFace Hub for your model of choice.
-
-## 🛠️ Serving fine-tuning layers
-
-[PEFT](https://huggingface.co/docs/peft/index), or Parameter-Efficient Fine-Tuning, is a methodology designed to fine-tune pre-trained models more efficiently. Instead of adjusting all model parameters, PEFT focuses on tuning only a subset, reducing computational and storage costs. [LoRA](https://huggingface.co/docs/peft/conceptual_guides/lora) (Low-Rank Adaptation) is one of the techniques supported by PEFT. It streamlines fine-tuning by using low-rank decomposition to represent weight updates, thereby drastically reducing the number of trainable parameters.
-
-With OpenLLM, you can take advantage of the fine-tuning feature by serving models with any PEFT-compatible layers using the `--adapter-id` option. For example:
-
-```bash
-openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6-7b-quotes:default
-```
-
-OpenLLM also provides flexibility by supporting adapters from custom file paths:
-
-```bash
-openllm start facebook/opt-6.7b --adapter-id /path/to/adapters:local_adapter
-```
-
-To use multiple adapters, use the following format:
-
-```bash
-openllm start facebook/opt-6.7b --adapter-id aarnphm/opt-6.7b-lora:default --adapter-id aarnphm/opt-6.7b-french:french_lora
-```
-
-By default, all adapters will be injected into the models during startup. Adapters can be specified per request via `adapter_name`:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:3000/v1/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "prompt": "What is the meaning of life?",
-  "stop": [
-    "philosopher"
-  ],
-  "llm_config": {
-    "max_new_tokens": 256,
-    "temperature": 0.75,
-    "top_k": 15,
-    "top_p": 1
-  },
-  "adapter_name": "default"
-}'
-```
-
-To include this into the Bento, you can specify the `--adapter-id` option when using the `openllm build` command:
-
-```bash
-openllm build facebook/opt-6.7b --adapter-id ...
-```
-
-If you use a relative path for `--adapter-id`, you need to add `--build-ctx`.
-
-```bash
-openllm build facebook/opt-6.7b --adapter-id ./path/to/adapter_id --build-ctx .
-```
-
-> [!IMPORTANT]
-> Fine-tuning support is still experimental and currently only works with PyTorch backend. vLLM support is coming soon.
+> Make sure to use pre-quantized models weights when using with `openllm start`.
 
 ## ⚙️ Integrations
 
@@ -1060,26 +888,7 @@ The compatible endpoints supports `/completions`, `/chat/completions`, and `/mod
 
 ### [LlamaIndex](https://docs.llamaindex.ai/en/stable/examples/llm/openllm/)
 
-To start a local LLM with `llama_index`, simply use `llama_index.llms.openllm.OpenLLM`:
-
-```python
-import asyncio
-from llama_index.llms.openllm import OpenLLM
-
-llm = OpenLLM('HuggingFaceH4/zephyr-7b-alpha')
-
-llm.complete('The meaning of life is')
-
-
-async def main(prompt, **kwargs):
-  async for it in llm.astream_chat(prompt, **kwargs):
-    print(it)
-
-
-asyncio.run(main('The time at San Francisco is'))
-```
-
-If there is a remote LLM Server running elsewhere, then you can use `llama_index.llms.openllm.OpenLLMAPI`:
+You can use `llama_index.llms.openllm.OpenLLMAPI` to interact with a LLM running server:
 
 ```python
 from llama_index.llms.openllm import OpenLLMAPI
@@ -1100,10 +909,6 @@ llm('What is the difference between a duck and a goose? And why there are so man
 ```
 
 <!-- hatch-fancy-pypi-readme interim stop -->
-
-![Gif showing Agent integration](/.github/assets/agent.gif)
-
-<br/>
 
 <!-- hatch-fancy-pypi-readme meta start -->
 

@@ -21,7 +21,6 @@ else:
   OrderedDictType = OrderedDict
 
 ModelType: t.TypeAlias = t.Literal[
-  'flan_t5',
   'baichuan',
   'chatglm',
   'falcon',
@@ -44,7 +43,6 @@ ModelType: t.TypeAlias = t.Literal[
 # NOTE: This is the entrypoint when adding new model config
 CONFIG_MAPPING_NAMES: OrderedDict[ModelType, str] = OrderedDict(
   sorted([
-    ('flan_t5', 'FlanT5Config'),
     ('baichuan', 'BaichuanConfig'),
     ('chatglm', 'ChatGLMConfig'),
     ('falcon', 'FalconConfig'),
@@ -143,9 +141,6 @@ class AutoConfig:
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['falcon'], **attrs: t.Any) -> openllm_core.config.FalconConfig: ...
-  @t.overload
-  @classmethod
-  def for_model(cls, model_name: t.Literal['flan_t5'], **attrs: t.Any) -> openllm_core.config.FlanT5Config: ...
   @t.overload
   @classmethod
   def for_model(cls, model_name: t.Literal['gemma'], **attrs: t.Any) -> openllm_core.config.GemmaConfig: ...
