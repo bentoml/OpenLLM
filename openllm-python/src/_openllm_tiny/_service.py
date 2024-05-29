@@ -106,7 +106,10 @@ class LLMService:
     finish_reason_sent = [False] * _config['n']
 
     async for generations in self.llm.generate_iterator(
-      prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
+      prompt=prompt,
+      prompt_token_ids=prompt_token_ids,
+      request_id=request_id,
+      **core.utils.dict_filter_none(llm_config),
     ):
       for output in generations.outputs:
         i = output.index

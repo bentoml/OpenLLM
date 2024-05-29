@@ -179,7 +179,7 @@ class LLM:
           k: config.__getitem__(k) for k in set(inspect.signature(SamplingParams).parameters.keys())
         }),
         request_id=request_id,
-        prompt_token_ids=prompt_token_ids,
+        prompt_token_ids=prompt_token_ids if prompt_token_ids else None,
       ):
         yield generations
     except Exception as err:
