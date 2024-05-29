@@ -101,7 +101,7 @@ jobs:
           print-hash: true
   binary-distribution:
     if: github.repository_owner == 'bentoml'
-    needs: build-pypi
+    needs: publish-python
     name: Create binary/wheels distribution
     uses: bentoml/OpenLLM/.github/workflows/binary-releases.yml@main # ratchet:exclude
   release-notes:
