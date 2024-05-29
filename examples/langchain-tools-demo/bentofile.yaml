@@ -1,5 +1,0 @@
-service: 'service:svc'
-include:
-  - '*.py'
-python:
-  requirements_txt: './requirements.txt'

@@ -1,4 +1,0 @@
-openllm
-langchain>=0.0.212
-pydantic
-BeautifulSoup4

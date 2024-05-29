@@ -1,8 +1,0 @@
-runners:
-  llm-dolly-v2-runner:
-    resources:
-      nvidia.com/gpu: 2
-    workers_per_resource: 0.5
-  llm-stablelm-runner:
-    resources:
-      nvidia.com/gpu: 1

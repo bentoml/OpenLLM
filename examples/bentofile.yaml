@@ -1,6 +1,0 @@
-service: 'api_server.py:svc'
-include:
-  - 'api_server.py'
-python:
-  packages:
-    - openllm[vllm]>=0.4.15
