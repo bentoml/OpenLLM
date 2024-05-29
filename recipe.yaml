@@ -1,8 +1,6 @@
 "phi3:3.8b-mini-instruct-4k-fp16":
   alias:
-    - latest
     - 3.8b
-    - instruct
     - mini
   project: vllm-chat
   service_config:
@@ -11,7 +9,7 @@
       timeout: 300
     resources:
       gpu: 1
-      gpu_type: nvidia-tesla-t4
+      gpu_type: nvidia-rtx-3060
   engine_config:
     model: microsoft/Phi-3-mini-4k-instruct
     max_model_len: 4096
@@ -19,9 +17,7 @@
   chat_template: phi-3
 "llama2:7b-chat-fp16":
   alias:
-    - latest
     - 7b
-    - 7b-chat
   project: vllm-chat
   service_config:
     name: llama2
@@ -37,7 +33,6 @@
 "llama2:7b-chat-awq-4bit":
   alias:
     - 7b-4bit
-    - 7b-chat-4bit
   project: vllm-chat
   service_config:
     name: llama2
@@ -55,7 +50,6 @@
 "mistral:7b-instruct-awq-4bit":
   alias:
     - 7b-4bit
-    - 7b-instruct-4bit
   project: vllm-chat
   service_config:
     name: mistral
@@ -75,7 +69,6 @@
   alias:
     - 7b
     - 7b-instruct
-    - 7b-instruct-v0.1
   project: vllm-chat
   service_config:
     name: mistral
@@ -93,7 +86,6 @@
 "llama3:8b-instruct-awq-4bit":
   alias:
     - 8b-4bit
-    - 8b-instruct-4bit
   project: vllm-chat
   service_config:
     name: llama3
@@ -109,7 +101,6 @@
 "llama3:70b-instruct-awq-4bit":
   alias:
     - 70b-4bit
-    - 70b-instruct-4bit
   project: vllm-chat
   service_config:
     name: llama3
@@ -124,9 +115,7 @@
     quantization: awq
 "llama3:8b-instruct-fp16":
   alias:
-    - latest
     - 8b
-    - 8b-instruct
   project: vllm-chat
   service_config:
     name: llama3
@@ -140,9 +129,7 @@
     max_model_len: 2048
 "llama3:70b-instruct-fp16":
   alias:
-    - latest
     - 70b
-    - 70b-instruct
   project: vllm-chat
   service_config:
     name: llama3
@@ -156,9 +143,7 @@
     max_model_len: 2048
 "gemma:2b-instruct-fp16":
   alias:
-    - latest
     - 2b
-    - 2b-instruct
   project: vllm-chat
   service_config:
     name: gemma
@@ -172,9 +157,7 @@
     max_model_len: 2048
 "gemma:7b-instruct-fp16":
   alias:
-    - latest
     - 7b
-    - 7b-instruct
   project: vllm-chat
   service_config:
     name: gemma
@@ -189,7 +172,6 @@
 "gemma:7b-instruct-awq-4bit":
   alias:
     - 7b-4bit
-    - 7b-instruct-4bit
   project: vllm-chat
   service_config:
     name: gemma
