@@ -71,45 +71,24 @@ class LLMService:
     self,
     prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
-    stop: t.Optional[t.List[str]] = None,
-    stop_token_ids: t.Optional[t.List[int]] = None,
-    request_id: t.Optional[str] = None,
     llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig.model_dump(), description='LLM Config'),
   ) -> core.GenerationOutput:
-    if stop:
-      llm_config.update(stop=stop)
-    if stop_token_ids:
-      llm_config.update(stop_token_ids=stop_token_ids)
-
-    return await self.llm.generate(
-      prompt=prompt, prompt_token_ids=prompt_token_ids, request_id=request_id, **llm_config
-    )
+    return await self.llm.generate(prompt=prompt, prompt_token_ids=prompt_token_ids, **llm_config)
 
   @core.utils.api(route='/v1/generate_stream')
   async def generate_stream_v1(
     self,
     prompt: str = pydantic.Field(default='What is the meaning of life?', description='Given prompt to generate from'),
     prompt_token_ids: t.Optional[t.List[int]] = None,
-    stop: t.Optional[t.List[str]] = None,
-    stop_token_ids: t.Optional[t.List[int]] = None,
-    request_id: t.Optional[str] = None,
     llm_config: t.Dict[str, t.Any] = pydantic.Field(default=LLMConfig.model_dump(), description='LLM Config'),
   ) -> t.AsyncGenerator[str, None]:
-    if stop:
-      llm_config.update(stop=stop)
-    if stop_token_ids:
-      llm_config.update(stop_token_ids=stop_token_ids)
-
     _config = LLMConfig.model_construct_env(**core.utils.dict_filter_none(llm_config))
     previous_texts = [''] * _config['n']
     previous_num_tokens = [0] * _config['n']
     finish_reason_sent = [False] * _config['n']
 
     async for generations in self.llm.generate_iterator(
-      prompt=prompt,
-      prompt_token_ids=prompt_token_ids,
-      request_id=request_id,
-      **core.utils.dict_filter_none(llm_config),
+      prompt=prompt, prompt_token_ids=prompt_token_ids, **_config.model_dump()
     ):
       for output in generations.outputs:
         i = output.index
