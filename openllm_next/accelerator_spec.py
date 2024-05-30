@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import functools
 import math
 from types import SimpleNamespace
 
-from openllm_next.common import BentoInfo
+from openllm_next.common import BentoInfo, DeploymentTarget
 
 
-class ACC_SPEC(SimpleNamespace):
+class Accelerator(SimpleNamespace):
     model: str
     memory_size: float
 
@@ -22,6 +23,9 @@ class Resource(SimpleNamespace):
     memory: float
     gpu: int
     gpu_type: str
+
+    def __hash__(self):
+        return hash((self.cpu, self.memory, self.gpu, self.gpu_type))
 
 
 ACCELERATOR_SPEC_DICT: dict[str, dict] = {
@@ -48,16 +52,12 @@ ACCELERATOR_SPEC_DICT: dict[str, dict] = {
 }
 
 
-ACCELERATOR_SPECS: dict[str, ACC_SPEC] = {
-    key: ACC_SPEC(**value) for key, value in ACCELERATOR_SPEC_DICT.items()
+ACCELERATOR_SPECS: dict[str, Accelerator] = {
+    key: Accelerator(**value) for key, value in ACCELERATOR_SPEC_DICT.items()
 }
 
 
-class DeploymentTarget(SimpleNamespace):
-    source: str = "local"
-    accelerators: list[ACC_SPEC]
-
-
+@functools.lru_cache
 def get_local_machine_spec():
     from pynvml import (
         nvmlDeviceGetCount,
@@ -70,19 +70,34 @@ def get_local_machine_spec():
 
     nvmlInit()
     device_count = nvmlDeviceGetCount()
-    accelerators: list[ACC_SPEC] = []
+    accelerators: list[Accelerator] = []
     for i in range(device_count):
         handle = nvmlDeviceGetHandleByIndex(i)
         name = nvmlDeviceGetName(handle)
         memory_info = nvmlDeviceGetMemoryInfo(handle)
         accelerators.append(
-            ACC_SPEC(name=name, memory_size=math.ceil(int(memory_info.total) / 1024**3))
+            Accelerator(
+                name=name, memory_size=math.ceil(int(memory_info.total) / 1024**3)
+            )
         )
     nvmlShutdown()
     return DeploymentTarget(accelerators=accelerators, source="local")
 
 
-def _score(resource_spec: Resource, target: DeploymentTarget) -> float:
+@functools.lru_cache()
+def can_run(
+    resource_spec: Resource | BentoInfo,
+    target: DeploymentTarget | None = None,
+) -> float:
+    """
+    Calculate if the resource_spec can be deployed on the target.
+    """
+    if isinstance(resource_spec, BentoInfo):
+        resource_spec = Resource(
+            **(resource_spec.bento_yaml["services"][0]["config"]["resources"])
+        )
+    if target is None:
+        target = get_local_machine_spec()
     if resource_spec.gpu > 0:
         required_gpu = ACCELERATOR_SPECS[resource_spec.gpu_type]
         filtered_accelerators = [
@@ -100,27 +115,3 @@ def _score(resource_spec: Resource, target: DeploymentTarget) -> float:
     if target.accelerators:
         return 0.01 / sum(ac.memory_size for ac in target.accelerators)
     return 1.0
-
-
-def _multi_score(
-    resource_spec: Resource,
-    targets: list[DeploymentTarget],
-) -> list[tuple[DeploymentTarget, float]]:
-    results = [(target, _score(resource_spec, target)) for target in targets]
-    return [(target, score) for target, score in results if score > 0.0]
-
-
-def match_deployment_target(
-    bentos: list[BentoInfo],
-    targets: list[DeploymentTarget] | None = None,
-):
-    if targets is None:
-        targets = [get_local_machine_spec()]
-
-    return {
-        bento: _multi_score(
-            Resource(**(bento.bento_yaml["services"][0]["config"]["resources"])),
-            targets,
-        )
-        for bento in bentos
-    }

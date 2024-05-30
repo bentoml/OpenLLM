@@ -1,18 +1,24 @@
-import asyncio
 import json
 import os
+import pathlib
+import shutil
 import subprocess
 
 import questionary
 import typer
 
-from openllm_next.common import ERROR_STYLE, BentoInfo, run_command
-from openllm_next.model import pick_bento
+from openllm_next.accelerator_spec import ACCELERATOR_SPECS
+from openllm_next.common import (
+    ERROR_STYLE,
+    BentoInfo,
+    DeploymentTarget,
+    run_command,
+)
 
 app = typer.Typer()
 
 
-def _get_deploy_cmd(bento: BentoInfo):
+def _get_deploy_cmd(bento: BentoInfo, target: DeploymentTarget | None = None):
     cmd = ["bentoml", "deploy", bento.tag]
     env = {
         "BENTOML_HOME": f"{bento.repo.path}/bentoml",
@@ -42,6 +48,16 @@ def _get_deploy_cmd(bento: BentoInfo):
         if value is None:
             raise typer.Exit(1)
         cmd += ["--env", f"{env_info['name']}={value}"]
+
+    if target:
+        cmd += ["--instance-type", target.name]
+
+    assert (pathlib.Path.home() / "bentoml" / ".yatai.yaml").exists()
+    shutil.copy(
+        pathlib.Path.home() / "bentoml" / ".yatai.yaml",
+        bento.repo.path / "bentoml" / ".yatai.yaml",
+    )
+
     return cmd, env, None
 
 
@@ -94,65 +110,35 @@ def _ensure_cloud_context():
             raise typer.Exit(1)
 
 
-def serve(bento: BentoInfo):
+def get_cloud_machine_spec():
     _ensure_cloud_context()
-    cmd, env, cwd = _get_deploy_cmd(bento)
+    cmd = ["bentoml", "deployment", "list-instance-types", "-o", "json"]
+    try:
+        result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+        instance_types = json.loads(result)
+        return [
+            DeploymentTarget(
+                source="cloud",
+                name=it["name"],
+                price=it["price"],
+                accelerators=(
+                    [ACCELERATOR_SPECS[it["gpu_type"]] for _ in range(int(it["gpu"]))]
+                    if it.get("gpu")
+                    else []
+                ),
+            )
+            for it in instance_types
+        ]
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, ValueError):
+        questionary.print("Failed to get cloud instance types", style=ERROR_STYLE)
+        return []
+
+
+def serve(bento: BentoInfo, target: DeploymentTarget):
+    _ensure_cloud_context()
+    cmd, env, cwd = _get_deploy_cmd(bento, target)
     run_command(cmd, env=env, cwd=cwd)
 
 
-async def _run_model(bento: BentoInfo, timeout: int = 600):
-    _ensure_cloud_context()
-    cmd, env, cwd = _get_deploy_cmd(bento)
-    server_proc = subprocess.Popen(
-        cmd,
-        env=env,
-        cwd=cwd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    import bentoml
-    from httpx import ReadError
-
-    try:
-        questionary.print("Model loading...", style="green")
-        for _ in range(timeout):
-            try:
-                client = bentoml.AsyncHTTPClient(
-                    "http://localhost:3000", timeout=timeout
-                )
-                resp = await client.request("GET", "/readyz")
-                if resp.status_code == 200:
-                    break
-            except bentoml.exceptions.BentoMLException:
-                await asyncio.sleep(1)
-            except ReadError:
-                await asyncio.sleep(1)
-        else:
-            questionary.print("Model failed to load", style="red")
-            return
-
-        questionary.print("Model is ready", style="green")
-        messages = []
-        while True:
-            try:
-                message = input("user: ")
-                messages.append(dict(role="user", content=message))
-                print("assistant: ", end="")
-                assistant_message = ""
-                async for text in client.chat(messages=messages):  # type: ignore
-                    assistant_message += text
-                    print(text, end="")
-                messages.append(dict(role="assistant", content=assistant_message))
-                print()
-
-            except KeyboardInterrupt:
-                break
-    finally:
-        questionary.print("\nStopping model server...", style="green")
-        server_proc.terminate()
-        questionary.print("Stopped model server", style="green")
-
-
-def run(bento: BentoInfo):
-    asyncio.run(_run_model(bento))
+def run(bento: BentoInfo, target: DeploymentTarget):
+    pass

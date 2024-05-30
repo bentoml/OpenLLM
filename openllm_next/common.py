@@ -179,6 +179,27 @@ class BentoInfo(SimpleNamespace):
             )
 
 
+class Accelerator(SimpleNamespace):
+    model: str
+    memory_size: float
+
+    def __gt__(self, other):
+        return self.memory_size > other.memory_size
+
+    def __eq__(self, other):
+        return self.memory_size == other.memory_size
+
+
+class DeploymentTarget(SimpleNamespace):
+    source: str = "local"
+    name: str = "local"
+    price: str = ""
+    accelerators: list[Accelerator]
+
+    def __hash__(self):
+        return hash(self.source)
+
+
 @typing.overload
 def run_command(
     cmd,
@@ -254,7 +275,11 @@ def run_command(
                 stderr=subprocess.DEVNULL,
             )
         else:
-            return run_func(cmd, cwd=cwd, env=env)
+            return run_func(
+                cmd,
+                cwd=cwd,
+                env=env,
+            )
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
         raise typer.Exit(1)

@@ -1,12 +1,9 @@
 import asyncio
 
 import questionary
-import typer
 
 from openllm_next.common import BentoInfo, run_command
 from openllm_next.venv import ensure_venv
-
-app = typer.Typer()
 
 
 def _get_serve_cmd(bento: BentoInfo):
