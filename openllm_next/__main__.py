@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import typer
 
 from openllm_next.cloud import app as cloud_app
@@ -20,7 +22,7 @@ def serve(model: str):
 
 
 @app.command()
-def run(model: str):
+def run(model: Annotated[str, typer.Argument()] = ""):
     local_run(model)
 
 

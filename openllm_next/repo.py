@@ -1,6 +1,6 @@
 import re
 import shutil
-import subprocess
+import time
 
 import pyaml
 import questionary
@@ -12,7 +12,6 @@ from openllm_next.common import (
     SUCCESS_STYLE,
     RepoInfo,
     load_config,
-    run_command,
     save_config,
 )
 
@@ -43,36 +42,47 @@ def remove(name: str):
 
 @app.command()
 def update():
+    import dulwich
+    import dulwich.errors
+    import dulwich.porcelain
+
     config = load_config()
     repos_in_use = set()
     for repo_name, repo in config.repos.items():
         repo = parse_repo_url(repo, repo_name)
         repos_in_use.add((repo.server, repo.owner, repo.repo))
+        if repo.path.exists():  # TODO: use update instead of remove and clone
+            shutil.rmtree(repo.path, ignore_errors=True)
         if not repo.path.exists():
             repo.path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                cmd = [
-                    "git",
-                    "clone",
-                    "--branch",
-                    repo.branch,
+                dulwich.porcelain.clone(
                     f"https://{repo.server}/{repo.owner}/{repo.repo}.git",
                     str(repo.path),
-                ]
-                run_command(cmd)
-            except subprocess.CalledProcessError:
+                    checkout=True,
+                    depth=1,
+                    branch=repo.branch,
+                )
+                questionary.print("")
+                questionary.print(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
+            except:
                 shutil.rmtree(repo.path, ignore_errors=True)
                 questionary.print(
                     f"Failed to clone repo {repo.name}", style=ERROR_STYLE
                 )
         else:
             try:
-                cmd = ["git", "fetch", "origin", repo.branch]
-                run_command(cmd, cwd=repo.path)
-                cmd = ["git", "reset", "--hard", f"origin/{repo.branch}"]
-                run_command(cmd, cwd=repo.path)
-                cmd = ["git", "clean", "-fdx"]
-                run_command(cmd, cwd=repo.path)
+                import dulwich.porcelain
+
+                dulwich.porcelain.pull(
+                    str(repo.path),
+                    f"https://{repo.server}/{repo.owner}/{repo.repo}.git",
+                    refspecs=repo.branch,
+                    force=True,
+                )
+                dulwich.porcelain.clean(str(repo.path), str(repo.path))
+                questionary.print("")
+                questionary.print(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
             except:
                 shutil.rmtree(repo.path, ignore_errors=True)
                 questionary.print(
@@ -82,7 +92,6 @@ def update():
         if tuple(c.parts[-3:]) not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
             questionary.print(f"Removed unused repo cache {c}")
-    questionary.print("Repos updated", style=SUCCESS_STYLE)
 
 
 GIT_REPO_RE = re.compile(

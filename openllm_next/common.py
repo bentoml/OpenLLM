@@ -109,6 +109,12 @@ class BentoInfo(SimpleNamespace):
     repo: RepoInfo
     path: pathlib.Path
 
+    def __str__(self):
+        if self.repo.name == "default":
+            return f"{self.tag}"
+        else:
+            return f"{self.tag} ({self.repo.name})"
+
     def __hash__(self):
         return md5(str(self.path))
 
@@ -152,12 +158,6 @@ class BentoInfo(SimpleNamespace):
             }
             return pretty_yaml
         return self.bento_yaml
-
-    def __str__(self):
-        if self.repo.name == "default":
-            return f"{self.tag}"
-        else:
-            return f"{self.tag} ({self.repo.name})"
 
     def tolist(self):
         verbose = VERBOSE_LEVEL.get()

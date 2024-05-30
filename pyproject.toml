@@ -16,6 +16,8 @@ dependencies = [
     "psutil",
     "pathlib",
     "pip_requirements_parser",
+    "nvidia-ml-py",
+    "dulwich",
 ]
 
 [project.scripts]
@@ -23,3 +25,7 @@ openllm = "openllm_next.__main__:main"
 
 [tool.typer]
 src-dir = "openllm_next"
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true

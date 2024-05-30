@@ -3,8 +3,9 @@ import asyncio
 import questionary
 import typer
 
+from openllm_next.accelerator_spec import match_machines
 from openllm_next.common import run_command
-from openllm_next.model import get_serve_cmd, pick_bento
+from openllm_next.model import get_serve_cmd, list_bento, pick_bento
 from openllm_next.venv import ensure_venv
 
 app = typer.Typer()
@@ -78,5 +79,22 @@ async def _run_model(model: str, timeout: int = 600):
 
 
 @app.command()
-def run(model: str):
+def run(model: str = ""):
+    if not model:
+        models = list_bento()
+        matchs = match_machines(
+            [b.bento_yaml["services"][0]["config"]["resources"] for b in models]
+        )
+        selected = questionary.select(
+            "Select a model to run",
+            choices=[
+                questionary.Choice(
+                    f"{model.name}:{model.version} ({'local' if match[2] > 0 else 'cloud'})",
+                    model,
+                )
+                for model, match in zip(models, matchs)
+                if match[2] > 0
+            ],
+        ).ask()
+        return
     asyncio.run(_run_model(model))
