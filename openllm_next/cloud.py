@@ -1,14 +1,48 @@
 import asyncio
 import json
+import os
 import subprocess
 
 import questionary
 import typer
 
-from openllm_next.common import ERROR_STYLE, run_command
-from openllm_next.model import get_deploy_cmd
+from openllm_next.common import ERROR_STYLE, BentoInfo, run_command
+from openllm_next.model import pick_bento
 
 app = typer.Typer()
+
+
+def _get_deploy_cmd(bento: BentoInfo):
+    cmd = ["bentoml", "deploy", bento.tag]
+    env = {
+        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
+    }
+
+    required_envs = bento.bento_yaml.get("envs", [])
+    required_env_names = [env["name"] for env in required_envs if "name" in env]
+    if required_env_names:
+        questionary.print(
+            f"This model requires the following environment variables to run: {repr(required_env_names)}",
+            style="yellow",
+        )
+
+    for env_info in bento.bento_yaml.get("envs", []):
+        if "name" not in env_info:
+            continue
+        if os.environ.get(env_info["name"]):
+            default = os.environ[env_info["name"]]
+        elif "value" in env_info:
+            default = env_info["value"]
+        else:
+            default = ""
+        value = questionary.text(
+            f"{env_info['name']}:",
+            default=default,
+        ).ask()
+        if value is None:
+            raise typer.Exit(1)
+        cmd += ["--env", f"{env_info['name']}={value}"]
+    return cmd, env, None
 
 
 def _ensure_cloud_context():
@@ -60,16 +94,15 @@ def _ensure_cloud_context():
             raise typer.Exit(1)
 
 
-@app.command()
-def serve(model: str):
+def serve(bento: BentoInfo):
     _ensure_cloud_context()
-    cmd, env, cwd = get_deploy_cmd(model)
+    cmd, env, cwd = _get_deploy_cmd(bento)
     run_command(cmd, env=env, cwd=cwd)
 
 
-async def _run_model(model: str, timeout: int = 600):
+async def _run_model(bento: BentoInfo, timeout: int = 600):
     _ensure_cloud_context()
-    cmd, env, cwd = get_deploy_cmd(model)
+    cmd, env, cwd = _get_deploy_cmd(bento)
     server_proc = subprocess.Popen(
         cmd,
         env=env,
@@ -103,7 +136,7 @@ async def _run_model(model: str, timeout: int = 600):
         messages = []
         while True:
             try:
-                message = input("uesr: ")
+                message = input("user: ")
                 messages.append(dict(role="user", content=message))
                 print("assistant: ", end="")
                 assistant_message = ""
@@ -121,6 +154,5 @@ async def _run_model(model: str, timeout: int = 600):
         questionary.print("Stopped model server", style="green")
 
 
-@app.command()
-def run(model: str):
-    asyncio.run(_run_model(model))
+def run(bento: BentoInfo):
+    asyncio.run(_run_model(bento))

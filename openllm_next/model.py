@@ -6,7 +6,12 @@ import pyaml
 import questionary
 import typer
 
-from openllm_next.common import ERROR_STYLE, VERBOSE_LEVEL, BentoInfo, load_config
+from openllm_next.common import (
+    ERROR_STYLE,
+    VERBOSE_LEVEL,
+    BentoInfo,
+    load_config,
+)
 from openllm_next.repo import parse_repo_url
 
 app = typer.Typer()
@@ -38,7 +43,7 @@ def list_():
 
 
 def list_bento(tag: str | None = None) -> typing.List[BentoInfo]:
-    if tag is None:
+    if not tag:
         glob_pattern = "bentoml/bentos/*/*"
     elif ":" in tag:
         repo_name, version = tag.split(":")
@@ -86,48 +91,3 @@ def pick_bento(tag) -> BentoInfo:
     if model is None:
         raise typer.Exit(1)
     return model
-
-
-def get_serve_cmd(bento: BentoInfo):
-    cmd = ["bentoml", "serve", bento.tag]
-    env = {
-        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
-    }
-    return cmd, env, None
-
-
-def get_deploy_cmd(tag: str):
-    if ":" not in tag:
-        tag = f"{tag}:latest"
-    bento = pick_bento(tag)
-
-    cmd = ["bentoml", "deploy", bento.tag]
-    env = {
-        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
-    }
-
-    required_envs = bento.bento_yaml.get("envs", [])
-    required_env_names = [env["name"] for env in required_envs if "name" in env]
-    if required_env_names:
-        questionary.print(
-            f"This model requires the following environment variables to run: {repr(required_env_names)}",
-            style="yellow",
-        )
-
-    for env_info in bento.bento_yaml.get("envs", []):
-        if "name" not in env_info:
-            continue
-        if os.environ.get(env_info["name"]):
-            default = os.environ[env_info["name"]]
-        elif "value" in env_info:
-            default = env_info["value"]
-        else:
-            default = ""
-        value = questionary.text(
-            f"{env_info['name']}:",
-            default=default,
-        ).ask()
-        if value is None:
-            raise typer.Exit(1)
-        cmd += ["--env", f"{env_info['name']}={value}"]
-    return cmd, env, None

@@ -1,6 +1,5 @@
 import re
 import shutil
-import time
 
 import pyaml
 import questionary

@@ -113,7 +113,7 @@ class BentoInfo(SimpleNamespace):
         if self.repo.name == "default":
             return f"{self.tag}"
         else:
-            return f"{self.tag} ({self.repo.name})"
+            return f"{self.repo.name}/{self.tag}"
 
     def __hash__(self):
         return md5(str(self.path))

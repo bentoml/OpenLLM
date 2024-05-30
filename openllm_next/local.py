@@ -3,30 +3,29 @@ import asyncio
 import questionary
 import typer
 
-from openllm_next.accelerator_spec import match_machines
-from openllm_next.common import run_command
-from openllm_next.model import get_serve_cmd, list_bento, pick_bento
+from openllm_next.common import BentoInfo, run_command
 from openllm_next.venv import ensure_venv
 
 app = typer.Typer()
 
 
-@app.command()
-def serve(model: str):
-    if ":" not in model:
-        model = f"{model}:latest"
-    bento = pick_bento(model)
+def _get_serve_cmd(bento: BentoInfo):
+    cmd = ["bentoml", "serve", bento.tag]
+    env = {
+        "BENTOML_HOME": f"{bento.repo.path}/bentoml",
+    }
+    return cmd, env, None
+
+
+def serve(bento: BentoInfo):
     venv = ensure_venv(bento)
-    cmd, env, cwd = get_serve_cmd(bento)
+    cmd, env, cwd = _get_serve_cmd(bento)
     run_command(cmd, env=env, cwd=cwd, venv=venv)
 
 
-async def _run_model(model: str, timeout: int = 600):
-    if ":" not in model:
-        model = f"{model}:latest"
-    bento = pick_bento(model)
+async def _run_model(bento: BentoInfo, timeout: int = 600):
     venv = ensure_venv(bento)
-    cmd, env, cwd = get_serve_cmd(bento)
+    cmd, env, cwd = _get_serve_cmd(bento)
     server_proc = run_command(
         cmd,
         env=env,
@@ -58,7 +57,7 @@ async def _run_model(model: str, timeout: int = 600):
         messages = []
         while True:
             try:
-                message = input("uesr: ")
+                message = input("user: ")
                 messages.append(dict(role="user", content=message))
                 print("assistant: ", end="")
                 assistant_message = ""
@@ -78,23 +77,5 @@ async def _run_model(model: str, timeout: int = 600):
         questionary.print("Stopped model server", style="green")
 
 
-@app.command()
-def run(model: str = ""):
-    if not model:
-        models = list_bento()
-        matchs = match_machines(
-            [b.bento_yaml["services"][0]["config"]["resources"] for b in models]
-        )
-        selected = questionary.select(
-            "Select a model to run",
-            choices=[
-                questionary.Choice(
-                    f"{model.name}:{model.version} ({'local' if match[2] > 0 else 'cloud'})",
-                    model,
-                )
-                for model, match in zip(models, matchs)
-                if match[2] > 0
-            ],
-        ).ask()
-        return
-    asyncio.run(_run_model(model))
+def run(bento: BentoInfo):
+    asyncio.run(_run_model(bento))
