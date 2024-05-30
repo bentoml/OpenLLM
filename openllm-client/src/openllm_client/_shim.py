@@ -6,6 +6,7 @@ import email.utils, anyio, distro, httpx, pydantic
 
 from ._stream import AsyncStream, Stream, Response
 from ._typing_compat import Annotated, Architecture, LiteralString, Platform
+from ._schemas import Helpers
 
 logger = logging.getLogger(__name__)
 
@@ -614,3 +615,4 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
 
 Stream.model_rebuild()
 AsyncStream.model_rebuild()
+Helpers.model_rebuild()

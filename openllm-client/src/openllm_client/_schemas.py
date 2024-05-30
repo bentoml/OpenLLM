@@ -38,22 +38,12 @@ class MesssageParam(TypedDict):
 
 
 class Helpers(pydantic.BaseModel):
-  _client: t.Optional[Client] = None
-  _async_client: t.Optional[AsyncClient] = None
-
-  @property
-  def client(self):
-    if self._client is None:
-      raise RuntimeError('Sync client should not be used within a async context.')
-    return self._client
-
-  @property
-  def async_client(self):
-    if self._async_client is None:
-      raise RuntimeError('Async client should not be used within a sync context.')
-    return self._async_client
+  client: t.Optional[Client] = None
+  async_client: t.Optional[AsyncClient] = None
 
   def messages(self, messages, add_generation_prompt=False):
+    if self.client is None:
+      raise RuntimeError('client is not initialised correctly.')
     return self.client._post(
       '/v1/helpers/messages',
       response_cls=str,
@@ -61,6 +51,8 @@ class Helpers(pydantic.BaseModel):
     )
 
   async def async_messages(self, messages, add_generation_prompt=False):
+    if self.async_client is None:
+      raise RuntimeError('async_client is not initialised correctly.')
     return await self.async_client._post(
       '/v1/helpers/messages',
       response_cls=str,
