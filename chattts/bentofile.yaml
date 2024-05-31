@@ -8,6 +8,9 @@ include:
 python:
   requirements_txt: "./requirements.txt"
   lock_packages: true
+docker:
+  system_packages:
+    - libsox-dev
 envs:
   - name: CHAT_TTS_REPO
     value: https://github.com/2noise/ChatTTS.git

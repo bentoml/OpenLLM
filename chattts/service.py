@@ -4,6 +4,7 @@ from typing import Annotated
 import sys
 import shutil
 import io
+import pathlib
 
 import bentoml
 from bentoml.validators import ContentType
@@ -46,7 +47,7 @@ class Main:
         self.chat.load_models(compile=False) # Set to True for better performance
 
     @bentoml.api
-    def tts(self, text: str = "PUT YOUR TEXT HERE") -> Annotated[bytes, ContentType("audio/wav")]:
+    def tts(self, text: str = "PUT YOUR TEXT HERE") -> Annotated[pathlib.Path, ContentType("audio/wav")]:
         import torch
         import torchaudio
 
