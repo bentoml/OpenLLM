@@ -1,0 +1,13 @@
+service: "service:Main"
+labels:
+  owner: bentoml-team
+  stage: demo
+  platforms: linux, macos
+include:
+- "*.py"
+python:
+  requirements_txt: "./requirements.txt"
+  lock_packages: true
+envs:
+  - name: CHAT_TTS_REPO
+    value: https://github.com/2noise/ChatTTS.git
