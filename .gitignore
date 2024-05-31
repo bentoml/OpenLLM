@@ -8,3 +8,5 @@ venv/
 
 # BentoML
 bentoml/client_id
+
+chattts/ChatTTS/
