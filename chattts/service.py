@@ -12,6 +12,7 @@ from bento_constants import CONSTANT_YAML
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
+CHATTTS_PATH = os.path.join(os.path.dirname(__file__), "ChatTTS")
 
 @bentoml.service(**CONSTANTS["service_config"])
 class Main:
@@ -26,18 +27,18 @@ class Main:
         import dulwich.errors
         import dulwich.porcelain
 
-        if os.path.exists("ChatTTS"):
-            shutil.rmtree("ChatTTS")
+        if os.path.exists(CHATTTS_PATH):
+            shutil.rmtree(CHATTTS_PATH)
 
         dulwich.porcelain.clone(
             CHAT_TTS_REPO,
-            "ChatTTS",
+            CHATTTS_PATH,
             checkout=True,
             depth=1,
         )
 
     def __init__(self) -> None:
-        sys.path.append(os.path.join(os.path.dirname(__file__), "ChatTTS"))
+        sys.path.append(CHATTTS_PATH)
 
         import ChatTTS
 
