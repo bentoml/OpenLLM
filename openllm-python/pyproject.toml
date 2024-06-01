@@ -95,23 +95,20 @@ Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 
 [project.optional-dependencies]
-agents = ["transformers[agents]>=4.36.0", "diffusers", "soundfile"]
 all = ["openllm[full]"]
 awq = ["autoawq"]
 baichuan = ["cpm-kernels"]
 chatglm = ["cpm-kernels"]
+commandr = ["cpm-kernels"]
 dbrx = ["cpm-kernels"]
 dolly-v2 = ["cpm-kernels"]
 falcon = ["xformers"]
-fine-tune = ["peft>=0.6.0", "datasets", "trl", "huggingface-hub"]
 full = [
-    "openllm[agents,awq,baichuan,chatglm,dbrx,dolly-v2,falcon,fine-tune,gemma,ggml,gpt-neox,gptq,grpc,llama,mistral,mixtral,mpt,openai,opt,phi,playground,qwen,stablelm,starcoder,vllm,yi]",
+    "openllm[awq,baichuan,chatglm,commandr,dbrx,dolly-v2,falcon,gemma,gpt-neox,gptq,llama,mistral,mixtral,mpt,openai,opt,phi,qwen,stablelm,starcoder,vllm,yi]",
 ]
 gemma = ["xformers"]
-ggml = ["ctransformers"]
 gpt-neox = ["xformers"]
 gptq = ["auto-gptq[triton]>=0.4.2"]
-grpc = ["bentoml[grpc]>=1.2.16"]
 llama = ["xformers"]
 mistral = ["xformers"]
 mixtral = ["xformers"]
@@ -119,7 +116,6 @@ mpt = ["triton"]
 openai = ["openai[datalib]>=1", "tiktoken", "fastapi"]
 opt = ["triton"]
 phi = ["triton"]
-playground = ["jupyter", "notebook", "ipython", "jupytext", "nbformat"]
 qwen = ["cpm-kernels", "tiktoken"]
 stablelm = ["cpm-kernels", "tiktoken"]
 starcoder = ["bitsandbytes"]

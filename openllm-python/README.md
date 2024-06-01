@@ -186,6 +186,50 @@ You can specify any of the following ChatGLM models via `openllm start`:
 
 <details>
 
+<summary>Cohere</summary>
+
+
+### Quickstart
+
+
+
+> **Note:** Cohere requires to install with:
+> ```bash
+> pip install "openllm[commandr]"
+> ```
+
+
+Run the following command to quickly spin up a Cohere server:
+
+```bash
+TRUST_REMOTE_CODE=True openllm start CohereForAI/c4ai-command-r-plus-4bit
+```
+In a different terminal, run the following command to interact with the server:
+
+```bash
+export OPENLLM_ENDPOINT=http://localhost:3000
+openllm query 'What are large language models?'
+```
+
+
+> **Note:** Any Cohere variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=commandr) to see more Cohere-compatible models.
+
+
+
+### Supported models
+
+You can specify any of the following Cohere models via `openllm start`:
+
+
+- [CohereForAI/c4ai-command-r-plus-4bit](https://huggingface.co/CohereForAI/c4ai-command-r-plus-4bit)
+- [CohereForAI/c4ai-command-r-plus](https://huggingface.co/CohereForAI/c4ai-command-r-plus)
+- [CohereForAI/c4ai-command-r-v01-4bit](https://huggingface.co/CohereForAI/c4ai-command-r-v01-4bit)
+- [CohereForAI/c4ai-command-r-v01](https://huggingface.co/CohereForAI/c4ai-command-r-v01)
+
+</details>
+
+<details>
+
 <summary>Dbrx</summary>
 
 

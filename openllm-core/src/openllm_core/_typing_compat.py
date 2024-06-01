@@ -18,8 +18,8 @@ ListStr = List[str]
 At = TypeVar('At', bound=attr.AttrsInstance)
 LiteralDtype = Literal['float16', 'float32', 'bfloat16', 'int8', 'int16']
 LiteralSerialisation = Literal['safetensors', 'legacy']
-LiteralQuantise = Literal['int8', 'int4', 'gptq', 'awq', 'squeezellm']
-LiteralBackend = Literal['pt', 'vllm', 'triton', 'ggml']  # TODO: ggml
+LiteralQuantise = Literal['aqlm', 'fp8', 'gptq', 'awq', 'squeezellm', 'gptq_marlin', 'marlin']
+LiteralBackend = Literal['pt', 'vllm']  # TODO: ggml
 AdapterType = Literal[
   'lora', 'adalora', 'adaption_prompt', 'prefix_tuning', 'p_tuning', 'prompt_tuning', 'ia3', 'loha', 'lokr'
 ]

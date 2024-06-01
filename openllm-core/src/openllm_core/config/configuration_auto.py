@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import importlib, typing as t, inflection
 from collections import OrderedDict
-from ..exceptions import MissingDependencyError
-from ..utils import ReprMixin, is_bentoml_available
+from ..utils import ReprMixin
 
 if t.TYPE_CHECKING:
   import types
-  from bentoml import Model
   from collections import _odict_items, _odict_keys, _odict_values
 
   import openllm, openllm_core
@@ -23,6 +21,7 @@ else:
 ModelType: t.TypeAlias = t.Literal[
   'baichuan',
   'chatglm',
+  'commandr',
   'falcon',
   'gemma',
   'gpt_neox',
@@ -45,6 +44,7 @@ CONFIG_MAPPING_NAMES: OrderedDict[ModelType, str] = OrderedDict(
   sorted([
     ('baichuan', 'BaichuanConfig'),
     ('chatglm', 'ChatGLMConfig'),
+    ('commandr', 'CohereConfig'),
     ('falcon', 'FalconConfig'),
     ('gpt_neox', 'GPTNeoXConfig'),
     ('gemma', 'GemmaConfig'),
@@ -134,6 +134,9 @@ class AutoConfig:
   def for_model(cls, model_name: t.Literal['chatglm'], **attrs: t.Any) -> openllm_core.config.ChatGLMConfig: ...
   @t.overload
   @classmethod
+  def for_model(cls, model_name: t.Literal['commandr'], **attrs: t.Any) -> openllm_core.config.CohereConfig: ...
+  @t.overload
+  @classmethod
   def for_model(cls, model_name: t.Literal['dbrx'], **attrs: t.Any) -> openllm_core.config.DbrxConfig: ...
   @t.overload
   @classmethod
@@ -197,21 +200,9 @@ class AutoConfig:
   def from_llm(cls, llm: openllm.LLM, **attrs: t.Any) -> openllm_core.LLMConfig:
     config_cls = llm.config.__class__.__name__
     if config_cls in CONFIG_TO_ALIAS_NAMES:
-      return cls.for_model(CONFIG_TO_ALIAS_NAMES[config_cls]).model_construct_env(**attrs)
+      return cls.from_id(llm.model_id, trust_remote_code=llm.trust_remote_code, **attrs)
     raise ValueError(
       f"Failed to determine config class for '{llm.model_id}'. Make sure {llm.model_id} is saved with openllm."
-    )
-
-  @classmethod
-  def from_bentomodel(cls, bentomodel: Model, **attrs: t.Any) -> openllm_core.LLMConfig:
-    if not is_bentoml_available():
-      raise MissingDependencyError("Requires 'bentoml' to be available. Do 'pip install bentoml'")
-
-    arch = bentomodel.info.metadata['architectures'][0]
-    if arch in cls._architecture_mappings:
-      return cls.for_model(cls._architecture_mappings[arch]).model_construct_env(**attrs)
-    raise ValueError(
-      f"Failed to determine config class for '{bentomodel.name}'. Make sure {bentomodel.name} is saved with openllm."
     )
 
   @classmethod
