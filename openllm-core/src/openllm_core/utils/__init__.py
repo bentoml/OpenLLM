@@ -371,6 +371,19 @@ _LOGGING_CONFIG = {
 }
 
 
+class Counter:
+  def __init__(self, start: int = 0):
+    self.counter = start
+
+  def __next__(self) -> int:
+    i = self.counter
+    self.counter += 1
+    return i
+
+  def reset(self) -> None:
+    self.counter = 0
+
+
 def configure_logging():
   if get_quiet_mode():
     _LOGGING_CONFIG['loggers']['openllm']['level'] = logging.ERROR
