@@ -26,27 +26,12 @@ fi
 . "$GIT_ROOT/.venv/bin/activate"
 
 print_usage() {
-  echo "Usage: $0 [OPTIONS]"
-  echo "Options:"
-  echo "  -e, -E, --ext  Specify extensions for OpenLLM. Can be used multiple times or as a comma-separated list."
-  echo "                  Example: $0 -e ext1,ext2"
-  echo "                  Example: $0 --ext ext1 --ext ext2"
-  echo ""
-  echo "This script installs various components with optional extensions."
+  echo "Usage: $0"
 }
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-  --extensions | -e | -E | --ext)
-    if [[ -n $2 && $2 != -* ]]; then
-      split_csv "$2"
-      shift
-    else
-      print_usage
-      exit 1
-    fi
-    ;;
   --help | -h)
     print_usage
     exit 0
