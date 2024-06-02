@@ -70,9 +70,7 @@ jobs:
       - name: Install build frontend
         run: python -m pip install --upgrade build
       - name: Build
-        run: |
-          bash local.sh
-          python -m build -sw openllm-python/
+        run: python -m build -sw openllm-python/
       - name: Upload artifacts
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # ratchet:actions/upload-artifact@v4
         with:
