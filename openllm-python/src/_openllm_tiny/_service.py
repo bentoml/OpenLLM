@@ -110,8 +110,11 @@ class LLMService:
     return core.MetadataOutput(
       timeout=self.llm.config['timeout'],
       model_name=self.llm.config['model_name'],
+      trust_remote_code=svars.trust_remote_code,
       model_id=self.llm.model_id,
-      configuration=self.llm.config.model_dump_json(),
+      configuration=self.llm.config,
+      serialisation=svars.serialisation,
+      quantise=svars.quantise,
     )
 
   @core.utils.api(route='/v1/helpers/messages')

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pydantic, orjson, typing as t
 from ._configuration import LLMConfig
 from .utils import gen_random_uuid
-from ._typing_compat import Required, TypedDict, LiteralString
+from ._typing_compat import Required, TypedDict, LiteralString, LiteralQuantise, LiteralSerialisation
 
 if t.TYPE_CHECKING:
   import vllm
@@ -24,14 +24,21 @@ class MetadataOutput(pydantic.BaseModel):
   model_id: str
   timeout: int
   model_name: str
+  trust_remote_code: bool
   configuration: LLMConfig
+  serialisation: LiteralSerialisation
+  quantise: LiteralQuantise
 
   @pydantic.field_validator('configuration', mode='before')
   @classmethod
-  def configuration_converter(cls, data: str | LLMConfig, values: pydantic.ValidationInfo) -> LLMConfig:
+  def configuration_converter(cls, data: str | dict[str, t.Any] | LLMConfig, values: pydantic.ValidationInfo) -> LLMConfig:
+    from .config import AutoConfig
+    model_id = values.data['model_id']
+    trust_remote_code = values.data['trust_remote_code']
     if isinstance(data, str):
-      from .config import AutoConfig
-      return AutoConfig.from_id(values.data['model_id'], **orjson.loads(data))
+      return AutoConfig.from_id(model_id, trust_remote_code=trust_remote_code, **orjson.loads(data))
+    elif isinstance(data, dict):
+      return AutoConfig.from_id(model_id, trust_remote_code=trust_remote_code, **data)
     return data
 
 
