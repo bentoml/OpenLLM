@@ -760,11 +760,8 @@ Quantization is a technique to reduce the storage and computation requirements f
 
 OpenLLM supports the following quantization techniques
 
-- [LLM.int8(): 8-bit Matrix Multiplication](https://arxiv.org/abs/2208.07339) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
-- [SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight Compression
-  ](https://arxiv.org/abs/2306.03078) through [bitsandbytes](https://github.com/TimDettmers/bitsandbytes)
-- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978),
-- [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323)
+- [AWQ: Activation-aware Weight Quantization](https://arxiv.org/abs/2306.00978).
+- [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323).
 - [SqueezeLLM: Dense-and-Sparse Quantization](https://arxiv.org/abs/2306.07629).
 
 > [!NOTE]
@@ -816,10 +813,21 @@ from llama_index.llms.openllm import OpenLLMAPI
 Spin up an OpenLLM server, and connect to it by specifying its URL:
 
 ```python
-from langchain.llms import OpenLLM
+from langchain.llms import OpenLLMAPI
 
-llm = OpenLLM(server_url='http://44.23.123.1:3000', server_type='http')
-llm('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
+llm = OpenLLMAPI(server_url='http://44.23.123.1:3000')
+llm.invoke('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
+
+# streaming
+for it in llm.stream('What is the difference between a duck and a goose? And why there are so many Goose in Canada?'):
+  print(it, flush=True, end='')
+
+# async context
+await llm.ainvoke('What is the difference between a duck and a goose? And why there are so many Goose in Canada?')
+
+# async streaming
+async for it in llm.astream('What is the difference between a duck and a goose? And why there are so many Goose in Canada?'):
+  print(it, flush=True, end='')
 ```
 
 <!-- hatch-fancy-pypi-readme interim stop -->
