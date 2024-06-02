@@ -135,7 +135,6 @@ class APIResponse(pydantic.BaseModel, t.Generic[Response]):
       # Since users specific different content_type, then we return the raw binary text without and deserialisation
       return self.raw_response.text
 
-    breakpoint()
     data = self.raw_response.json()
     try:
       return self.response_cls(**data)
