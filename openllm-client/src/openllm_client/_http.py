@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import importlib.metadata, logging, os, typing as t, orjson, pydantic
+import importlib.metadata, logging, os, typing as t, pydantic
 
 from ._schemas import Helpers, Metadata, Response, StreamingResponse
 from ._shim import MAX_RETRIES, AsyncClient, Client
@@ -62,7 +62,7 @@ class HTTPClient(Client):
   @property
   def _config(self) -> dict[str, t.Any]:
     if self.__config is None:
-      self.__config = orjson.loads(self._metadata.configuration)
+      self.__config = self._metadata.configuration.model_dump()
     return self.__config
 
   def query(self, prompt, **attrs):
@@ -175,7 +175,7 @@ class AsyncHTTPClient(AsyncClient, pydantic.BaseModel):
   @property
   async def _config(self):
     if self.__config is None:
-      self.__config = orjson.loads((await self._metadata).configuration)
+      self.__config = (await self._metadata).configuration.model_dump()
     return self.__config
 
   async def query(self, prompt, **attrs):

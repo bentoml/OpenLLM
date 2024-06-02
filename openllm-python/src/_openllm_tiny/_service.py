@@ -110,7 +110,6 @@ class LLMService:
     return core.MetadataOutput(
       timeout=self.llm.config['timeout'],
       model_name=self.llm.config['model_name'],
-      backend='vllm',  # deprecated
       model_id=self.llm.model_id,
       configuration=self.llm.config.model_dump_json(),
     )

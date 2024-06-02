@@ -24,8 +24,15 @@ class MetadataOutput(pydantic.BaseModel):
   model_id: str
   timeout: int
   model_name: str
-  backend: str
-  configuration: str
+  configuration: LLMConfig
+
+  @pydantic.field_validator('configuration', mode='before')
+  @classmethod
+  def configuration_converter(cls, data: str | LLMConfig, values: pydantic.ValidationInfo) -> LLMConfig:
+    if isinstance(data, str):
+      from .config import AutoConfig
+      return AutoConfig.from_id(values.data['model_id'], **orjson.loads(data))
+    return data
 
 
 class GenerationInputDict(TypedDict, total=False):

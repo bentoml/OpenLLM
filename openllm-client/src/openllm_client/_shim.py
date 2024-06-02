@@ -1,11 +1,11 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
 
-import asyncio, logging, platform, random, orjson, time, typing as t
+import asyncio, logging, platform, random, time, typing as t
 import email.utils, anyio, distro, httpx, pydantic
 
 from ._stream import AsyncStream, Stream, Response
-from ._typing_compat import Annotated, Architecture, LiteralString, Platform
+from ._typing_compat import Annotated, Architecture, Platform
 from ._schemas import Helpers
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ InnerClient = t.TypeVar('InnerClient', bound=t.Union[httpx.Client, httpx.AsyncCl
 StreamType = t.TypeVar('StreamType', bound=t.Union[Stream[t.Any], AsyncStream[t.Any]])
 _Stream = t.TypeVar('_Stream', bound=Stream[t.Any])
 _AsyncStream = t.TypeVar('_AsyncStream', bound=AsyncStream[t.Any])
-LiteralVersion = Annotated[LiteralString, t.Literal['v1'], str]
+LiteralVersion = Annotated[t.Literal['v1'], str]
 
 
 def _address_converter(addr: str | httpx.URL) -> httpx.URL:
@@ -87,7 +87,7 @@ class RequestOptions(pydantic.BaseModel):
 
   method: pydantic.constr(to_lower=True)
   url: str
-  json: t.Optional[t.Dict[str, t.Any]] = pydantic.Field(default=None)
+  data: t.Optional[t.Dict[str, t.Any]] = pydantic.Field(default=None)
   params: t.Optional[t.Mapping[str, t.Any]] = pydantic.Field(default=None)
   headers: t.Optional[t.Dict[str, str]] = pydantic.Field(default=None)
   max_retries: int = pydantic.Field(default=MAX_RETRIES)
@@ -137,7 +137,7 @@ class APIResponse(pydantic.BaseModel, t.Generic[Response]):
 
     data = self.raw_response.json()
     try:
-      return self.response_cls(**orjson.loads(data))
+      return self.response_cls(**data)
     except Exception as exc:
       raise ValueError(exc) from None  # validation error here
 
@@ -268,7 +268,7 @@ class BaseClient(pydantic.BaseModel, t.Generic[InnerClient, StreamType]):
       method=options.method,
       headers=self._build_headers(options),
       url=self._prepare_url(options.url),
-      json=options.json,
+      json=options.data,
       params=options.params,
     )
 
@@ -461,7 +461,7 @@ class Client(BaseClient[httpx.Client, Stream[t.Any]]):
     if options is None:
       options = {}
     return self.request(
-      response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls
+      response_cls, RequestOptions(method='POST', url=path, data=json, **options), stream=stream, stream_cls=stream_cls
     )
 
 
@@ -602,7 +602,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient, AsyncStream[t.Any]]):
     if options is None:
       options = {}
     return await self.request(
-      response_cls, RequestOptions(method='POST', url=path, json=json, **options), stream=stream, stream_cls=stream_cls
+      response_cls, RequestOptions(method='POST', url=path, data=json, **options), stream=stream, stream_cls=stream_cls
     )
 
 
