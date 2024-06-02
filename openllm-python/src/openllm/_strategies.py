@@ -1,3 +1,19 @@
+# Apache License
+#
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import inspect, logging, math, os, sys, types, warnings, typing as t
 import psutil, bentoml, openllm_core.utils as coreutils
@@ -113,13 +129,15 @@ class _ResourceMixin:
         # So we need to use the ctypes bindings directly.
         # we don't want to use CLI because parsing is a pain.
         # TODO: Use tinygrad/gpuctypes
-        sys.path.append('/opt/rocm/libexec/rocm_smi')
+        rocm_path = os.environ.get('ROCM_PATH', '/opt/rocm')
+        sys.path.append(rocm_path + '/libexec/rocm_smi')
         try:
           from ctypes import byref, c_uint32
 
           # refers to https://github.com/RadeonOpenCompute/rocm_smi_lib/blob/master/python_smi_tools/rsmiBindings.py
           from rsmiBindings import rocmsmi, rsmi_status_t
 
+          ret = rocmsmi.rsmi_init(0)
           device_count = c_uint32(0)
           ret = rocmsmi.rsmi_num_monitor_devices(byref(device_count))
           if ret == rsmi_status_t.RSMI_STATUS_SUCCESS:
@@ -129,7 +147,7 @@ class _ResourceMixin:
         except (ModuleNotFoundError, ImportError):
           return []
         finally:
-          sys.path.remove('/opt/rocm/libexec/rocm_smi')
+          sys.path.remove(rocm_path + '/libexec/rocm_smi')
       else:
         try:
           from cuda import cuda
