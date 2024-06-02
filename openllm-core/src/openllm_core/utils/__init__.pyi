@@ -6,7 +6,6 @@ from openllm_core._typing_compat import overload, AnyCallable, ParamSpec, Concat
 from bentoml._internal.types import PathType
 from openllm_core.utils.import_utils import (
   ENV_VARS_TRUE_VALUES as ENV_VARS_TRUE_VALUES,
-  OPTIONAL_DEPENDENCIES as OPTIONAL_DEPENDENCIES,
   is_autoawq_available as is_autoawq_available,
   is_autogptq_available as is_autogptq_available,
   is_bentoml_available as is_bentoml_available,

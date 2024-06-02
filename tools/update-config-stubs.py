@@ -159,7 +159,6 @@ def main() -> int:
     'def is_vllm_available() -> bool: ...\n',
     *[f'def {k}() -> bool: ...\n' for k in iutils.caller],
     'ENV_VARS_TRUE_VALUES: t.Set[str] = ...\n',
-    'OPTIONAL_DEPENDENCIES: t.Set[str] = ...\n',
   ]
   with _TARGET_IMPORT_UTILS_FILE.open('w') as f:
     f.writelines(lines)

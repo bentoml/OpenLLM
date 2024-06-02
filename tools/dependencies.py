@@ -13,10 +13,9 @@ if t.TYPE_CHECKING:
   from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, 'openllm-python', 'src'))
-sys.path.insert(1, os.path.join(ROOT, 'openllm-core', 'src'))
+sys.path.insert(0, os.path.join(ROOT, 'openllm-core', 'src'))
 
-import openllm
+import openllm_core as core
 
 _OWNER, _REPO = 'bentoml', 'openllm'
 
@@ -143,35 +142,7 @@ class Dependencies:
 
 _LOWER_BENTOML_CONSTRAINT = '1.2.16'
 _BENTOML_EXT = ['io']
-_TRANSFORMERS_EXT = ['torch', 'tokenizers']
-_TRANSFORMERS_CONSTRAINTS = '4.36.0'
 
-FINE_TUNE_DEPS = ['peft>=0.6.0', 'datasets', 'trl', 'huggingface-hub']
-GRPC_DEPS = [f'bentoml[grpc]>={_LOWER_BENTOML_CONSTRAINT}']
-OPENAI_DEPS = ['openai[datalib]>=1', 'tiktoken', 'fastapi']
-AGENTS_DEPS = [f'transformers[agents]>={_TRANSFORMERS_CONSTRAINTS}', 'diffusers', 'soundfile']
-PLAYGROUND_DEPS = ['jupyter', 'notebook', 'ipython', 'jupytext', 'nbformat']
-GGML_DEPS = ['ctransformers']
-AWQ_DEPS = ['autoawq']
-GPTQ_DEPS = ['auto-gptq[triton]>=0.4.2']
-VLLM_DEPS = ['vllm==0.4.2']
-
-_base_requirements: dict[str, t.Any] = {
-  inflection.dasherize(name): config_cls()['requirements']
-  for name, config_cls in openllm.CONFIG_MAPPING.items()
-  if 'requirements' in config_cls()
-}
-
-# shallow copy from locals()
-_locals = locals().copy()
-
-# NOTE: update this table when adding new external dependencies
-# sync with openllm.utils.OPTIONAL_DEPENDENCIES
-_base_requirements.update({
-  v: _locals.get(f'{inflection.underscore(v).upper()}_DEPS') for v in openllm.utils.OPTIONAL_DEPENDENCIES
-})
-
-_base_requirements = {k: v for k, v in sorted(_base_requirements.items())}
 
 fname = f'{os.path.basename(os.path.dirname(__file__))}/{os.path.basename(__file__)}'
 
@@ -199,21 +170,6 @@ def create_classifiers() -> Array:
     *Classifier.create_python_classifier(),
   ])
   return arr.multiline(True)
-
-
-def create_optional_table() -> Table:
-  all_array = tomlkit.array()
-  all_array.append(f"openllm[{','.join([k for k, v in _base_requirements.items() if v])}]")
-
-  table = tomlkit.table(is_super_table=True)
-  _base_requirements.update({
-    'full': correct_style(all_array.multiline(True)),
-    'all': tomlkit.array('["openllm[full]"]'),
-  })
-  table.update({k: v for k, v in sorted(_base_requirements.items()) if v})
-  table.add(tomlkit.nl())
-
-  return table
 
 
 def create_url_table(_info: t.Any) -> Table:
@@ -282,25 +238,23 @@ def main(args) -> int:
   if args.release_version is not None:
     release_version = args.release_version
   else:
-    release_version = openllm.bundle.RefResolver.from_strategy('release').version
+    try:
+      release_version = api.repos.get_latest_release()['name'].lstrip('v')
+    except Exception as err:
+      raise err
 
   _BASE_DEPENDENCIES = [
     Dependencies(name='bentoml', extensions=_BENTOML_EXT, lower_constraint=_LOWER_BENTOML_CONSTRAINT),
-    Dependencies(name='transformers', extensions=_TRANSFORMERS_EXT, lower_constraint=_TRANSFORMERS_CONSTRAINTS),
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
     Dependencies(name='safetensors'),
     Dependencies(name='vllm', lower_constraint='0.4.2'),
-    Dependencies(name='optimum', lower_constraint='1.12.0'),
-    Dependencies(name='accelerate'),
     Dependencies(name='ghapi'),
     Dependencies(name='einops'),
     Dependencies(name='sentencepiece'),
     Dependencies(name='scipy'),
-    Dependencies(name='build', upper_constraint='1', extensions=['virtualenv']),
     Dependencies(name='click', lower_constraint='8.1.3'),
     Dependencies(name='cuda-python', platform=('Darwin', 'ne')),
-    Dependencies(name='bitsandbytes', upper_constraint='0.42'),  # 0.41 works with CUDA 11.8
   ]
 
   dependencies_array = correct_style(tomlkit.array())
@@ -321,7 +275,6 @@ def main(args) -> int:
 
   pyproject['project']['urls'] = create_url_table(_info)
   pyproject['project']['scripts'] = build_cli_extensions()
-  pyproject['project']['optional-dependencies'] = create_optional_table()
 
   with open(os.path.join(ROOT, 'openllm-python', 'pyproject.toml'), 'w') as f:
     f.write(tomlkit.dumps(pyproject))

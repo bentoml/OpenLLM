@@ -105,7 +105,7 @@ def optimization_decorator(fn: t.Callable[..., t.Any]):
       '--quantise',
       '--quantize',
       'quantise',
-      type=str,
+      type=click.Choice(get_literal_args(LiteralQuantise)),
       default=None,
       envvar='QUANTIZE',
       show_envvar=True,
