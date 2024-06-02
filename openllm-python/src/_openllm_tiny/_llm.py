@@ -202,7 +202,14 @@ class LLM:
         "'generate_iterator' is reserved only for online serving. For batch inference use 'LLM.batch' instead."
       )
 
-    from vllm import SamplingParams
+    from vllm import SamplingParams, TextPrompt, TokensPrompt
+
+    if prompt_token_ids is not None:
+      inputs = TokensPrompt(prompt_token_ids=prompt_token_ids)
+    else:
+      if prompt is None:
+        raise ValueError('Either "prompt" or "prompt_token_ids" must be passed.')
+      inputs = TextPrompt(prompt=prompt)
 
     config = self.config.model_construct_env(**dict_filter_none(attrs))
 
@@ -229,12 +236,11 @@ class LLM:
 
     try:
       async for generations in self._model.generate(
-        prompt,
+        inputs=inputs,
         sampling_params=SamplingParams(**{
           k: config.__getitem__(k) for k in set(inspect.signature(SamplingParams).parameters.keys())
         }),
         request_id=request_id,
-        prompt_token_ids=prompt_token_ids if prompt_token_ids else None,
       ):
         yield generations
     except Exception as err:
@@ -277,7 +283,7 @@ class LLM:
         "'batch' is reserved for offline batch inference. For online serving use 'LLM.generate' or 'LLM.generate_iterator' instead."
       )
 
-    from vllm import SamplingParams
+    from vllm import SamplingParams, TextPrompt
 
     if isinstance(prompts, str):
       prompts = [prompts]
@@ -295,11 +301,10 @@ class LLM:
 
     for i in range(num_requests):
       request_id = str(next(self._counter))
-      prompt = prompts[i]
       config = configs[i]
       self._model.add_request(
         request_id,
-        prompt,
+        TextPrompt(prompt=prompts[i]),
         SamplingParams(**{k: config.__getitem__(k) for k in set(inspect.signature(SamplingParams).parameters.keys())}),
       )
 

@@ -7,9 +7,6 @@ charset = utf-8
 indent_style = space
 indent_size = 2
 
-[openllm-client/src/openllm_client/pb/v1/*]
-indent_size = unset
-
 [/node_modules/*]
 indent_size = unset
 indent_style = unset

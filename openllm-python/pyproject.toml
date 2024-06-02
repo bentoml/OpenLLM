@@ -42,7 +42,7 @@ dependencies = [
     "openllm-client>=0.5.4",
     "openllm-core>=0.5.4",
     "safetensors",
-    "vllm>=0.4.2",
+    "vllm>=0.4.3",
     "ghapi",
     "einops",
     "sentencepiece",

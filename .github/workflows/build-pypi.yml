@@ -18,18 +18,12 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'
   pull_request:
     branches: [main]
     paths-ignore:
-      - 'docs/**'
-      - 'bazel/**'
-      - 'typings/**'
       - '*.md'
       - 'changelog.d/**'
       - 'assets/**'

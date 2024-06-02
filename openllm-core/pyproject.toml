@@ -80,9 +80,7 @@ Homepage = "https://bentoml.com"
 Tracker = "https://github.com/bentoml/OpenLLM/issues"
 Twitter = "https://twitter.com/bentomlai"
 [project.optional-dependencies]
-full = ["openllm-core[vllm,bentoml,transformers]"]
-transformers = ["transformers>=4.36.0"]
-vllm = ["vllm>=0.3.0"]
+full = ["openllm-core[bentoml]", "transformers>=4.36.0"]
 bentoml = ["bentoml>=1.2"]
 
 [tool.hatch.version]

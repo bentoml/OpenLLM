@@ -2,10 +2,8 @@
 from __future__ import annotations
 import dataclasses
 import os
-import sys
 import typing as t
 
-import inflection
 import tomlkit
 from ghapi.all import GhApi
 
@@ -13,9 +11,6 @@ if t.TYPE_CHECKING:
   from tomlkit.items import Array, Table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, 'openllm-core', 'src'))
-
-import openllm_core as core
 
 _OWNER, _REPO = 'bentoml', 'openllm'
 
@@ -248,7 +243,7 @@ def main(args) -> int:
     Dependencies(name='openllm-client', lower_constraint=release_version),
     Dependencies(name='openllm-core', lower_constraint=release_version),
     Dependencies(name='safetensors'),
-    Dependencies(name='vllm', lower_constraint='0.4.2'),
+    Dependencies(name='vllm', lower_constraint='0.4.3'),
     Dependencies(name='ghapi'),
     Dependencies(name='einops'),
     Dependencies(name='sentencepiece'),

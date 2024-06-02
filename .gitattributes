@@ -3,7 +3,6 @@
 *_pb2*.pyi linguist-generated=true
 
 # Python sdk
-openllm-python/tests/models/__snapshots__/* linguist-generated=true
 openllm-python/README.md linguist-generated=true
 openllm-python/CHANGELOG.md linguist-generated=true
 openllm-core/src/openllm_core/config/__init__.py linguist-generated=true
