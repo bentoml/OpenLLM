@@ -19,8 +19,6 @@ def markdown_importantblock(text: str):
 
 
 def main() -> int:
-  with open(os.path.join(ROOT, 'openllm-python', 'pyproject.toml'), 'r') as f:
-    deps = tomlkit.parse(f.read()).value['project']['optional-dependencies']
   with open(os.path.join(ROOT, 'README.md'), 'r') as f:
     readme = f.readlines()
 
@@ -33,20 +31,18 @@ def main() -> int:
     architecture_name = it.__class__.__name__[:-6]
     details_block = ['<details>\n', f'<summary>{architecture_name}</summary>\n\n', '### Quickstart\n']
     nitem = CONFIG_TO_ALIAS_NAMES[it.__class__.__name__]
-    if nitem in deps:
-      instruction = f'> ```bash\n> pip install "openllm[{nitem}]"\n> ```'
-      details_block.extend(markdown_noteblock(f'{architecture_name} requires to install with:\n{instruction}\n'))
     details_block.extend([
       f'Run the following command to quickly spin up a {architecture_name} server:\n',
       f"""\
 ```bash
-{'' if not it['trust_remote_code'] else 'TRUST_REMOTE_CODE=True '}openllm start {it['default_id']}
+openllm start {it['default_id']}{'' if not it['trust_remote_code'] else ' --trust-remote-code'}
 ```""",
-      'In a different terminal, run the following command to interact with the server:\n',
+      'You can run the following code in a different terminal to interact with the server:',
       """\
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```""",
       *markdown_noteblock(
         f'Any {architecture_name} variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search={nitem}) to see more {architecture_name}-compatible models.\n'

@@ -9,7 +9,6 @@ dependencies = [
     "pre-commit",
     # NOTE: towncrier for changelog
     "towncrier",
-    # NOTE: Using under ./tools/update-optional-dependencies.py
     "tomlkit",
     # NOTE: For fancy PyPI readme
     "hatch-fancy-pypi-readme",

@@ -101,24 +101,16 @@ OpenLLM currently supports the following models. By default, OpenLLM doesn't inc
 
 ### Quickstart
 
-
-
-> **Note:** Baichuan requires to install with:
-> ```bash
-> pip install "openllm[baichuan]"
-> ```
-
-
 Run the following command to quickly spin up a Baichuan server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start baichuan-inc/baichuan-7b
+openllm start baichuan-inc/baichuan-7b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -145,24 +137,16 @@ You can specify any of the following Baichuan models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** ChatGLM requires to install with:
-> ```bash
-> pip install "openllm[chatglm]"
-> ```
-
-
 Run the following command to quickly spin up a ChatGLM server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start thudm/chatglm-6b
+openllm start thudm/chatglm-6b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -191,24 +175,16 @@ You can specify any of the following ChatGLM models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Cohere requires to install with:
-> ```bash
-> pip install "openllm[commandr]"
-> ```
-
-
 Run the following command to quickly spin up a Cohere server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start CohereForAI/c4ai-command-r-plus-4bit
+openllm start CohereForAI/c4ai-command-r-plus --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -221,9 +197,7 @@ openllm query 'What are large language models?'
 You can specify any of the following Cohere models via `openllm start`:
 
 
-- [CohereForAI/c4ai-command-r-plus-4bit](https://huggingface.co/CohereForAI/c4ai-command-r-plus-4bit)
 - [CohereForAI/c4ai-command-r-plus](https://huggingface.co/CohereForAI/c4ai-command-r-plus)
-- [CohereForAI/c4ai-command-r-v01-4bit](https://huggingface.co/CohereForAI/c4ai-command-r-v01-4bit)
 - [CohereForAI/c4ai-command-r-v01](https://huggingface.co/CohereForAI/c4ai-command-r-v01)
 
 </details>
@@ -235,24 +209,16 @@ You can specify any of the following Cohere models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Dbrx requires to install with:
-> ```bash
-> pip install "openllm[dbrx]"
-> ```
-
-
 Run the following command to quickly spin up a Dbrx server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start databricks/dbrx-instruct
+openllm start databricks/dbrx-instruct --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -280,13 +246,13 @@ You can specify any of the following Dbrx models via `openllm start`:
 Run the following command to quickly spin up a DollyV2 server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start databricks/dolly-v2-3b
+openllm start databricks/dolly-v2-3b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -312,24 +278,16 @@ You can specify any of the following DollyV2 models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Falcon requires to install with:
-> ```bash
-> pip install "openllm[falcon]"
-> ```
-
-
 Run the following command to quickly spin up a Falcon server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start tiiuae/falcon-7b
+openllm start tiiuae/falcon-7b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -356,24 +314,16 @@ You can specify any of the following Falcon models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Gemma requires to install with:
-> ```bash
-> pip install "openllm[gemma]"
-> ```
-
-
 Run the following command to quickly spin up a Gemma server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start google/gemma-7b
+openllm start google/gemma-7b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -403,13 +353,13 @@ You can specify any of the following Gemma models via `openllm start`:
 Run the following command to quickly spin up a GPTNeoX server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start eleutherai/gpt-neox-20b
+openllm start eleutherai/gpt-neox-20b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -433,24 +383,16 @@ You can specify any of the following GPTNeoX models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Llama requires to install with:
-> ```bash
-> pip install "openllm[llama]"
-> ```
-
-
 Run the following command to quickly spin up a Llama server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start NousResearch/llama-2-7b-hf
+openllm start NousResearch/llama-2-7b-hf --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -485,24 +427,16 @@ You can specify any of the following Llama models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Mistral requires to install with:
-> ```bash
-> pip install "openllm[mistral]"
-> ```
-
-
 Run the following command to quickly spin up a Mistral server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start mistralai/Mistral-7B-Instruct-v0.1
+openllm start mistralai/Mistral-7B-Instruct-v0.1 --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -530,24 +464,16 @@ You can specify any of the following Mistral models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Mixtral requires to install with:
-> ```bash
-> pip install "openllm[mixtral]"
-> ```
-
-
 Run the following command to quickly spin up a Mixtral server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start mistralai/Mixtral-8x7B-Instruct-v0.1
+openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -572,24 +498,16 @@ You can specify any of the following Mixtral models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** MPT requires to install with:
-> ```bash
-> pip install "openllm[mpt]"
-> ```
-
-
 Run the following command to quickly spin up a MPT server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start mosaicml/mpt-7b-instruct
+openllm start mosaicml/mpt-7b-instruct --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -619,24 +537,16 @@ You can specify any of the following MPT models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** OPT requires to install with:
-> ```bash
-> pip install "openllm[opt]"
-> ```
-
-
 Run the following command to quickly spin up a OPT server:
 
 ```bash
 openllm start facebook/opt-1.3b
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -665,24 +575,16 @@ You can specify any of the following OPT models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Phi requires to install with:
-> ```bash
-> pip install "openllm[phi]"
-> ```
-
-
 Run the following command to quickly spin up a Phi server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start microsoft/Phi-3-mini-4k-instruct
+openllm start microsoft/Phi-3-mini-4k-instruct --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -711,24 +613,16 @@ You can specify any of the following Phi models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Qwen requires to install with:
-> ```bash
-> pip install "openllm[qwen]"
-> ```
-
-
 Run the following command to quickly spin up a Qwen server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start qwen/Qwen-7B-Chat
+openllm start qwen/Qwen-7B-Chat --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -757,24 +651,16 @@ You can specify any of the following Qwen models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** StableLM requires to install with:
-> ```bash
-> pip install "openllm[stablelm]"
-> ```
-
-
 Run the following command to quickly spin up a StableLM server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start stabilityai/stablelm-tuned-alpha-3b
+openllm start stabilityai/stablelm-tuned-alpha-3b --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -801,24 +687,16 @@ You can specify any of the following StableLM models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** StarCoder requires to install with:
-> ```bash
-> pip install "openllm[starcoder]"
-> ```
-
-
 Run the following command to quickly spin up a StarCoder server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start bigcode/starcoder
+openllm start bigcode/starcoder --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 
@@ -843,24 +721,16 @@ You can specify any of the following StarCoder models via `openllm start`:
 
 ### Quickstart
 
-
-
-> **Note:** Yi requires to install with:
-> ```bash
-> pip install "openllm[yi]"
-> ```
-
-
 Run the following command to quickly spin up a Yi server:
 
 ```bash
-TRUST_REMOTE_CODE=True openllm start 01-ai/Yi-6B
+openllm start 01-ai/Yi-6B --trust-remote-code
 ```
-In a different terminal, run the following command to interact with the server:
-
-```bash
-export OPENLLM_ENDPOINT=http://localhost:3000
-openllm query 'What are large language models?'
+You can run the following code in a different terminal to interact with the server:
+```python
+import openllm_client
+client = openllm_client.HTTPClient('http://localhost:3000')
+client.generate('What are large language models?')
 ```
 
 

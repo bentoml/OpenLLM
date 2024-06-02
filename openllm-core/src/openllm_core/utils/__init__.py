@@ -427,7 +427,6 @@ __lazy = LazyModule(
     'representation': ['ReprMixin'],
     'serde': ['converter'],
     'import_utils': [
-      'OPTIONAL_DEPENDENCIES',
       'is_vllm_available',
       'is_torch_available',
       'is_bitsandbytes_available',
