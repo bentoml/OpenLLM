@@ -1,7 +1,7 @@
 # This provides a base shim with httpx and acts as base request
 from __future__ import annotations
 
-import asyncio, logging, platform, random, time, typing as t
+import asyncio, logging, platform, random, orjson, time, typing as t
 import email.utils, anyio, distro, httpx, pydantic
 
 from ._stream import AsyncStream, Stream, Response
@@ -137,9 +137,7 @@ class APIResponse(pydantic.BaseModel, t.Generic[Response]):
 
     data = self.raw_response.json()
     try:
-      return self.client._process_response_data(
-        data=data, response_cls=self.response_cls, raw_response=self.raw_response
-      )
+      return self.response_cls(**orjson.loads(data))
     except Exception as exc:
       raise ValueError(exc) from None  # validation error here
 
@@ -316,11 +314,6 @@ class BaseClient(pydantic.BaseModel, t.Generic[InnerClient, StreamType]):
     if response.status_code >= 500:
       return True
     return False
-
-  def _process_response_data(
-    self, *, response_cls: type[Response], data: t.Dict[str, t.Any], raw_response: httpx.Response
-  ) -> Response:
-    return response_cls(**data)
 
   def _process_response(
     self,

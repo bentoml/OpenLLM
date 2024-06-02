@@ -14,10 +14,6 @@ def markdown_noteblock(text: str):
   return ['\n', f'> **Note:** {text}\n']
 
 
-def markdown_importantblock(text: str):
-  return ['\n', f'> **Important:** {text}\n']
-
-
 def main() -> int:
   with open(os.path.join(ROOT, 'README.md'), 'r') as f:
     readme = f.readlines()

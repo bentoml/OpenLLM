@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [eslint, prettier, mypy]
+  skip: [mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
   autofix_prs: false
@@ -37,8 +37,7 @@ repos:
         exclude: |
           (?x)^(
               openllm-python/src/openllm_cli/entrypoint.py |
-              openllm-python/src/_openllm_tiny/_entrypoint.py |
-              openllm-client/src/openllm_client/pb.*
+              openllm-python/src/_openllm_tiny/_entrypoint.py
           )$
   - repo: meta
     hooks:
@@ -66,17 +65,3 @@ repos:
         types: [python]
         exclude: ^(docs|tools|openllm-python/tests)
         args: [--config=pyproject.toml]
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.3.0
-    hooks:
-      - id: eslint
-        verbose: true
-        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
-        types: [file]
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        verbose: true
-        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
-        types_or: [javascript, yaml, ts]

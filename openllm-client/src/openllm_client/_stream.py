@@ -35,9 +35,7 @@ class Stream(pydantic.BaseModel, t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self.client._process_response_data(
-          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
-        )
+        yield self.response_cls(**orjson.loads(sse.data))
 
 
 class AsyncStream(pydantic.BaseModel, t.Generic[Response]):
@@ -68,9 +66,7 @@ class AsyncStream(pydantic.BaseModel, t.Generic[Response]):
       if sse.data.startswith('[DONE]'):
         break
       if sse.event is None:
-        yield self.client._process_response_data(
-          data=orjson.loads(sse.data), response_cls=self.response_cls, raw_response=self.response
-        )
+        yield self.response_cls(**orjson.loads(sse.data))
 
 
 class SSE(pydantic.BaseModel):
