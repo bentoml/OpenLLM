@@ -27,7 +27,7 @@ class MetadataOutput(pydantic.BaseModel):
   trust_remote_code: bool
   configuration: LLMConfig
   serialisation: LiteralSerialisation
-  quantise: LiteralQuantise
+  quantise: t.Optional[LiteralQuantise]
 
   @pydantic.field_validator('configuration', mode='before')
   @classmethod
