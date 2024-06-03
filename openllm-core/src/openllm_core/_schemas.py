@@ -31,8 +31,11 @@ class MetadataOutput(pydantic.BaseModel):
 
   @pydantic.field_validator('configuration', mode='before')
   @classmethod
-  def configuration_converter(cls, data: str | dict[str, t.Any] | LLMConfig, values: pydantic.ValidationInfo) -> LLMConfig:
+  def configuration_converter(
+    cls, data: str | dict[str, t.Any] | LLMConfig, values: pydantic.ValidationInfo
+  ) -> LLMConfig:
     from .config import AutoConfig
+
     model_id = values.data['model_id']
     trust_remote_code = values.data['trust_remote_code']
     if isinstance(data, str):
