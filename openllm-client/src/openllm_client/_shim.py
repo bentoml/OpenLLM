@@ -139,7 +139,7 @@ class APIResponse(pydantic.BaseModel, t.Generic[Response]):
     try:
       return self.response_cls(**data)
     except Exception as exc:
-      raise ValueError(exc) from None  # validation error here
+      raise ValueError(exc) from exc # validation error here
 
   @property
   def headers(self):

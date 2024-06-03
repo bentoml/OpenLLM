@@ -36,12 +36,11 @@ class MetadataOutput(pydantic.BaseModel):
   ) -> LLMConfig:
     from .config import AutoConfig
 
-    model_id = values.data['model_id']
-    trust_remote_code = values.data['trust_remote_code']
+    model_name = values.data['model_name']
     if isinstance(data, str):
-      return AutoConfig.from_id(model_id, trust_remote_code=trust_remote_code, **orjson.loads(data))
+      return AutoConfig.for_model(model_name, **orjson.loads(data))
     elif isinstance(data, dict):
-      return AutoConfig.from_id(model_id, trust_remote_code=trust_remote_code, **data)
+      return AutoConfig.for_model(model_name, **data)
     return data
 
 
