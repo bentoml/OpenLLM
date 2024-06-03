@@ -19,14 +19,12 @@ repos:
         alias: rf
         verbose: true
         types_or: [python, pyi, jupyter]
-  - repo: local
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.10.0'
     hooks:
       - id: mypy
-        name: mypy
-        language: system
-        always_run: true
-        pass_filenames: false
-        entry: python -m mypy --strict
+        args: [--strict]
+        additional_dependencies: [pydantic]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: '2.7.3'
     hooks:
