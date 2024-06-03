@@ -423,10 +423,11 @@ def build_command(
     bentomodel = bentoml.models.get(model_id.lower())
     model_id = bentomodel.path
     _revision = bentomodel.tag.version
+    _tag_name = bentomodel.tag.name
     if not trust_remote_code:
       trust_remote_code = True
   except (ValueError, bentoml.exceptions.NotFound):
-    bentomodel, _revision = None, None
+    bentomodel, _revision, _tag_name = None, None, None
 
   llm_config = core.AutoConfig.from_id(model_id, trust_remote_code=trust_remote_code)
   transformers_config = transformers.AutoConfig.from_pretrained(model_id, trust_remote_code=trust_remote_code)
@@ -450,7 +451,7 @@ def build_command(
   if bento_tag is None:
     _bento_version = first_not_none(bento_version, default=_revision)
     generated_tag = bentoml.Tag.from_taglike(
-      f'{normalise_model_name(model_id)}-service:{_bento_version}'.lower().strip()
+      f'{_tag_name if _tag_name is not None else normalise_model_name(model_id)}-service:{_bento_version}'.lower().strip()
     )
   else:
     generated_tag = bentoml.Tag.from_taglike(bento_tag)

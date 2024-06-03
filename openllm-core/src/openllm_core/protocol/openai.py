@@ -45,8 +45,6 @@ class CompletionRequest(pydantic.BaseModel):
 class ChatCompletionRequest(pydantic.BaseModel):
   messages: t.List[t.Dict[str, str]]
   model: str = pydantic.Field(default=None)
-  functions: t.List[t.Dict[str, str]] = pydantic.Field(default_factory=list)
-  function_calls: t.List[t.Dict[str, str]] = pydantic.Field(default_factory=list)
   temperature: t.Optional[float] = 0.7
   top_p: t.Optional[float] = 1.0
   n: t.Optional[int] = 1
