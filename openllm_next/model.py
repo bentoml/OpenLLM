@@ -1,5 +1,4 @@
 import collections
-import os
 import typing
 
 import pyaml
@@ -74,6 +73,16 @@ def list_bento(tag: str | None = None) -> typing.List[BentoInfo]:
             if model:
                 model_list.append(model)
     model_list.sort(key=lambda x: x.tag)
+    if VERBOSE_LEVEL.get() <= 0:
+        seen = set()
+        model_list = [
+            x
+            for x in model_list
+            if not (
+                f"{x.bento_yaml['name']}:{x.bento_yaml['version']}" in seen
+                or seen.add(f"{x.bento_yaml['name']}:{x.bento_yaml['version']}")
+            )
+        ]
     return model_list
 
 

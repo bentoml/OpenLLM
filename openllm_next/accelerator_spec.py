@@ -91,7 +91,7 @@ def can_run(
     target: DeploymentTarget | None = None,
 ) -> float:
     """
-    Calculate if the resource_spec can be deployed on the target.
+    Calculate if the bento can be deployed on the target.
     """
     if isinstance(resource_spec, BentoInfo):
         resource_spec = Resource(
