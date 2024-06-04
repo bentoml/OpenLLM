@@ -1,10 +1,9 @@
 service: "service:VLLM"
 labels:
   owner: bentoml-team
-  stage: demo
+  platforms: linux
 include:
 - "*.py"
-- "config.yaml"
 - "bentovllm_openai/*.py"
 - "chat_templates/chat_templates/*.jinja"
 - "chat_templates/generation_configs/*.json"

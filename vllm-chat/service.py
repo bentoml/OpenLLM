@@ -1,7 +1,7 @@
 import uuid
 import json
 import os
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Union
 from typing_extensions import Annotated
 import functools
 
@@ -86,8 +86,8 @@ class VLLM:
             Ge(128),
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
-        stop: list[str] | str | None = None,
-        stop_token_ids: list[int] | None = None,
+        stop: Union[list[str], str, None] = None,
+        stop_token_ids: Union[list[int], None] = None,
     ) -> AsyncGenerator[str, None]:
         """
         light-weight chat API that takes in a list of messages and returns a response
