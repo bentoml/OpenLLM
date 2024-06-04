@@ -121,6 +121,7 @@ def get_cloud_machine_spec():
                 source="cloud",
                 name=it["name"],
                 price=it["price"],
+                platform="linux",
                 accelerators=(
                     [ACCELERATOR_SPECS[it["gpu_type"]] for _ in range(int(it["gpu"]))]
                     if it.get("gpu") and it["gpu_type"] in ACCELERATOR_SPECS

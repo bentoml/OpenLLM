@@ -4,6 +4,9 @@ import functools
 import math
 from types import SimpleNamespace
 
+import psutil
+import questionary
+
 from openllm_next.common import BentoInfo, DeploymentTarget
 
 
@@ -60,6 +63,16 @@ ACCELERATOR_SPECS: dict[str, Accelerator] = {
 
 @functools.lru_cache
 def get_local_machine_spec():
+    if psutil.MACOS:
+        return DeploymentTarget(accelerators=[], source="local", platform="macos")
+
+    if psutil.WINDOWS:
+        platform = "windows"
+    elif psutil.LINUX:
+        platform = "linux"
+    else:
+        raise NotImplementedError(f"Unsupported platform")
+
     from pynvml import (
         nvmlDeviceGetCount,
         nvmlDeviceGetHandleByIndex,
@@ -69,36 +82,49 @@ def get_local_machine_spec():
         nvmlShutdown,
     )
 
-    nvmlInit()
-    device_count = nvmlDeviceGetCount()
-    accelerators: list[Accelerator] = []
-    for i in range(device_count):
-        handle = nvmlDeviceGetHandleByIndex(i)
-        name = nvmlDeviceGetName(handle)
-        memory_info = nvmlDeviceGetMemoryInfo(handle)
-        accelerators.append(
-            Accelerator(
-                name=name, memory_size=math.ceil(int(memory_info.total) / 1024**3)
+    try:
+        nvmlInit()
+        device_count = nvmlDeviceGetCount()
+        accelerators: list[Accelerator] = []
+        for i in range(device_count):
+            handle = nvmlDeviceGetHandleByIndex(i)
+            name = nvmlDeviceGetName(handle)
+            memory_info = nvmlDeviceGetMemoryInfo(handle)
+            accelerators.append(
+                Accelerator(
+                    name=name, memory_size=math.ceil(int(memory_info.total) / 1024**3)
+                )
             )
+        nvmlShutdown()
+        return DeploymentTarget(
+            accelerators=accelerators,
+            source="local",
+            platform=platform,
         )
-    nvmlShutdown()
-    return DeploymentTarget(accelerators=accelerators, source="local")
+    except Exception as e:
+        questionary.print(
+            f"Failed to get local GPU info. Ensure nvidia driver is installed to enable local GPU deployment",
+            color="yellow",
+        )
+        return DeploymentTarget(accelerators=[], source="local", platform=platform)
 
 
 @functools.lru_cache()
 def can_run(
-    resource_spec: Resource | BentoInfo,
+    bento: Resource | BentoInfo,
     target: DeploymentTarget | None = None,
 ) -> float:
     """
     Calculate if the bento can be deployed on the target.
     """
-    if isinstance(resource_spec, BentoInfo):
-        resource_spec = Resource(
-            **(resource_spec.bento_yaml["services"][0]["config"]["resources"])
-        )
     if target is None:
         target = get_local_machine_spec()
+
+    resource_spec = Resource(**(bento.bento_yaml["services"][0]["config"]["resources"]))
+    platforms = bento.bento_yaml["labels"].get("platforms", "linux").split(",")
+
+    if target.platform not in platforms:
+        return 0.0
     if resource_spec.gpu > 0:
         required_gpu = ACCELERATOR_SPECS[resource_spec.gpu_type]
         filtered_accelerators = [

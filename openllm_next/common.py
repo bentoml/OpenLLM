@@ -194,6 +194,7 @@ class DeploymentTarget(SimpleNamespace):
     source: str = "local"
     name: str = "local"
     price: str = ""
+    platform = "linux"
     accelerators: list[Accelerator]
 
     def __hash__(self):
