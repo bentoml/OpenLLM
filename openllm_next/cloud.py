@@ -141,4 +141,8 @@ def serve(bento: BentoInfo, target: DeploymentTarget):
 
 
 def run(bento: BentoInfo, target: DeploymentTarget):
-    pass
+    questionary.print(
+        "`run` with bentocloud is not supported yet, please use `serve` instead",
+        style=ERROR_STYLE,
+    )
+    raise typer.Exit(1)

@@ -11,7 +11,7 @@ from openllm_next.common import (
     BentoInfo,
     load_config,
 )
-from openllm_next.repo import parse_repo_url
+from openllm_next.repo import ensure_repo_updated, parse_repo_url
 
 app = typer.Typer()
 
@@ -42,6 +42,7 @@ def list_():
 
 
 def list_bento(tag: str | None = None) -> typing.List[BentoInfo]:
+    ensure_repo_updated()
     if not tag:
         glob_pattern = "bentoml/bentos/*/*"
     elif ":" in tag:

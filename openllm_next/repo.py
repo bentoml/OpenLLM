@@ -1,3 +1,4 @@
+import datetime
 import re
 import shutil
 
@@ -13,6 +14,8 @@ from openllm_next.common import (
     load_config,
     save_config,
 )
+
+UPDATE_INTERVAL = datetime.timedelta(days=3)
 
 app = typer.Typer()
 
@@ -91,6 +94,26 @@ def update():
         if tuple(c.parts[-3:]) not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
             questionary.print(f"Removed unused repo cache {c}")
+    with open(REPO_DIR / "last_update", "w") as f:
+        f.write(datetime.datetime.now().isoformat())
+
+
+def ensure_repo_updated():
+    last_update_file = REPO_DIR / "last_update"
+    if not last_update_file.exists():
+        choice = questionary.confirm(
+            "The repo cache is never updated, do you want to update it to fetch the latest model list?"
+        ).ask()
+        if choice:
+            update()
+        return
+    last_update = datetime.datetime.fromisoformat(last_update_file.read_text().strip())
+    if datetime.datetime.now() - last_update > UPDATE_INTERVAL:
+        choice = questionary.confirm(
+            "The repo cache is outdated, do you want to update it to fetch the latest model list?"
+        ).ask()
+        if choice:
+            update()
 
 
 GIT_REPO_RE = re.compile(
