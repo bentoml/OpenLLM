@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+venv/
+
+# BentoML
+bentoml/client_id
+
+chattts/ChatTTS/

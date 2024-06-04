@@ -1,7 +1,6 @@
 "phi3:3.8b-mini-instruct-4k-fp16":
   alias:
     - 3.8b
-    - mini
   project: vllm-chat
   service_config:
     name: phi3
@@ -28,6 +27,36 @@
       gpu_type: nvidia-tesla-t4
   engine_config:
     model: meta-llama/Llama-2-7b-chat-hf
+    max_model_len: 1024
+  chat_template: llama-2-chat
+"llama2:13b-chat-fp16":
+  alias:
+    - 13b
+  project: vllm-chat
+  service_config:
+    name: llama2
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-a100
+  engine_config:
+    model: meta-llama/Llama-2-13b-chat-hf
+    max_model_len: 1024
+  chat_template: llama-2-chat
+"llama2:70b-chat-fp16":
+  alias:
+    - 70b
+  project: vllm-chat
+  service_config:
+    name: llama2
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 2
+      gpu_type: nvidia-a100-80g
+  engine_config:
+    model: meta-llama/Llama-2-70b-chat-hf
     max_model_len: 1024
   chat_template: llama-2-chat
 "llama2:7b-chat-awq-4bit":
@@ -68,7 +97,6 @@
 "mistral:7b-instruct-fp16":
   alias:
     - 7b
-    - 7b-instruct
   project: vllm-chat
   service_config:
     name: mistral
@@ -110,7 +138,7 @@
       gpu: 1
       gpu_type: nvidia-a100-80g
   engine_config:
-    model: meta-llama/Meta-Llama-3-8B
+    model: casperhansen/llama-3-70b-instruct-awq
     max_model_len: 2048
     quantization: awq
 "llama3:8b-instruct-fp16":
