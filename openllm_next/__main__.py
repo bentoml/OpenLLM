@@ -4,7 +4,6 @@ import questionary
 import typer
 
 from openllm_next.accelerator_spec import (
-    ACCELERATOR_SPECS,
     DeploymentTarget,
     can_run,
     get_local_machine_spec,

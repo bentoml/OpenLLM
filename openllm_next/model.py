@@ -41,7 +41,7 @@ def list_():
     )
 
 
-def list_bento(tag: str | None = None) -> typing.List[BentoInfo]:
+def list_bento(tag: typing.Optional[str] = None) -> typing.List[BentoInfo]:
     ensure_repo_updated()
     if not tag:
         glob_pattern = "bentoml/bentos/*/*"

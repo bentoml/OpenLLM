@@ -1,4 +1,5 @@
 import functools
+import typing
 import pathlib
 import shutil
 from types import SimpleNamespace
@@ -10,7 +11,7 @@ import typer
 from openllm_next.common import VENV_DIR, VERBOSE_LEVEL, BentoInfo, md5, run_command
 
 
-def _resolve_packages(requirement: str | pathlib.Path) -> dict[str, str]:
+def _resolve_packages(requirement: typing.Union[pathlib.Path, str]) -> dict[str, str]:
     from pip_requirements_parser import RequirementsFile
 
     requirements_txt = RequirementsFile.from_file(
@@ -78,9 +79,11 @@ def _resolve_bento_env_specs(bento: BentoInfo):
 
 
 def _ensure_venv(
-    env_spec: EnvSpec, parrent_venv: pathlib.Path | None = None
+    env_spec: EnvSpec, parrent_venv: typing.Optional[pathlib.Path] = None,
 ) -> pathlib.Path:
     venv = VENV_DIR / str(hash(env_spec))
+    if venv.exists() and not (venv / "DONE").exists():
+        shutil.rmtree(venv, ignore_errors=True)
     if not venv.exists():
         questionary.print(f"Installing model dependencies({venv})...", style="green")
         try:
@@ -116,6 +119,8 @@ def _ensure_venv(
                 ],
                 silent=VERBOSE_LEVEL.get() < 1,
             )
+            with open(venv / "DONE", "w") as f:
+                f.write("DONE")
         except Exception:
             shutil.rmtree(venv, ignore_errors=True)
             questionary.print(

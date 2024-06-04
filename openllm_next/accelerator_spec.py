@@ -1,4 +1,5 @@
 from __future__ import annotations
+import typing
 
 import functools
 import math
@@ -101,7 +102,7 @@ def get_local_machine_spec():
             source="local",
             platform=platform,
         )
-    except Exception as e:
+    except Exception:
         questionary.print(
             f"Failed to get local GPU info. Ensure nvidia driver is installed to enable local GPU deployment",
             color="yellow",
@@ -111,8 +112,8 @@ def get_local_machine_spec():
 
 @functools.lru_cache()
 def can_run(
-    bento: Resource | BentoInfo,
-    target: DeploymentTarget | None = None,
+    bento: typing.Union[Resource, BentoInfo],
+    target: typing.Optional[DeploymentTarget] = None,
 ) -> float:
     """
     Calculate if the bento can be deployed on the target.

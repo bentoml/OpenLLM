@@ -233,7 +233,7 @@ def run_command(
     venv=None,
     silent=False,
     background=False,
-) -> subprocess.CompletedProcess | subprocess.Popen:
+) -> typing.Union[subprocess.CompletedProcess, subprocess.Popen]:
     if background:
         run_func = subprocess.Popen
     else:

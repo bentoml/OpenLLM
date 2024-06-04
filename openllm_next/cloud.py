@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import subprocess
 
+import typing
 import questionary
 import typer
 
@@ -18,7 +19,7 @@ from openllm_next.common import (
 app = typer.Typer()
 
 
-def _get_deploy_cmd(bento: BentoInfo, target: DeploymentTarget | None = None):
+def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget]=None):
     cmd = ["bentoml", "deploy", bento.tag]
     env = {
         "BENTOML_HOME": f"{bento.repo.path}/bentoml",
