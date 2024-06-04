@@ -76,6 +76,15 @@ def _pre_select(model: str) -> tuple[BentoInfo, DeploymentTarget]:
     bento, target = choosen
     if target is None:
         cloud_targets = get_cloud_machine_spec()
+        cloud_targets = [
+            target for target in cloud_targets if can_run(bento, target) > 0
+        ]
+        if len(cloud_targets) == 0:
+            questionary.print(
+                f"No suitable instance type found for {bento.name}:{bento.version}",
+                style="red",
+            )
+            raise typer.Exit(1)
         target = questionary.select(
             "Select a cloud target",
             choices=[
@@ -84,7 +93,6 @@ def _pre_select(model: str) -> tuple[BentoInfo, DeploymentTarget]:
                     target,
                 )
                 for target in cloud_targets
-                if can_run(bento, target) > 0
             ],
         ).ask()
         if not target:

@@ -48,6 +48,7 @@ ACCELERATOR_SPEC_DICT: dict[str, dict] = {
     "nvidia-tesla-l4": {"model": "L4", "memory_size": 24.0},
     "nvidia-tesla-a10g": {"model": "A10G", "memory_size": 24.0},
     "nvidia-a100-80g": {"model": "A100", "memory_size": 80.0},
+    "nvidia-a100-80gb": {"model": "A100", "memory_size": 80.0},
     "nvidia-tesla-a100": {"model": "A100", "memory_size": 40.0},
 }
 

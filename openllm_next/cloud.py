@@ -123,13 +123,13 @@ def get_cloud_machine_spec():
                 price=it["price"],
                 accelerators=(
                     [ACCELERATOR_SPECS[it["gpu_type"]] for _ in range(int(it["gpu"]))]
-                    if it.get("gpu")
+                    if it.get("gpu") and it["gpu_type"] in ACCELERATOR_SPECS
                     else []
                 ),
             )
             for it in instance_types
         ]
-    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, ValueError):
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
         questionary.print("Failed to get cloud instance types", style=ERROR_STYLE)
         return []
 
