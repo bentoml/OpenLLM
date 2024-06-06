@@ -1,4 +1,5 @@
 import functools
+import asyncio
 import hashlib
 import json
 import os
@@ -201,7 +202,6 @@ class DeploymentTarget(SimpleNamespace):
         return hash(self.source)
 
 
-@typing.overload
 def run_command(
     cmd,
     cwd=None,
@@ -209,35 +209,7 @@ def run_command(
     copy_env=True,
     venv=None,
     silent=False,
-    background: typing.Literal[False] = False,
-) -> subprocess.CompletedProcess: ...
-
-
-@typing.overload
-def run_command(
-    cmd,
-    cwd=None,
-    env=None,
-    copy_env=True,
-    venv=None,
-    silent=False,
-    background: typing.Literal[True] = True,
-) -> subprocess.Popen: ...
-
-
-def run_command(
-    cmd,
-    cwd=None,
-    env=None,
-    copy_env=True,
-    venv=None,
-    silent=False,
-    background=False,
-) -> typing.Union[subprocess.CompletedProcess, subprocess.Popen]:
-    if background:
-        run_func = subprocess.Popen
-    else:
-        run_func = subprocess.run
+) -> subprocess.CompletedProcess:
     import shlex
 
     env = env or {}
@@ -268,7 +240,7 @@ def run_command(
 
     try:
         if silent:
-            return run_func(  # type: ignore
+            return subprocess.run(  # type: ignore
                 cmd,
                 cwd=cwd,
                 env=env,
@@ -276,11 +248,73 @@ def run_command(
                 stderr=subprocess.DEVNULL,
             )
         else:
-            return run_func(
+            return subprocess.run(
                 cmd,
                 cwd=cwd,
                 env=env,
             )
+    except subprocess.CalledProcessError:
+        questionary.print("Command failed", style=ERROR_STYLE)
+        raise typer.Exit(1)
+
+
+async def _stream_print(stream, style="gray"):
+    async for line in stream:
+        questionary.print(line.decode(), style=style, end="")
+
+
+async def async_run_command(
+    cmd,
+    cwd=None,
+    env=None,
+    copy_env=True,
+    venv=None,
+    silent=True,
+    stream_stdout=False,
+    stream_stderr=False,
+):
+    import shlex
+
+    env = env or {}
+    cmd = [str(c) for c in cmd]
+
+    if not silent:
+        questionary.print("\n")
+        if cwd:
+            questionary.print(f"$ cd {cwd}", style="bold")
+        if env:
+            for k, v in env.items():
+                questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
+        if venv:
+            questionary.print(f"$ source {venv / 'bin' / 'activate'}", style="bold")
+        questionary.print(f"$ {' '.join(cmd)}", style="bold")
+
+    if venv:
+        py = venv / "bin" / "python"
+    else:
+        py = sys.executable
+
+    if copy_env:
+        env = {**os.environ, **env}
+
+    if cmd and cmd[0] == "bentoml":
+        cmd = [py, "-m", "bentoml"] + cmd[1:]
+    if cmd and cmd[0] == "python":
+        cmd = [py] + cmd[1:]
+
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            " ".join(map(str, cmd)),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=cwd,
+            env=env,
+        )
+        if stream_stdout:
+            asyncio.create_task(_stream_print(proc.stdout))
+        if stream_stderr:
+            asyncio.create_task(_stream_print(proc.stderr, style="red"))
+        return proc
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
         raise typer.Exit(1)

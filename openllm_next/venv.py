@@ -79,7 +79,8 @@ def _resolve_bento_env_specs(bento: BentoInfo):
 
 
 def _ensure_venv(
-    env_spec: EnvSpec, parrent_venv: typing.Optional[pathlib.Path] = None,
+    env_spec: EnvSpec,
+    parrent_venv: typing.Optional[pathlib.Path] = None,
 ) -> pathlib.Path:
     venv = VENV_DIR / str(hash(env_spec))
     if venv.exists() and not (venv / "DONE").exists():
