@@ -258,7 +258,7 @@ def run_command(
         raise typer.Exit(1)
 
 
-async def _stream_print(stream, style="gray"):
+async def stream_command_output(stream, style="gray"):
     async for line in stream:
         questionary.print(line.decode(), style=style, end="")
 
@@ -270,8 +270,6 @@ async def async_run_command(
     copy_env=True,
     venv=None,
     silent=True,
-    stream_stdout=False,
-    stream_stderr=False,
 ):
     import shlex
 
@@ -310,10 +308,6 @@ async def async_run_command(
             cwd=cwd,
             env=env,
         )
-        if stream_stdout:
-            asyncio.create_task(_stream_print(proc.stdout))
-        if stream_stderr:
-            asyncio.create_task(_stream_print(proc.stderr, style="red"))
         return proc
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)

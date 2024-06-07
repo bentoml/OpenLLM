@@ -1,10 +1,14 @@
 import asyncio
 import httpx
-import typer
 
 import questionary
 
-from openllm_next.common import BentoInfo, run_command, async_run_command
+from openllm_next.common import (
+    BentoInfo,
+    run_command,
+    async_run_command,
+    stream_command_output,
+)
 from openllm_next.venv import ensure_venv
 
 
@@ -31,8 +35,12 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
         cwd=cwd,
         venv=venv,
         silent=False,
-        stream_stderr=True,
-        stream_stdout=True,
+    )
+    stdout_streamer = asyncio.create_task(
+        stream_command_output(server_proc.stdout, style="gray")
+    )
+    stderr_streamer = asyncio.create_task(
+        stream_command_output(server_proc.stderr, style="#BD2D0F")
     )
 
     import bentoml
@@ -50,6 +58,9 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
             questionary.print("Model failed to load", style="red")
             server_proc.terminate()
             return
+
+        stdout_streamer.cancel()
+        stderr_streamer.cancel()
 
         questionary.print("Model is ready", style="green")
         messages = []
