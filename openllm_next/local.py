@@ -1,4 +1,6 @@
 import asyncio
+import signal
+import time
 import httpx
 
 import questionary
@@ -29,23 +31,21 @@ def serve(bento: BentoInfo):
 async def _run_model(bento: BentoInfo, timeout: int = 600):
     venv = ensure_venv(bento)
     cmd, env, cwd = _get_serve_cmd(bento)
-    server_proc = await async_run_command(
+    async with async_run_command(
         cmd,
         env=env,
         cwd=cwd,
         venv=venv,
         silent=False,
-    )
-    stdout_streamer = asyncio.create_task(
-        stream_command_output(server_proc.stdout, style="gray")
-    )
-    stderr_streamer = asyncio.create_task(
-        stream_command_output(server_proc.stderr, style="#BD2D0F")
-    )
+    ) as server_proc:
+        import bentoml
 
-    import bentoml
+        print("Model server started", server_proc.pid)
 
-    try:
+        stdout_streamer = None
+        stderr_streamer = None
+        start_time = time.time()
+
         questionary.print("Model loading...", style="green")
         for _ in range(timeout):
             try:
@@ -53,14 +53,25 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
                 if resp.status_code == 200:
                     break
             except httpx.RequestError:
-                await asyncio.sleep(0)
+                if time.time() - start_time > 30:
+                    if not stdout_streamer:
+                        stdout_streamer = asyncio.create_task(
+                            stream_command_output(server_proc.stdout, style="gray")
+                        )
+                    if not stderr_streamer:
+                        stderr_streamer = asyncio.create_task(
+                            stream_command_output(server_proc.stderr, style="#BD2D0F")
+                        )
+                await asyncio.sleep(1)
         else:
             questionary.print("Model failed to load", style="red")
             server_proc.terminate()
             return
 
-        stdout_streamer.cancel()
-        stderr_streamer.cancel()
+        if stdout_streamer:
+            stdout_streamer.cancel()
+        if stderr_streamer:
+            stderr_streamer.cancel()
 
         questionary.print("Model is ready", style="green")
         messages = []
@@ -76,17 +87,10 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
                     print(text, end="")
                 messages.append(dict(role="assistant", content=assistant_message))
                 print()
-
             except KeyboardInterrupt:
                 break
-    except (asyncio.CancelledError, httpx.RequestError):
-        pass
-    finally:
         questionary.print("\nStopping model server...", style="green")
-        if server_proc.returncode is None:
-            server_proc.terminate()
-        await server_proc.wait()
-        questionary.print("Stopped model server", style="green")
+    questionary.print("Stopped model server", style="green")
 
 
 def run(bento: BentoInfo):

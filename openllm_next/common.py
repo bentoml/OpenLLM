@@ -1,4 +1,5 @@
 import functools
+import signal
 import asyncio
 import hashlib
 import json
@@ -7,7 +8,7 @@ import pathlib
 import subprocess
 import sys
 import typing
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 from types import SimpleNamespace
 
 import questionary
@@ -263,6 +264,7 @@ async def stream_command_output(stream, style="gray"):
         questionary.print(line.decode(), style=style, end="")
 
 
+@asynccontextmanager
 async def async_run_command(
     cmd,
     cwd=None,
@@ -300,6 +302,7 @@ async def async_run_command(
     if cmd and cmd[0] == "python":
         cmd = [py] + cmd[1:]
 
+    proc = None
     try:
         proc = await asyncio.create_subprocess_shell(
             " ".join(map(str, cmd)),
@@ -308,10 +311,14 @@ async def async_run_command(
             cwd=cwd,
             env=env,
         )
-        return proc
+        yield proc
     except subprocess.CalledProcessError:
         questionary.print("Command failed", style=ERROR_STYLE)
         raise typer.Exit(1)
+    finally:
+        if proc:
+            proc.send_signal(signal.SIGINT)
+            await proc.wait()
 
 
 def md5(*strings: str) -> int:
