@@ -79,11 +79,13 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
 
             except KeyboardInterrupt:
                 break
-    except asyncio.CancelledError:
+    except (asyncio.CancelledError, httpx.RequestError):
         pass
     finally:
         questionary.print("\nStopping model server...", style="green")
-        server_proc.terminate()
+        if server_proc.returncode is None:
+            server_proc.terminate()
+        await server_proc.wait()
         questionary.print("Stopped model server", style="green")
 
 
