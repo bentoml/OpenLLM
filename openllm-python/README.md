@@ -773,8 +773,7 @@ OpenLLM is not just a standalone product; it's a building block designed to
 integrate with other powerful tools easily. We currently offer integration with
 [OpenAI's Compatible Endpoints](https://platform.openai.com/docs/api-reference/completions/object),
 [LlamaIndex](https://www.llamaindex.ai/),
-[LangChain](https://github.com/hwchase17/langchain), and
-[Transformers Agents](https://huggingface.co/docs/transformers/transformers_agents).
+[LangChain](https://github.com/hwchase17/langchain).
 
 ### OpenAI Compatible Endpoints
 
@@ -791,7 +790,7 @@ completions = client.chat.completions.create(
 )
 ```
 
-The compatible endpoints supports `/completions`, `/chat/completions`, and `/models`
+The compatible endpoints supports `/chat/completions`, and `/models`
 
 > [!NOTE]
 > You can find out OpenAI example clients under the
@@ -806,7 +805,8 @@ from llama_index.llms.openllm import OpenLLMAPI
 ```
 
 > [!NOTE]
-> All synchronous and asynchronous API from `llama_index.llms.LLM` are supported.
+> All synchronous and asynchronous API from `llama_index.llms.OpenLLMAPI` are supported.
+> Make sure to install `llama-index-integrations-llm-openllm` to use the supported class.
 
 ### [LangChain](https://python.langchain.com/docs/integrations/llms/openllm/)
 

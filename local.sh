@@ -17,10 +17,15 @@ if [ ! -f "$GIT_ROOT/.python-version" ]; then
   ln -s "$GIT_ROOT/.python-version-default" "$GIT_ROOT/.python-version"
 fi
 
+if [ ! -f "$GIT_ROOT/.envrc" ]; then
+  echo "copy .envrc.template to .envrc"
+  cp "$GIT_ROOT/.envrc.template" "$GIT_ROOT/.envrc"
+fi
+
 # check if there is a $GIT_ROOT/.venv directory, if not, create it
 if [ ! -d "$GIT_ROOT/.venv" ]; then
   # get the python version from $GIT_ROOT/.python-version-default
-  uv venv -p $(cat "$GIT_ROOT/.python-version-default") "$GIT_ROOT/.venv"
+  uv venv -p "$(cat "$GIT_ROOT/.python-version-default")" "$GIT_ROOT/.venv"
 fi
 
 . "$GIT_ROOT/.venv/bin/activate"
@@ -32,14 +37,14 @@ print_usage() {
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-  --help | -h)
-    print_usage
-    exit 0
-    ;;
-  *)
-    print_usage
-    exit 1
-    ;;
+    --help | -h)
+      print_usage
+      exit 0
+      ;;
+    *)
+      print_usage
+      exit 1
+      ;;
   esac
   shift
 done
@@ -49,7 +54,7 @@ PRERELEASE=${PRERELEASE:-false}
 ARGS=()
 [[ "${PRERELEASE}" == "true" ]] && ARGS+=("--prerelease=allow")
 
-uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-python"
+uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-python" || true
 uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-client"
 uv pip install "${ARGS[@]}" --editable "$GIT_ROOT/openllm-core"
 

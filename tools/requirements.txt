@@ -1,2 +1,4 @@
 ipython
 jupyter
+tomlkit
+ghapi
