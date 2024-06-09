@@ -88,6 +88,7 @@ def openai_endpoints(
                 if self.chat_template is None and chat_template_model_id is not None:
                     from transformers import AutoTokenizer
 
+                    # If no community chat template is provided, use the tokenizer's chat template
                     _tokenizer = AutoTokenizer.from_pretrained(chat_template_model_id)
                     self.chat_template = _tokenizer.chat_template
 
