@@ -1,1 +1,1 @@
-PAPERSPACE_API_KEY=$(bw get notes paperspace-api)
+export PAPERSPACE_API_KEY=$(bw get notes paperspace-api)
