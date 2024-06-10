@@ -4,15 +4,18 @@ import asyncio
 import typing as t
 
 from _bentoml_sdk.service.factory import Service
+from bentoml._internal.types import LazyType
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
+from .protocol import CompletionRequest
 
 T = t.TypeVar("T", bound=object)
 
 if t.TYPE_CHECKING:
     from vllm import AsyncLLMEngine
+    from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse
+
 
 
 def openai_endpoints(
@@ -28,6 +31,7 @@ def openai_endpoints(
         app = FastAPI()
 
         class new_cls(cls):
+            engine: AsyncLLMEngine
 
             def __init__(self):
 
@@ -37,7 +41,6 @@ def openai_endpoints(
                 # `prometheus_client` won't cause import troubles
                 # That's also why we put these codes inside class's
                 # `__init__` function
-                import bentoml
                 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
                 from vllm.entrypoints.openai.serving_completion import (
                     OpenAIServingCompletion,
@@ -77,7 +80,7 @@ def openai_endpoints(
                         # guarantee the order in which scheduled tasks are run
                         while self.tokenizer is None:
                             await asyncio.sleep(0.1)
-                        return super()._load_chat_template(chat_template)
+                        return await super()._load_chat_template(chat_template)
 
                 self.openai_serving_completion = OpenAIServingCompletion(
                     engine=self.engine,
@@ -106,26 +109,35 @@ def openai_endpoints(
 
                 @app.post("/chat/completions")
                 async def create_chat_completion(
-                    request: ChatCompletionRequest, raw_request: Request
+                    request: 'ChatCompletionRequest', raw_request: Request
                 ):
+                    models = await self.openai_serving_chat.show_available_models()
+                    model_ids = [model['id'] for model in models.model_dump()['data']]
+                    if not request.model or request.model not in model_ids and len(model_ids) == 1:
+                        request.model = model_ids[0]
                     generator = await self.openai_serving_chat.create_chat_completion(
                         request, raw_request
                     )
-                    if isinstance(generator, ErrorResponse):
+                    if LazyType['ErrorResponse']("vllm.entrypoints.openai.protocol.ErrorResponse").isinstance(generator):
                         return JSONResponse(
-                            content=generator.model_dump(), status_code=generator.code
+                            content=generator.model_dump_json(), status_code=generator.code
                         )
                     if request.stream:
                         return StreamingResponse(
                             content=generator, media_type="text/event-stream"
                         )
                     else:
-                        return JSONResponse(content=generator.model_dump())
+                        return JSONResponse(content=generator.model_dump_json())
 
                 @app.post("/completions")
                 async def create_completion(
                     request: CompletionRequest, raw_request: Request
                 ):
+                    from vllm.entrypoints.openai.protocol import ErrorResponse
+                    if not request.model:
+                        models = await self.openai_serving_chat.show_available_models()
+                        if len(models.model_dump()) == 1:
+                            request.model = models.model_dump()['data'][0]['id']
                     generator = await self.openai_serving_completion.create_completion(
                         request, raw_request
                     )

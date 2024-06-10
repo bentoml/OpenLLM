@@ -256,7 +256,6 @@
     model: Qwen/Qwen2-7B-Instruct-AWQ
     max_model_len: 2048
     quantization: awq
-  chat_template: gemma-it
 "qwen2:7b-instruct-fp16":
   alias:
     - 7b

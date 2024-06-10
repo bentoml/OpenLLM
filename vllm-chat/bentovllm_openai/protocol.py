@@ -58,14 +58,6 @@ class OpenAIBaseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ErrorResponse(OpenAIBaseModel):
-    object: str = "error"
-    message: str
-    type: str
-    param: Optional[str] = None
-    code: int
-
-
 class ModelPermission(OpenAIBaseModel):
     id: str = Field(default_factory=lambda: f"modelperm-{random_uuid()}")
     object: str = "model_permission"
