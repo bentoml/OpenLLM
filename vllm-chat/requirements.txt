@@ -1,4 +1,3 @@
-torch==2.3.0
-vllm==0.4.2
+vllm==0.4.3
 transformers==4.41.0
 pyyaml

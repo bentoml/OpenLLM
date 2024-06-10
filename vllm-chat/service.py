@@ -41,7 +41,7 @@ def _get_gen_config(community_chat_template: str) -> dict:
 
 
 @openai_endpoints(
-    served_model_names=[ENGINE_CONFIG["model"]],
+    model_id=ENGINE_CONFIG["model"],
     chat_template=_get_gen_config(CHAT_TEMPLATE)["template"] if CHAT_TEMPLATE else None,
     chat_template_model_id=ENGINE_CONFIG["model"],
 )
