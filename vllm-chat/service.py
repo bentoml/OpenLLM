@@ -2,21 +2,22 @@ import functools
 import json
 import logging
 import os
+import sys
 import uuid
 from typing import AsyncGenerator, Union
 
-import bentoml
+import fastapi
+import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
 from bento_constants import CONSTANT_YAML
-from bentovllm_openai.utils import openai_endpoints
 from typing_extensions import Annotated
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
 ENGINE_CONFIG = CONSTANTS["engine_config"]
 SERVICE_CONFIG = CONSTANTS["service_config"]
-CHAT_TEMPLATE = CONSTANTS.get("chat_template")
+OVERRIDE_CHAT_TEMPLATE = CONSTANTS.get("chat_template")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -40,21 +41,61 @@ def _get_gen_config(community_chat_template: str) -> dict:
     return gen_config
 
 
-@openai_endpoints(
-    served_model_names=[ENGINE_CONFIG["model"]],
-    chat_template=_get_gen_config(CHAT_TEMPLATE)["template"] if CHAT_TEMPLATE else None,
-    chat_template_model_id=ENGINE_CONFIG["model"],
-)
+openai_api_app = fastapi.FastAPI()
+
+
+for route in vllm_api_server.app.routes:
+    if isinstance(route, fastapi.routing.APIRoute):
+        if route.path.startswith("/v1"):
+            openai_api_app.add_api_route(
+                path=route.path[3:],
+                endpoint=route.endpoint,
+                methods=list(route.methods) if route.methods else None,
+                name=route.name,
+                include_in_schema=route.include_in_schema,
+            )
+
+
+if "prometheus_client" in sys.modules:
+    sys.modules.pop("prometheus_client")
+
+
+import bentoml
+
+
+@bentoml.mount_asgi_app(openai_api_app, path="/v1")
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
     def __init__(self) -> None:
         from transformers import AutoTokenizer
         from vllm import AsyncEngineArgs, AsyncLLMEngine
+        from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+        from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 
         ENGINE_ARGS = AsyncEngineArgs(**ENGINE_CONFIG)
         self.engine = AsyncLLMEngine.from_engine_args(ENGINE_ARGS)
         self.tokenizer = AutoTokenizer.from_pretrained(ENGINE_CONFIG["model"])
         logger.info(f"VLLM service initialized with model: {ENGINE_CONFIG['model']}")
+
+        if OVERRIDE_CHAT_TEMPLATE:  # use community chat template
+            gen_config = _get_gen_config(CONSTANTS["chat_template"])
+            chat_template = gen_config["template"]
+        else:
+            chat_template = None
+
+        # inject the engine into the openai serving chat and completion
+        vllm_api_server.openai_serving_chat = OpenAIServingChat(
+            engine=self.engine,
+            served_model_names=[ENGINE_CONFIG["model"]],
+            response_role="assistant",
+            chat_template=chat_template,
+            # args.lora_modules,
+        )
+        vllm_api_server.openai_serving_completion = OpenAIServingCompletion(
+            engine=self.engine,
+            served_model_names=[ENGINE_CONFIG["model"]],
+            # args.lora_modules,
+        )
 
     @bentoml.api
     async def generate(
@@ -101,7 +142,7 @@ class VLLM:
         """
         from vllm import SamplingParams
 
-        if CHAT_TEMPLATE:  # community chat template
+        if OVERRIDE_CHAT_TEMPLATE:  # community chat template
             gen_config = _get_gen_config(CONSTANTS["chat_template"])
             if not stop:
                 if gen_config["stop_str"]:
