@@ -40,7 +40,7 @@ class Machine:
       return cls(id=machines['items'][0]['id'], inner=client)
     response = client.post('/machines', json=dict(
       name=f'openllm-ci-{datetime.datetime.now().timestamp()}',
-      machineType='A100-80G', templateId=template_id,
+      machineType='A4000', templateId=template_id,
       networkId=os.getenv("PAPERSPACE_NETWORK_ID"),
       diskSize=500, region='ny2', publicIpType="dynamic", startOnCreate=True,
     ))
