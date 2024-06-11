@@ -1,21 +1,16 @@
 CONSTANT_YAML = """
-alias:
-  - latest
-  - 3.8b
-  - instruct
-  - mini
-project: vllm-chat
-service_config:
-  name: phi3
-  traffic:
-    timeout: 300
-  resources:
-    gpu: 1
-    gpu_type: nvidia-tesla-t4
-chat_template: phi-3
-engine_config:
-  model: microsoft/Phi-3-mini-4k-instruct
-  max_model_len: 4096
-  dtype: half
-  trust_remote_code: true
+  alias:
+    - 7b-4bit
+  project: vllm-chat
+  service_config:
+    name: qwen2
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-rtx-3060
+  engine_config:
+    model: Qwen/Qwen2-7B-Instruct-AWQ
+    max_model_len: 2048
+    quantization: awq
 """

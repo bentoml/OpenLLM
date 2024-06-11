@@ -26,24 +26,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-@functools.lru_cache(maxsize=1)
-def _get_gen_config(community_chat_template: str) -> dict:
-    logger.info(f"Load community_chat_template: {community_chat_template}")
-    chat_template_path = os.path.join(
-        os.path.dirname(__file__), "chat_templates", "chat_templates"
-    )
-    config_path = os.path.join(
-        os.path.dirname(__file__), "chat_templates", "generation_configs"
-    )
-    with open(os.path.join(config_path, f"{community_chat_template}.json")) as f:
-        gen_config = json.load(f)
-    chat_template_file = gen_config["chat_template"].split("/")[-1]
-    with open(os.path.join(chat_template_path, chat_template_file)) as f:
-        chat_template = f.read()
-    gen_config["template"] = chat_template.replace("    ", "").replace("\n", "")
-    return gen_config
-
-
 openai_api_app = fastapi.FastAPI()
 
 
@@ -63,15 +45,16 @@ for route, endpoint, methods in OPENAI_ENDPOINTS:
     )
 
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "ui", "_next")
-CHAT_HTML = os.path.join(os.path.dirname(__file__), "ui", "chat.html")
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "ui")
+INDEX_HTML = os.path.join(os.path.dirname(__file__), "ui", "index.html")
+
 
 openai_api_app.mount("/_next", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR))
 
 
-@openai_api_app.get("/chat")
-async def chat_ui():
-    with open(CHAT_HTML) as f:
+@openai_api_app.get("/")
+async def index():
+    with open(INDEX_HTML) as f:
         return fastapi.responses.HTMLResponse(content=f.read())
 
 
@@ -114,7 +97,7 @@ class VLLM:
             # args.lora_modules,
         )
 
-    @bentoml.api
+    @bentoml.api(route="/api/generate")
     async def generate(
         self,
         prompt: str = "Explain superconductors like I'm five years old",
@@ -139,7 +122,7 @@ class VLLM:
             yield text[cursor:]
             cursor = len(text)
 
-    @bentoml.api
+    @bentoml.api(route="/api/chat")
     async def chat(
         self,
         messages: list[dict[str, str]] = [
@@ -207,3 +190,21 @@ class VLLM:
                 strip_flag = False
                 yield assistant_message.lstrip()
             cursor = len(text)
+
+
+@functools.lru_cache(maxsize=1)
+def _get_gen_config(community_chat_template: str) -> dict:
+    logger.info(f"Load community_chat_template: {community_chat_template}")
+    chat_template_path = os.path.join(
+        os.path.dirname(__file__), "chat_templates", "chat_templates"
+    )
+    config_path = os.path.join(
+        os.path.dirname(__file__), "chat_templates", "generation_configs"
+    )
+    with open(os.path.join(config_path, f"{community_chat_template}.json")) as f:
+        gen_config = json.load(f)
+    chat_template_file = gen_config["chat_template"].split("/")[-1]
+    with open(os.path.join(chat_template_path, chat_template_file)) as f:
+        chat_template = f.read()
+    gen_config["template"] = chat_template.replace("    ", "").replace("\n", "")
+    return gen_config
