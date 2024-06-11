@@ -7,6 +7,7 @@ on:
     branches: [main]
 env:
   PAPERSPACE_API_KEY: ${{secrets.PAPERSPACE_API_KEY}}
+  PAPERSPACE_NETWORK_ID: ${{secrets.PAPERSPACE_NETWORK_ID}}
 defaults:
   run:
     shell: bash --noprofile --norc -eo pipefail {0}
