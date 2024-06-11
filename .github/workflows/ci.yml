@@ -31,9 +31,12 @@ jobs:
       - name: startup machine
         id: paperspace-machine
         run: |
-          PUBLIC_IP=$(python tools/machines.py --ci-template ${{secrets.PAPERSPACE_TEMPLATE_ID}})
+          PUBLIC_IP=$(python tools/machines.py --ci-template ${{secrets.PAPERSPACE_TEMPLATE_ID}} --output-ip)
+          MACHINE_ID=$(python tools/machines.py --ci-template ${{secrets.PAPERSPACE_TEMPLATE_ID}} --output-id)
           echo "::add-mask::$PUBLIC_IP"
+          echo "::add-mask::$MACHINE_ID"
           echo "publicIp=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "machineId=$MACHINE_ID" >> $GITHUB_OUTPUT
       - name: running regression tests (PR)
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         if: github.event_name == 'pull_request'
@@ -53,7 +56,7 @@ jobs:
           port: ${{ secrets.PAPERSPACE_PORT }}
           script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --refresh -- --head
       - name: shutdown machine
-        run: python tools/machines.py --delete ${{ steps.paperspace-machine.outputs.publicIp }}
+        run: python tools/machines.py --delete ${{ steps.paperspace-machine.outputs.machineId }}
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
