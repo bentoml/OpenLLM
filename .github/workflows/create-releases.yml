@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v4.1.6
         with:
           fetch-depth: 0
-          token: ${{ secrets.OPENLLM_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bentoml/setup-bentoml-action@862aa8fa0e0c3793fcca4bfe7a62717a497417e4 # ratchet:bentoml/setup-bentoml-action@v1
         with:
           bentoml-version: 'main'
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v4.1.6
         with:
           ref: '${{ needs.release.outputs.version }}'
-          token: ${{ secrets.OPENLLM_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       # NOTE: Keep this section in sync with build-pypi.yml
       - name: Download Python artifacts
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v4
