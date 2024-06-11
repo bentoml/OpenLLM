@@ -33,7 +33,7 @@ tool = ["quality", "bash ./clean.sh", 'python ./cz.py']
 installer = "uv"
 type = "virtual"
 dependencies = [
-    "openllm[vllm] @ {root:uri}/openllm-python",
+    "openllm @ {root:uri}/openllm-python",
     "openllm-core @ {root:uri}/openllm-core",
     "openllm-client @ {root:uri}/openllm-client",
     # NOTE: Tests strategies with Hypothesis and pytest, and snapshot testing with syrupy
