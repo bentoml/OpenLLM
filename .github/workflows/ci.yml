@@ -30,12 +30,14 @@ jobs:
       - name: startup machine
         id: paperspace-machine
         run: |
-          echo "$(python tools/machines.py --ci-template ${{secrets.PAPERSPACE_TEMPLATE_ID}})" >> $GITHUB_OUTPUT
+          PUBLIC_IP=$(python tools/machines.py --ci-template ${{secrets.PAPERSPACE_TEMPLATE_ID}})
+          echo "::add-mask::$PUBLIC_IP"
+          echo "publicIp=$PUBLIC_IP" >> $GITHUB_OUTPUT
       - name: running regression tests (PR)
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         if: github.event_name == 'pull_request'
         with:
-          host: ${{steps.outputs.paperspace-machine.outputs.publicIp}}
+          host: ${{steps.paperspace-machine.outputs.publicIp}}
           username: paperspace
           key: ${{secrets.PAPERSPACE_SSH_KEY}}
           port: ${{secrets.PAPERSPACE_PORT}}
@@ -44,7 +46,7 @@ jobs:
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         if: ${{ !github.event.repository.fork && github.event_name == 'push' }}
         with:
-          host: ${{steps.outputs.paperspace-machine.outputs.ip}}
+          host: ${{steps.paperspace-machine.outputs.publicIp}}
           username: paperspace
           key: ${{secrets.PAPERSPACE_SSH_KEY}}
           port: ${{secrets.PAPERSPACE_PORT}}

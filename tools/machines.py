@@ -46,7 +46,7 @@ class Machine:
     ))
     if response.status_code != 200: raise ValueError(f'Failed while creating a machine: {response.json()}')
     return cls(id=response.json()['data']['id'], inner=client)
-  def actions(self): return f'publicIp={self.metadata["publicIp"]}'
+  def actions(self): return self.metadata["publicIp"]
 
 def main():
   parser = argparse.ArgumentParser()
