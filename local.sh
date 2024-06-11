@@ -6,10 +6,11 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
 cd "$GIT_ROOT" || exit 1
 
 usage() {
-  echo "Usage: $0 [--daemon] [--debug]"
+  echo "Usage: $0 [--daemon] [--debug] [--tests]"
   echo
   echo "Options:"
   echo "  --daemon            Running as background, skip all script."
+  echo "  --tests             Run tests environment."
   echo "  --assume-yes | -y   Assuming yes to all instructions.."
   echo "  --help | -h         Show this help message"
   echo
@@ -18,12 +19,17 @@ usage() {
 DEBUG=false
 DAEMON=false
 YES=false
+TESTS=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
     --daemon)
       DAEMON=true
+      shift
+      ;;
+    --tests)
+      TESTS=true
       shift
       ;;
     --help | -h)
@@ -54,6 +60,7 @@ if [ "$DAEMON" = false ] && ! $YES; then
   echo "  4. Create a virtualenv under $GIT_ROOT/.venv based on .python-version-default"
   echo "  5. source the venv, then proceed to install all openllm libraries to this venv"
   echo "  6. By default, it will run all.sh scripts, which mainly include tools for openllm. If --daemon is passed, then this step is skipped."
+  echo "  7. Optionally install tests dependencies, then run tests set."
   echo ""
   while true; do
     read -p "Do you want to proceed? (yY/nN) " yn
@@ -116,4 +123,9 @@ if [ "$DAEMON" = false ]; then
   pre-commit install
 
   bash "$GIT_ROOT/all.sh"
+fi
+
+if [ "$TESTS" = true ]; then
+  "$UV_BIN" pip install "coverage[toml]" "filelock>=3.7.1" pytest pytest-cov pytest-mock pytest-randomly pytest-rerunfailures "pytest-asyncio>=0.21.0" "pytest-xdist[psutil]"
+  uv tool run pytest -- --cov --cov-report="${COVERAGE_REPORT:-term-missing}" --cov-config="$GIT_ROOT/pyproject.toml" -vv -r aR -X "${PYTEST_ARGS:-${GIT_ROOT}/openllm-python/tests}"
 fi
