@@ -6,6 +6,7 @@ import sys
 import uuid
 from typing import AsyncGenerator, Union
 
+import bentoml
 import fastapi
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
@@ -44,23 +45,25 @@ def _get_gen_config(community_chat_template: str) -> dict:
 openai_api_app = fastapi.FastAPI()
 
 
-for route in vllm_api_server.app.routes:
-    if isinstance(route, fastapi.routing.APIRoute):
-        if route.path.startswith("/v1"):
-            openai_api_app.add_api_route(
-                path=route.path[3:],
-                endpoint=route.endpoint,
-                methods=list(route.methods) if route.methods else None,
-                name=route.name,
-                include_in_schema=route.include_in_schema,
-            )
+OPENAI_ENDPOINTS = [
+    ["/v1/chat/completions", vllm_api_server.create_chat_completion, ["POST"]],
+    ["/v1/completions", vllm_api_server.create_completion, ["POST"]],
+    ["/v1/models", vllm_api_server.show_available_models, ["GET"]],
+]
 
 
+for route, endpoint, methods in OPENAI_ENDPOINTS:
+    openai_api_app.add_api_route(
+        path=route[3:],
+        endpoint=endpoint,
+        methods=methods,
+        include_in_schema=True,
+    )
+
+
+# special handling for prometheus_client of bentoml
 if "prometheus_client" in sys.modules:
     sys.modules.pop("prometheus_client")
-
-
-import bentoml
 
 
 @bentoml.mount_asgi_app(openai_api_app, path="/v1")
