@@ -6,6 +6,11 @@ labels:
   source_directory: vllm-chat
 include:
 - "*.py"
+- "ui/*"
+- "ui/chunks/*"
+- "ui/css/*"
+- "ui/media/*"
+- "ui/chunks/pages/*"
 - "bentovllm_openai/*.py"
 - "chat_templates/chat_templates/*.jinja"
 - "chat_templates/generation_configs/*.json"
