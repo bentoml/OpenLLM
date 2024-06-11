@@ -168,9 +168,9 @@ if [ "$TESTS" = true ]; then
 
   # Check if the lock file already exists
   if [ -f "$LOCK_FILE" ]; then
-    echo "Another instance of the script is already running tests. Waiting for it to finish..."
     flock -s "$lock_fd"
   fi
+
   "$UV_BIN" pip install -r "$GIT_ROOT/tools/tests-requirements.txt"
 
   # TODO: uv tool run once it becomes more stable
