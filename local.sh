@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -e
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
@@ -30,6 +29,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --tests)
       TESTS=true
+      DAEMON=true
       shift
       ;;
     --help | -h)
@@ -106,8 +106,6 @@ if [ ! -d "$GIT_ROOT/.venv" ]; then
   "$UV_BIN" venv -p "$(cat "$GIT_ROOT/.python-version-default")" "$GIT_ROOT/.venv"
 fi
 
-. "$GIT_ROOT/.venv/bin/activate"
-
 PRERELEASE=${PRERELEASE:-false}
 
 ARGS=()
@@ -119,13 +117,23 @@ ARGS=()
 
 if [ "$DAEMON" = false ]; then
   "$UV_BIN" pip install -r "$GIT_ROOT/tools/requirements.txt"
-
-  pre-commit install
-
-  bash "$GIT_ROOT/all.sh"
 fi
 
 if [ "$TESTS" = true ]; then
-  "$UV_BIN" pip install "coverage[toml]" "filelock>=3.7.1" pytest pytest-cov pytest-mock pytest-randomly pytest-rerunfailures "pytest-asyncio>=0.21.0" "pytest-xdist[psutil]"
-  uv tool run pytest -- --cov --cov-report="${COVERAGE_REPORT:-term-missing}" --cov-config="$GIT_ROOT/pyproject.toml" -vv -r aR -X "${PYTEST_ARGS:-${GIT_ROOT}/openllm-python/tests}"
+  "$UV_BIN" pip install -r "$GIT_ROOT/tools/tests-requirements.txt"
+fi
+
+. "$GIT_ROOT/.venv/bin/activate"
+
+if [ "$DAEMON" = false ]; then
+  uv tool run pre-commit install
+  bash "$GIT_ROOT/all.sh"
+fi
+
+ARGS=()
+if [ "$TESTS" = true ]; then
+  # TODO: uv tool run once it becomes more stable
+  # [ "$DEBUG" = true ] && ARGS+=("--verbose")
+  # ARGS+=$(cat "$GIT_ROOT/tools/tests-requirements.txt" | tr '\n' '\0' | sed -z 's/^/ --with /')
+  python -m pytest --cov --cov-report="${COVERAGE_REPORT:-term-missing}" --cov-config="$GIT_ROOT/pyproject.toml" -vv -r aR -x "${PYTEST_ARGS:-${GIT_ROOT}/openllm-python/tests}"
 fi

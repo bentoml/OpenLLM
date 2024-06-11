@@ -1,0 +1,9 @@
+pytest
+pytest-cov
+pytest-mock
+pytest-randomly
+pytest-rerunfailures
+pytest-asyncio>=0.21.0
+coverage[toml]
+filelock>=3.7.1
+pytest-xdist[psutil]
