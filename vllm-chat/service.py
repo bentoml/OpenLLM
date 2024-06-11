@@ -8,11 +8,13 @@ from typing import AsyncGenerator, Union
 
 import bentoml
 import fastapi
+import fastapi.staticfiles
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
-from bento_constants import CONSTANT_YAML
 from typing_extensions import Annotated
+
+from bento_constants import CONSTANT_YAML
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
@@ -54,11 +56,23 @@ OPENAI_ENDPOINTS = [
 
 for route, endpoint, methods in OPENAI_ENDPOINTS:
     openai_api_app.add_api_route(
-        path=route[3:],
+        path=route,
         endpoint=endpoint,
         methods=methods,
         include_in_schema=True,
     )
+
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "ui", "_next")
+CHAT_HTML = os.path.join(os.path.dirname(__file__), "ui", "chat.html")
+
+openai_api_app.mount("/_next", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR))
+
+
+@openai_api_app.get("/chat")
+async def chat_ui():
+    with open(CHAT_HTML) as f:
+        return fastapi.responses.HTMLResponse(content=f.read())
 
 
 # special handling for prometheus_client of bentoml
@@ -66,7 +80,7 @@ if "prometheus_client" in sys.modules:
     sys.modules.pop("prometheus_client")
 
 
-@bentoml.mount_asgi_app(openai_api_app, path="/v1")
+@bentoml.mount_asgi_app(openai_api_app)
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
     def __init__(self) -> None:
