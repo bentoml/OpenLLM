@@ -9,7 +9,7 @@ env:
   PAPERSPACE_API_KEY: ${{secrets.PAPERSPACE_API_KEY}}
 defaults:
   run:
-    shell: bash --noprofile --norc -exo pipefail {0}
+    shell: bash --noprofile --norc -eo pipefail {0}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
