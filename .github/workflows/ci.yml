@@ -38,22 +38,22 @@ jobs:
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         if: github.event_name == 'pull_request'
         with:
-          host: ${{steps.paperspace-machine.outputs.publicIp}}
+          host: ${{ steps.paperspace-machine.outputs.publicIp }}
           username: paperspace
-          key: ${{secrets.PAPERSPACE_SSH_KEY}}
-          port: ${{secrets.PAPERSPACE_PORT}}
+          key: ${{ secrets.PAPERSPACE_SSH_KEY }}
+          port: ${{ secrets.PAPERSPACE_PORT }}
           script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --refresh -- --pr ${{github.event.number}}
       - name: running regression tests (main)
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
         if: ${{ !github.event.repository.fork && github.event_name == 'push' }}
         with:
-          host: ${{steps.paperspace-machine.outputs.publicIp}}
+          host: ${{ steps.paperspace-machine.outputs.publicIp }}
           username: paperspace
-          key: ${{secrets.PAPERSPACE_SSH_KEY}}
-          port: ${{secrets.PAPERSPACE_PORT}}
+          key: ${{ secrets.PAPERSPACE_SSH_KEY }}
+          port: ${{ secrets.PAPERSPACE_PORT }}
           script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --refresh -- --head
       - name: shutdown machine
-        run: python tools/machines.py --delete ${{ steps.outputs.paperspace-machine.outputs.ip }}
+        run: python tools/machines.py --delete ${{ steps.paperspace-machine.outputs.publicIp }}
   evergreen: # https://github.com/marketplace/actions/alls-green#why
     if: always()
     needs:
