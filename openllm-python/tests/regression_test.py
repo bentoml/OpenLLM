@@ -9,7 +9,7 @@ SERVER_PORT = 53822
 
 @pytest.mark.asyncio
 async def test_openai_compatible():
-  model_id = 'meta-llama/Meta-Llama-3-8B-Instruct'
+  model_id = 'casperhansen/llama-3-8b-instruct-awq'
   server = subprocess.Popen([sys.executable, '-m', 'openllm', 'start', model_id, '--port', str(SERVER_PORT)])
   await asyncio.sleep(10)
   with bentoml.SyncHTTPClient(f'http://127.0.0.1:{SERVER_PORT}', server_ready_timeout=120) as client:
