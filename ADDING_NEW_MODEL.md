@@ -15,7 +15,7 @@ Here's your roadmap:
       `$GIT_ROOT/openllm-core/src/openllm_core/config/configuration_{model_name}.py`
 - [ ] Update `$GIT_ROOT/openllm-core/src/openllm_core/config/__init__.py` to import the new model
 - [ ] Add your new model entry in `$GIT_ROOT/openllm-core/src/openllm_core/config/configuration_auto.py` with a tuple of the `model_name` alongside with the `ModelConfig`
-- [ ] Run `bash all.sh`
+- [ ] Run `bash $GIT_ROOT/local.sh --tools`
 
 > [!NOTE]
 >

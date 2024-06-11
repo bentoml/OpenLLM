@@ -27,7 +27,11 @@ setup = [
     "pre-commit install",
     "- ln -s .python-version-default .python-version",
 ]
-quality = ["bash ./all.sh", "- pre-commit run --all-files", "- pnpm format"]
+quality = [
+    "bash ./local.sh --tools",
+    "- pre-commit run --all-files",
+    "- pnpm format",
+]
 tool = ["quality", "bash ./clean.sh", 'python ./cz.py']
 [envs.tests]
 installer = "uv"

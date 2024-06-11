@@ -1,2 +1,0 @@
-[languages]
-python = ["ruff format -"]
