@@ -12,8 +12,9 @@ import fastapi.staticfiles
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
-from bento_constants import CONSTANT_YAML
 from typing_extensions import Annotated
+
+from bento_constants import CONSTANT_YAML
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 

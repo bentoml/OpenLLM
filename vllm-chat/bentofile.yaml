@@ -4,6 +4,7 @@ labels:
   platforms: linux
   source_repo: https://github.com/bentoml/openllm-repo-recipe.git
   source_directory: vllm-chat
+  service_home: /chat
 include:
 - "*.py"
 - "ui/*"
