@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import uuid
-from typing import AsyncGenerator, Union
+from typing import AsyncGenerator, Optional
 
 import bentoml
 import fastapi
@@ -12,9 +12,8 @@ import fastapi.staticfiles
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
-from typing_extensions import Annotated
-
 from bento_constants import CONSTANT_YAML
+from typing_extensions import Annotated
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
@@ -101,13 +100,17 @@ class VLLM:
     async def generate(
         self,
         prompt: str = "Explain superconductors like I'm five years old",
+        model: str = ENGINE_CONFIG["model"],
         max_tokens: Annotated[
             int,
             Ge(128),
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
-        stop: list[str] = [],
+        stop: Optional[list[str]] = None,
     ) -> AsyncGenerator[str, None]:
+        if stop is None:
+            stop = []
+
         from vllm import SamplingParams
 
         SAMPLING_PARAM = SamplingParams(
@@ -128,14 +131,14 @@ class VLLM:
         messages: list[dict[str, str]] = [
             {"role": "user", "content": "What is the meaning of life?"}
         ],
-        model: str = "",
+        model: str = ENGINE_CONFIG["model"],
         max_tokens: Annotated[
             int,
             Ge(128),
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
-        stop: Union[list[str], str, None] = None,
-        stop_token_ids: Union[list[int], None] = None,
+        stop: Optional[list[str]] = None,
+        stop_token_ids: Optional[list[int]] = None,
     ) -> AsyncGenerator[str, None]:
         """
         light-weight chat API that takes in a list of messages and returns a response
