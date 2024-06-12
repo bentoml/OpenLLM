@@ -26,12 +26,14 @@ logger.setLevel(logging.INFO)
 
 
 openai_api_app = fastapi.FastAPI()
+static_app = fastapi.FastAPI()
+ui_app = fastapi.FastAPI()
 
 
 OPENAI_ENDPOINTS = [
-    ["/v1/chat/completions", vllm_api_server.create_chat_completion, ["POST"]],
-    ["/v1/completions", vllm_api_server.create_completion, ["POST"]],
-    ["/v1/models", vllm_api_server.show_available_models, ["GET"]],
+    ["/chat/completions", vllm_api_server.create_chat_completion, ["POST"]],
+    ["/completions", vllm_api_server.create_completion, ["POST"]],
+    ["/models", vllm_api_server.show_available_models, ["GET"]],
 ]
 
 
@@ -48,11 +50,11 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "ui")
 INDEX_HTML = os.path.join(os.path.dirname(__file__), "ui", "index.html")
 
 
-openai_api_app.mount("/_next", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR))
+static_app.mount("/", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR))
 
 
-@openai_api_app.get("/")
-async def index():
+@ui_app.get("/")
+async def chat():
     with open(INDEX_HTML) as f:
         return fastapi.responses.HTMLResponse(content=f.read())
 
@@ -62,7 +64,9 @@ if "prometheus_client" in sys.modules:
     sys.modules.pop("prometheus_client")
 
 
-@bentoml.mount_asgi_app(openai_api_app)
+@bentoml.mount_asgi_app(openai_api_app, path="/v1")
+@bentoml.mount_asgi_app(static_app, path="/_next")
+@bentoml.mount_asgi_app(ui_app, path="/chat")
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
     def __init__(self) -> None:
