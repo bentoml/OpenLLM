@@ -43,7 +43,7 @@ _SERVICE_VARS = """\
 import orjson,openllm_core.utils as coreutils
 model_id='{__model_id__}'
 revision=orjson.loads(coreutils.getenv('revision',default={__model_revision__}))
-quantise=coreutils.getenv('quantize',default='{__model_quantise__}',var=['QUANTISE'])
+quantise=orjson.loads(coreutils.getenv('quantize',default={__model_quantise__},var=['QUANTISE']))
 serialisation=coreutils.getenv('serialization',default='{__model_serialization__}',var=['SERIALISATION'])
 dtype=coreutils.getenv('dtype', default='{__model_dtype__}',var=['TORCH_DTYPE'])
 trust_remote_code=coreutils.check_bool_env("TRUST_REMOTE_CODE",{__model_trust_remote_code__})
@@ -485,7 +485,7 @@ def build_command(
         __command__=' '.join(['openllm', *sys.argv[1:]]),
         __model_id__=model_id,
         __model_revision__=orjson.dumps(model_revision),
-        __model_quantise__=quantise,
+        __model_quantise__=orjson.dumps(quantise),
         __model_dtype__=dtype,
         __model_serialization__=serialisation,
         __model_trust_remote_code__=trust_remote_code,

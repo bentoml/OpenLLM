@@ -234,7 +234,7 @@ def main(args) -> int:
     release_version = args.release_version
   else:
     try:
-      release_version = api.repos.get_latest_release()['name'].lstrip('v')
+      release_version = api.repos.get_latest_release()['tag_name'].lstrip('v')
     except Exception as err:
       raise err
 
