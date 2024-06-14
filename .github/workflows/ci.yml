@@ -54,7 +54,7 @@ jobs:
           username: paperspace
           key: ${{ secrets.PAPERSPACE_SSH_KEY }}
           port: ${{ secrets.PAPERSPACE_PORT }}
-          script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --refresh -- --head
+          script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --accept-flake-config --refresh -- --head
       - name: shutdown machine
         run: python tools/machines.py --delete ${{ steps.paperspace-machine.outputs.machineId }}
   evergreen: # https://github.com/marketplace/actions/alls-green#why
