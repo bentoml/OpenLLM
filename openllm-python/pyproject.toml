@@ -39,8 +39,8 @@ classifiers = [
 ]
 dependencies = [
     "bentoml[io]>=1.2.16",
-    "openllm-client>=0.5.6",
-    "openllm-core>=0.5.6",
+    "openllm-client>=0.5.7",
+    "openllm-core>=0.5.7",
     "safetensors",
     "vllm>=0.4.3",
     "ghapi",
