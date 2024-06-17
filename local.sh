@@ -134,7 +134,7 @@ fi
 # check if there is a $GIT_ROOT/.venv directory, if not, create it
 if [ ! -d "$GIT_ROOT/.venv" ]; then
   # get the python version from $GIT_ROOT/.python-version-default
-  "$UV_BIN" venv -p "$(cat "$GIT_ROOT/.python-version-default")" "$GIT_ROOT/.venv"
+  "$UV_BIN" venv "$GIT_ROOT/.venv"
 fi
 
 PRERELEASE=${PRERELEASE:-false}
