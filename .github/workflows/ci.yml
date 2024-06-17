@@ -45,6 +45,7 @@ jobs:
           username: paperspace
           key: ${{ secrets.PAPERSPACE_SSH_KEY }}
           port: ${{ secrets.PAPERSPACE_PORT }}
+          command_timeout: 1h
           script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --refresh -- --pr ${{github.event.number}}
       - name: running regression tests (main)
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # ratchet:appleboy/ssh-action@v1.0.3
@@ -54,6 +55,7 @@ jobs:
           username: paperspace
           key: ${{ secrets.PAPERSPACE_SSH_KEY }}
           port: ${{ secrets.PAPERSPACE_PORT }}
+          command_timeout: 1h
           script: /nix/var/nix/profiles/default/bin/nix run github:aarnphm/dix#openllm-ci --accept-flake-config --refresh -- --head
       - name: shutdown machine
         run: python tools/machines.py --delete ${{ steps.paperspace-machine.outputs.machineId }}
