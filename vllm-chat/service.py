@@ -87,18 +87,21 @@ class VLLM:
         else:
             chat_template = None
 
+        model_config = self.engine.engine.get_model_config()
+
         # inject the engine into the openai serving chat and completion
         vllm_api_server.openai_serving_chat = OpenAIServingChat(
             engine=self.engine,
             served_model_names=[ENGINE_CONFIG["model"]],
             response_role="assistant",
             chat_template=chat_template,
-            # args.lora_modules,
+            model_config=model_config,
         )
         vllm_api_server.openai_serving_completion = OpenAIServingCompletion(
             engine=self.engine,
             served_model_names=[ENGINE_CONFIG["model"]],
-            # args.lora_modules,
+            model_config=model_config,
+            lora_modules=None,
         )
 
     @bentoml.api(route="/api/generate")
