@@ -12,9 +12,9 @@ import fastapi.staticfiles
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
-from typing_extensions import Annotated
-
 from bento_constants import CONSTANT_YAML
+from fastapi.responses import FileResponse
+from typing_extensions import Annotated
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
@@ -48,16 +48,23 @@ for route, endpoint, methods in OPENAI_ENDPOINTS:
 
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "ui")
-INDEX_HTML = os.path.join(os.path.dirname(__file__), "ui", "index.html")
 
-
-static_app.mount("/", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR))
+ui_app.mount(
+    "/static", fastapi.staticfiles.StaticFiles(directory=STATIC_DIR), name="static"
+)
 
 
 @ui_app.get("/")
-async def chat():
-    with open(INDEX_HTML) as f:
-        return fastapi.responses.HTMLResponse(content=f.read())
+async def serve_chat_html():
+    return FileResponse(os.path.join(STATIC_DIR, "chat.html"))
+
+
+@ui_app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    file_path = os.path.join(STATIC_DIR, full_path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse(os.path.join(STATIC_DIR, "chat.html"))
 
 
 # special handling for prometheus_client of bentoml
@@ -66,7 +73,6 @@ if "prometheus_client" in sys.modules:
 
 
 @bentoml.mount_asgi_app(openai_api_app, path="/v1")
-@bentoml.mount_asgi_app(static_app, path="/_next")
 @bentoml.mount_asgi_app(ui_app, path="/chat")
 @bentoml.service(**SERVICE_CONFIG)
 class VLLM:
@@ -74,7 +80,8 @@ class VLLM:
         from transformers import AutoTokenizer
         from vllm import AsyncEngineArgs, AsyncLLMEngine
         from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-        from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
+        from vllm.entrypoints.openai.serving_completion import \
+            OpenAIServingCompletion
 
         ENGINE_ARGS = AsyncEngineArgs(**ENGINE_CONFIG)
         self.engine = AsyncLLMEngine.from_engine_args(ENGINE_ARGS)
