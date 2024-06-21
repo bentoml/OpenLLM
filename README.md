@@ -15,7 +15,7 @@ Acknowledgements
 
 This project makes use of the following open-source projects:
 
-	•	[blrchen/chatgpt-lite](https://github.com/blrchen/chatgpt-lite)
-	•	[chujiezheng/chat_templates](https://github.com/chujiezheng/chat_templates)
+* [blrchen/chatgpt-lite](https://github.com/blrchen/chatgpt-lite)
+* [chujiezheng/chat_templates](https://github.com/chujiezheng/chat_templates)
 
 We are grateful to the developers and contributors of these projects for their hard work and dedication.
