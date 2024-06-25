@@ -41,20 +41,26 @@ def list_():
     )
 
 
-def list_bento(tag: typing.Optional[str] = None) -> typing.List[BentoInfo]:
+def list_bento(
+    tag: typing.Optional[str] = None,
+    repo_name: typing.Optional[str] = None,
+    include_alias: bool = False,
+) -> typing.List[BentoInfo]:
     ensure_repo_updated()
     if not tag:
         glob_pattern = "bentoml/bentos/*/*"
     elif ":" in tag:
-        repo_name, version = tag.split(":")
-        glob_pattern = f"bentoml/bentos/{repo_name}/{version}"
+        bento_name, version = tag.split(":")
+        glob_pattern = f"bentoml/bentos/{bento_name}/{version}"
     else:
         glob_pattern = f"bentoml/bentos/{tag}/*"
 
     model_list = []
     config = load_config()
-    for repo_name, repo_url in config.repos.items():
-        repo = parse_repo_url(repo_url, repo_name)
+    for _repo_name, repo_url in config.repos.items():
+        if repo_name is not None and _repo_name != repo_name:
+            continue
+        repo = parse_repo_url(repo_url, _repo_name)
         for path in repo.path.glob(glob_pattern):
             if path.is_dir() and (path / "bento.yaml").exists():
                 model = BentoInfo(
@@ -74,7 +80,7 @@ def list_bento(tag: typing.Optional[str] = None) -> typing.List[BentoInfo]:
             if model:
                 model_list.append(model)
     model_list.sort(key=lambda x: x.tag)
-    if VERBOSE_LEVEL.get() <= 0:
+    if not include_alias:
         seen = set()
         model_list = [
             x

@@ -18,6 +18,7 @@ dependencies = [
     "pip_requirements_parser",
     "nvidia-ml-py",
     "dulwich",
+    "tabulate",
 ]
 
 [project.scripts]

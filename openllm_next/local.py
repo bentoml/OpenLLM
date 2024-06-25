@@ -1,5 +1,4 @@
 import asyncio
-import signal
 import time
 import httpx
 

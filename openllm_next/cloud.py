@@ -13,6 +13,7 @@ from openllm_next.common import (
     ERROR_STYLE,
     BentoInfo,
     DeploymentTarget,
+    output,
     run_command,
 )
 
@@ -62,14 +63,12 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
     return cmd, env, None
 
 
-def _ensure_cloud_context():
+def ensure_cloud_context():
     cmd = ["bentoml", "cloud", "current-context"]
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
         context = json.loads(result)
-        questionary.print(
-            f"BentoCloud already logged in: {context['endpoint']}", style="green"
-        )
+        output(f"  BentoCloud already logged in: {context['endpoint']}", style="green")
     except subprocess.CalledProcessError:
         action = questionary.select(
             "BentoCloud not logged in",
@@ -79,10 +78,9 @@ def _ensure_cloud_context():
             ],
         ).ask()
         if action is None:
-            questionary.print("Cancelled", style=ERROR_STYLE)
             raise typer.Exit(1)
         elif action == "get an account in two minutes":
-            questionary.print(
+            output(
                 "Please visit https://cloud.bentoml.com to get your token",
                 style="yellow",
             )
@@ -105,14 +103,13 @@ def _ensure_cloud_context():
         ]
         try:
             result = subprocess.check_output(cmd)
-            questionary.print("Logged in successfully", style="green")
+            output("  Logged in successfully", style="green")
         except subprocess.CalledProcessError:
-            questionary.print("Failed to login", style=ERROR_STYLE)
+            output("  Failed to login", style=ERROR_STYLE)
             raise typer.Exit(1)
 
 
 def get_cloud_machine_spec():
-    _ensure_cloud_context()
     cmd = ["bentoml", "deployment", "list-instance-types", "-o", "json"]
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
@@ -137,14 +134,6 @@ def get_cloud_machine_spec():
 
 
 def serve(bento: BentoInfo, target: DeploymentTarget):
-    _ensure_cloud_context()
+    ensure_cloud_context()
     cmd, env, cwd = _get_deploy_cmd(bento, target)
     run_command(cmd, env=env, cwd=cwd)
-
-
-def run(bento: BentoInfo, target: DeploymentTarget):
-    questionary.print(
-        "`run` with bentocloud is not supported yet, please use `serve` instead",
-        style=ERROR_STYLE,
-    )
-    raise typer.Exit(1)

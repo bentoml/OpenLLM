@@ -1,5 +1,7 @@
 import functools
 import signal
+import io
+from collections import UserList
 import asyncio
 import hashlib
 import json
@@ -55,7 +57,30 @@ class ContextVar(typing.Generic[T]):
             self._stack.pop()
 
 
-VERBOSE_LEVEL = ContextVar(0)
+VERBOSE_LEVEL = ContextVar(10)
+INTERACTIVE = ContextVar(True)
+FORCE = ContextVar(False)
+
+
+def output(content, level=0, style=None):
+    if level >= VERBOSE_LEVEL.get():
+        return
+
+    if isinstance(content, (dict, list)):
+        import pyaml
+
+        out = io.StringIO()
+        pyaml.pprint(
+            content,
+            dst=out,
+            sort_dicts=False,
+            sort_keys=False,
+        )
+        questionary.print(out.getvalue(), style=style, end="")
+        out.close()
+
+    if isinstance(content, str):
+        questionary.print(content, style=style)
 
 
 class Config(SimpleNamespace):
@@ -201,6 +226,16 @@ class DeploymentTarget(SimpleNamespace):
 
     def __hash__(self):
         return hash(self.source)
+
+    @property
+    def accelerators_repr(self) -> str:
+        accs = {a.model for a in self.accelerators}
+        if len(accs) == 0:
+            return "null"
+        if len(accs) == 1:
+            a = self.accelerators[0]
+            return f"{a.model} x{len(self.accelerators)}"
+        return ", ".join((f"{a.model}" for a in self.accelerators))
 
 
 def run_command(

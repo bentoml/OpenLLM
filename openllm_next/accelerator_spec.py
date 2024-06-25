@@ -21,6 +21,9 @@ class Accelerator(SimpleNamespace):
     def __eq__(self, other):
         return self.memory_size == other.memory_size
 
+    def __repr__(self):
+        return f"{self.model}({self.memory_size}GB)"
+
 
 class Resource(SimpleNamespace):
     cpu: int
@@ -93,7 +96,7 @@ def get_local_machine_spec():
             memory_info = nvmlDeviceGetMemoryInfo(handle)
             accelerators.append(
                 Accelerator(
-                    name=name, memory_size=math.ceil(int(memory_info.total) / 1024**3)
+                    model=name, memory_size=math.ceil(int(memory_info.total) / 1024**3)
                 )
             )
         nvmlShutdown()
