@@ -1,24 +1,26 @@
 import collections
 import typing
+from typing import Optional
 
 import pyaml
-import questionary
 import typer
 
 from openllm_next.common import (
-    ERROR_STYLE,
     VERBOSE_LEVEL,
     BentoInfo,
     load_config,
+    output,
+    FORCE,
 )
 from openllm_next.repo import ensure_repo_updated, parse_repo_url
+from openllm_next.accelerator_spec import can_run, DeploymentTarget
 
 app = typer.Typer()
 
 
 @app.command()
 def get(tag: str):
-    bento_info = pick_bento(tag)
+    bento_info = ensure_bento(tag)
     if bento_info:
         with VERBOSE_LEVEL.patch(1):
             pyaml.pprint(
@@ -39,6 +41,55 @@ def list_():
         sort_dicts=False,
         sort_keys=False,
     )
+
+
+def ensure_bento(model: str, target: Optional[DeploymentTarget] = None) -> BentoInfo:
+    bentos = list_bento(model)
+    if len(bentos) == 0:
+        output(f"No model found for {model}", level=20, style="red")
+        raise typer.Exit(1)
+
+    if len(bentos) == 1:
+        if FORCE.get():
+            output(f"Found model {bentos[0]}", level=10, style="green")
+            return bentos[0]
+        if target is None:
+            return bentos[0]
+        if can_run(bentos[0], target) <= 0:
+            return bentos[0]
+        output(f"Found model {bentos[0]}", level=10, style="green")
+        return bentos[0]
+
+    if target is None:
+        output(
+            f"Multiple models match {model}, did you mean one of these?",
+            level=20,
+            style="red",
+        )
+        for bento in bentos:
+            output(f"  {bento}", level=20, style="red")
+        raise typer.Exit(1)
+
+    filtered = [bento for bento in bentos if can_run(bento, target) > 0]
+    if len(filtered) == 0:
+        output(f"No deployment target found for {model}", level=20, style="red")
+        raise typer.Exit(1)
+
+    if len(filtered) == 0:
+        output(f"No deployment target found for {model}", level=20, style="red")
+        raise typer.Exit(1)
+
+    if len(bentos) > 1:
+        output(
+            f"Multiple models match {model}, did you mean one of these?",
+            level=20,
+            style="red",
+        )
+        for bento in bentos:
+            output(f"  {bento}", level=20, style="red")
+        raise typer.Exit(1)
+
+    return bentos[0]
 
 
 def list_bento(
@@ -91,19 +142,3 @@ def list_bento(
             )
         ]
     return model_list
-
-
-def pick_bento(tag) -> BentoInfo:
-    model_list = list_bento(tag)
-    if len(model_list) == 0:
-        questionary.print("No models found", style=ERROR_STYLE)
-        raise typer.Exit(1)
-    if len(model_list) == 1:
-        return model_list[0]
-    model = questionary.select(
-        "Select a model",
-        choices=[questionary.Choice(str(model), value=model) for model in model_list],
-    ).ask()
-    if model is None:
-        raise typer.Exit(1)
-    return model

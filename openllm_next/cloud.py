@@ -133,7 +133,7 @@ def get_cloud_machine_spec():
         return []
 
 
-def serve(bento: BentoInfo, target: DeploymentTarget):
+def deploy(bento: BentoInfo, target: DeploymentTarget):
     ensure_cloud_context()
     cmd, env, cwd = _get_deploy_cmd(bento, target)
     run_command(cmd, env=env, cwd=cwd)

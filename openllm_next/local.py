@@ -13,23 +13,32 @@ from openllm_next.common import (
 from openllm_next.venv import ensure_venv
 
 
-def _get_serve_cmd(bento: BentoInfo):
+def _get_serve_cmd(bento: BentoInfo, port: int = 3000):
     cmd = ["bentoml", "serve", bento.tag]
+    if port != 3000:
+        cmd += ["--port", str(port)]
     env = {
         "BENTOML_HOME": f"{bento.repo.path}/bentoml",
     }
     return cmd, env, None
 
 
-def serve(bento: BentoInfo):
+def serve(
+    bento: BentoInfo,
+    port: int = 3000,
+):
     venv = ensure_venv(bento)
-    cmd, env, cwd = _get_serve_cmd(bento)
+    cmd, env, cwd = _get_serve_cmd(bento, port=port)
     run_command(cmd, env=env, cwd=cwd, venv=venv)
 
 
-async def _run_model(bento: BentoInfo, timeout: int = 600):
+async def _run_model(
+    bento: BentoInfo,
+    port: int = 3000,
+    timeout: int = 600,
+):
     venv = ensure_venv(bento)
-    cmd, env, cwd = _get_serve_cmd(bento)
+    cmd, env, cwd = _get_serve_cmd(bento, port)
     async with async_run_command(
         cmd,
         env=env,
@@ -48,7 +57,7 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
         questionary.print("Model loading...", style="green")
         for _ in range(timeout):
             try:
-                resp = httpx.get("http://localhost:3000/readyz", timeout=3)
+                resp = httpx.get(f"http://localhost:{port}/readyz", timeout=3)
                 if resp.status_code == 200:
                     break
             except httpx.RequestError:
@@ -74,7 +83,7 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
 
         questionary.print("Model is ready", style="green")
         messages = []
-        client = bentoml.AsyncHTTPClient("http://localhost:3000", timeout=timeout)
+        client = bentoml.AsyncHTTPClient(f"http://localhost:{port}", timeout=timeout)
         while True:
             try:
                 message = input("user: ")
@@ -92,5 +101,5 @@ async def _run_model(bento: BentoInfo, timeout: int = 600):
     questionary.print("Stopped model server", style="green")
 
 
-def run(bento: BentoInfo):
-    asyncio.run(_run_model(bento))
+def run(bento: BentoInfo, port: int = 3000, timeout: int = 600):
+    asyncio.run(_run_model(bento, port=port, timeout=timeout))

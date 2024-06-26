@@ -12,11 +12,11 @@ from openllm_next.accelerator_spec import (
 )
 from openllm_next.cloud import app as cloud_app, ensure_cloud_context
 from openllm_next.cloud import get_cloud_machine_spec
-from openllm_next.cloud import serve as cloud_deploy
-from openllm_next.common import VERBOSE_LEVEL, BentoInfo, FORCE, output
+from openllm_next.cloud import deploy as cloud_deploy
+from openllm_next.common import VERBOSE_LEVEL, output
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
-from openllm_next.model import app as model_app
+from openllm_next.model import app as model_app, ensure_bento
 from openllm_next.model import list_bento
 from openllm_next.repo import app as repo_app
 
@@ -25,55 +25,6 @@ app = typer.Typer()
 app.add_typer(repo_app, name="repo")
 app.add_typer(model_app, name="model")
 app.add_typer(cloud_app, name="cloud")
-
-
-def _pick_bento(model: str, target: Optional[DeploymentTarget] = None) -> BentoInfo:
-    bentos = list_bento(model)
-    if len(bentos) == 0:
-        output(f"No model found for {model}", level=20, style="red")
-        raise typer.Exit(1)
-
-    if len(bentos) == 1:
-        if FORCE.get():
-            output(f"Found model {bentos[0]}", level=10, style="green")
-            return bentos[0]
-        if target is None:
-            return bentos[0]
-        if can_run(bentos[0], target) <= 0:
-            return bentos[0]
-        output(f"Found model {bentos[0]}", level=10, style="green")
-        return bentos[0]
-
-    if target is None:
-        output(
-            f"Multiple models match {model}, did you mean one of these?",
-            level=20,
-            style="red",
-        )
-        for bento in bentos:
-            output(f"  {bento}", level=20, style="red")
-        raise typer.Exit(1)
-
-    filtered = [bento for bento in bentos if can_run(bento, target) > 0]
-    if len(filtered) == 0:
-        output(f"No deployment target found for {model}", level=20, style="red")
-        raise typer.Exit(1)
-
-    if len(filtered) == 0:
-        output(f"No deployment target found for {model}", level=20, style="red")
-        raise typer.Exit(1)
-
-    if len(bentos) > 1:
-        output(
-            f"Multiple models match {model}, did you mean one of these?",
-            level=20,
-            style="red",
-        )
-        for bento in bentos:
-            output(f"  {bento}", level=20, style="red")
-        raise typer.Exit(1)
-
-    return bentos[0]
 
 
 def _select_bento_name(models, target):
@@ -254,22 +205,48 @@ def hello():
 
 
 @app.command()
-def serve(model: Annotated[str, typer.Argument()] = ""):
+def serve(
+    model: Annotated[str, typer.Argument()] = "",
+    port: int = 3000,
+):
     target = get_local_machine_spec()
-    bento = _pick_bento(model, target)
-    local_serve(bento)
+    bento = ensure_bento(model, target)
+    local_serve(bento, port=port)
 
 
 @app.command()
-def run(model: Annotated[str, typer.Argument()] = ""):
+def run(
+    model: Annotated[str, typer.Argument()] = "",
+    port: int = 3000,
+    timeout: int = 600,
+):
     target = get_local_machine_spec()
-    bento = _pick_bento(model, target)
-    local_run(bento)
+    bento = ensure_bento(model, target)
+    local_run(bento, port=port, timeout=timeout)
 
 
 @app.command()
-def deploy(model: Annotated[str, typer.Argument()] = ""):
+def deploy(
+    model: Annotated[str, typer.Argument()] = "",
+    instance_type: Optional[str] = None,
+):
+    bento = ensure_bento(model)
+    if instance_type is not None:
+        cloud_deploy(bento, DeploymentTarget(name=instance_type))
+        return
     targets = get_cloud_machine_spec()
+    targets = filter(lambda x: can_run(bento, x) > 0, targets)
+    targets = sorted(targets, key=lambda x: can_run(bento, x), reverse=True)
+    if not targets:
+        output(
+            "No available instance type, check your bentocloud account",
+            level=20,
+            style="red",
+        )
+        raise typer.Exit(1)
+    target = targets[0]
+    output(f"Recommended instance type: {target.name}", style="green")
+    cloud_deploy(bento, target)
 
 
 def typer_callback(verbose: int = 0):
