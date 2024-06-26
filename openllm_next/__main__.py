@@ -39,7 +39,7 @@ def _select_bento_name(models, target):
     for repo, name, tag, score in model_infos:
         model_name_groups[(repo, name)] += score
     table_data = [
-        [name, repo, "*" if score > 0 else ""]
+        [name, repo, "✓" if score > 0 else ""]
         for (repo, name), score in model_name_groups.items()
     ]
     table = tabulate(
@@ -67,7 +67,7 @@ def _select_bento_version(models, target, bento_name, repo):
     ]
 
     table_data = [
-        [model.version, "yes" if score > 0 else ""]
+        [model.version, "✓" if score > 0 else ""]
         for model, score in model_infos
         if model.name == bento_name and model.repo.name == repo
     ]
@@ -107,12 +107,12 @@ def _select_target(bento, targets):
             [
                 target.name,
                 target.accelerators_repr,
-                target.price,
-                "" if can_run(bento, target) else "insufficient res.",
+                f"${target.price}",
+                "✓" if can_run(bento, target) else "insufficient res.",
             ]
             for target in targets
         ],
-        headers=["instance type", "accelerator", "price", "deployable"],
+        headers=["instance type", "accelerator", "price/hr", "deployable"],
     ).split("\n")
     options.append(questionary.Separator(f"{table[0]}\n   {table[1]}"))
 
