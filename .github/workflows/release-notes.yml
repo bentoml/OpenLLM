@@ -53,7 +53,7 @@ jobs:
           merge-multiple: true
           path: archives
       - name: Create release
-        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # ratchet:softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # ratchet:softprops/action-gh-release@v2.0.6
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
