@@ -9,12 +9,13 @@ from typing import AsyncGenerator, Optional
 import bentoml
 import fastapi
 import fastapi.staticfiles
+import pydantic
 import vllm.entrypoints.openai.api_server as vllm_api_server
 import yaml
 from annotated_types import Ge, Le
 from bento_constants import CONSTANT_YAML
 from fastapi.responses import FileResponse
-from typing_extensions import Annotated
+from typing_extensions import Annotated, Literal
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
@@ -36,6 +37,10 @@ OPENAI_ENDPOINTS = [
     ["/completions", vllm_api_server.create_completion, ["POST"]],
     ["/models", vllm_api_server.show_available_models, ["GET"]],
 ]
+
+class Message(pydantic.BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
 
 
 for route, endpoint, methods in OPENAI_ENDPOINTS:
@@ -143,7 +148,7 @@ class VLLM:
     @bentoml.api(route="/api/chat")
     async def chat(
         self,
-        messages: list[dict[str, str]] = [
+        messages: list[Message] = [
             {"role": "user", "content": "What is the meaning of life?"}
         ],
         model: str = ENGINE_CONFIG["model"],
