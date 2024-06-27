@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import uuid
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Literal, Optional
 
 import bentoml
 import fastapi
@@ -16,6 +16,12 @@ from annotated_types import Ge, Le
 from bento_constants import CONSTANT_YAML
 from fastapi.responses import FileResponse
 from typing_extensions import Annotated, Literal
+
+
+class Message(pydantic.BaseModel):
+    content: str
+    role: Literal["system", "user", "assistant"]
+
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
 
@@ -37,6 +43,7 @@ OPENAI_ENDPOINTS = [
     ["/completions", vllm_api_server.create_completion, ["POST"]],
     ["/models", vllm_api_server.show_available_models, ["GET"]],
 ]
+
 
 class Message(pydantic.BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -85,8 +92,7 @@ class VLLM:
         from transformers import AutoTokenizer
         from vllm import AsyncEngineArgs, AsyncLLMEngine
         from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-        from vllm.entrypoints.openai.serving_completion import \
-            OpenAIServingCompletion
+        from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 
         ENGINE_ARGS = AsyncEngineArgs(**ENGINE_CONFIG)
         self.engine = AsyncLLMEngine.from_engine_args(ENGINE_ARGS)
@@ -149,7 +155,7 @@ class VLLM:
     async def chat(
         self,
         messages: list[Message] = [
-            {"role": "user", "content": "What is the meaning of life?"}
+            Message(content="what is the meaning of life?", role="user")
         ],
         model: str = ENGINE_CONFIG["model"],
         max_tokens: Annotated[
@@ -158,7 +164,6 @@ class VLLM:
             Le(ENGINE_CONFIG["max_model_len"]),
         ] = ENGINE_CONFIG["max_model_len"],
         stop: Optional[list[str]] = None,
-        stop_token_ids: Optional[list[int]] = None,
     ) -> AsyncGenerator[str, None]:
         """
         light-weight chat API that takes in a list of messages and returns a response
@@ -183,13 +188,8 @@ class VLLM:
                         stop = []
                 system_prompt = None
 
-            # normalize inputs
-            if stop_token_ids is None:
-                stop_token_ids = []
-
             SAMPLING_PARAM = SamplingParams(
                 max_tokens=max_tokens,
-                stop_token_ids=stop_token_ids,
                 stop=stop,
             )
             if system_prompt and messages[0].role != "system":
@@ -201,7 +201,9 @@ class VLLM:
                 add_generation_prompt=True,
             )
 
-            stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
+            stream = await self.engine.add_request(
+                uuid.uuid4().hex, prompt, SAMPLING_PARAM
+            )
 
             cursor = 0
             strip_flag = True
