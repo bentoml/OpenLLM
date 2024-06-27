@@ -5,10 +5,16 @@ import shutil
 from types import SimpleNamespace
 from typing import Iterable
 
-import questionary
 import typer
 
-from openllm_next.common import VENV_DIR, VERBOSE_LEVEL, BentoInfo, md5, run_command
+from openllm_next.common import (
+    VENV_DIR,
+    VERBOSE_LEVEL,
+    BentoInfo,
+    md5,
+    run_command,
+    output,
+)
 
 
 def _resolve_packages(requirement: typing.Union[pathlib.Path, str]) -> dict[str, str]:
@@ -86,7 +92,7 @@ def _ensure_venv(
     if venv.exists() and not (venv / "DONE").exists():
         shutil.rmtree(venv, ignore_errors=True)
     if not venv.exists():
-        questionary.print(f"Installing model dependencies({venv})...", style="green")
+        output(f"Installing model dependencies({venv})...", style="green")
         try:
             run_command(["python", "-m", "venv", venv], silent=VERBOSE_LEVEL.get() < 1)
             pyver = next(venv.glob("lib/python*")).name
@@ -124,14 +130,12 @@ def _ensure_venv(
                 f.write("DONE")
         except Exception:
             shutil.rmtree(venv, ignore_errors=True)
-            questionary.print(
+            output(
                 f"Failed to install dependencies to {venv}. Cleaned up.",
                 style="red",
             )
             raise typer.Exit(1)
-        questionary.print(
-            f"Successfully installed dependencies to {venv}.", style="green"
-        )
+        output(f"Successfully installed dependencies to {venv}.", style="green")
         return venv
     else:
         return venv

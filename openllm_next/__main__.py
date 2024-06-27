@@ -13,14 +13,19 @@ from openllm_next.accelerator_spec import (
 from openllm_next.cloud import app as cloud_app, ensure_cloud_context
 from openllm_next.cloud import get_cloud_machine_spec
 from openllm_next.cloud import deploy as cloud_deploy
-from openllm_next.common import VERBOSE_LEVEL, output
+from openllm_next.common import INTERACTIVE, VERBOSE_LEVEL, output, CHECKED
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
 from openllm_next.model import app as model_app, ensure_bento
 from openllm_next.model import list_bento
 from openllm_next.repo import app as repo_app
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    help="`openllm hello` to get started. "
+    "OpenLLM is a CLI tool to manage and deploy open source LLMs and"
+    " get an OpenAI API compatible chat server in seconds.",
+)
 
 app.add_typer(repo_app, name="repo")
 app.add_typer(model_app, name="model")
@@ -32,16 +37,18 @@ def _select_bento_name(models, target):
 
     options = []
     model_infos = [
-        [model.repo.name, model.name, model.tag, can_run(model, target)]
-        for model in models
+        [model.repo.name, model.name, can_run(model, target)] for model in models
     ]
     model_name_groups = defaultdict(lambda: 0)
-    for repo, name, tag, score in model_infos:
+    for repo, name, score in model_infos:
         model_name_groups[(repo, name)] += score
     table_data = [
-        [name, repo, "✓" if score > 0 else ""]
+        [name, repo, CHECKED if score > 0 else ""]
         for (repo, name), score in model_name_groups.items()
     ]
+    if not table_data:
+        output("No model found", level=20, style="red")
+        raise typer.Exit(1)
     table = tabulate(
         table_data,
         headers=["model", "repo", "locally runnable"],
@@ -67,7 +74,7 @@ def _select_bento_version(models, target, bento_name, repo):
     ]
 
     table_data = [
-        [model.version, "✓" if score > 0 else ""]
+        [model.version, CHECKED if score > 0 else ""]
         for model, score in model_infos
         if model.name == bento_name and model.repo.name == repo
     ]
@@ -108,7 +115,7 @@ def _select_target(bento, targets):
                 target.name,
                 target.accelerators_repr,
                 f"${target.price}",
-                "✓" if can_run(bento, target) else "insufficient res.",
+                CHECKED if can_run(bento, target) else "insufficient res.",
             ]
             for target in targets
         ],
@@ -151,7 +158,7 @@ def _select_action(bento, score):
             questionary.Choice(
                 f"  $ openllm run {bento}",
                 value="run",
-                disabled="insufficient resources",
+                disabled="insufficient res.",
                 shortcut_key="0",
             ),
             questionary.Separator(" "),
@@ -159,7 +166,7 @@ def _select_action(bento, score):
             questionary.Choice(
                 f"  $ openllm serve {bento}",
                 value="serve",
-                disabled="insufficient resources",
+                disabled="insufficient res.",
                 shortcut_key="1",
             ),
             questionary.Separator(" "),
@@ -188,6 +195,8 @@ def _select_action(bento, score):
 
 @app.command()
 def hello():
+    INTERACTIVE.set(True)
+
     target = get_local_machine_spec()
     output(f"  Detected Platform: {target.platform}", style="green")
     if target.accelerators:
@@ -207,21 +216,23 @@ def hello():
 @app.command()
 def serve(
     model: Annotated[str, typer.Argument()] = "",
+    repo: Optional[str] = None,
     port: int = 3000,
 ):
     target = get_local_machine_spec()
-    bento = ensure_bento(model, target)
+    bento = ensure_bento(model, target=target, repo_name=repo)
     local_serve(bento, port=port)
 
 
 @app.command()
 def run(
     model: Annotated[str, typer.Argument()] = "",
+    repo: Optional[str] = None,
     port: int = 3000,
     timeout: int = 600,
 ):
     target = get_local_machine_spec()
-    bento = ensure_bento(model, target)
+    bento = ensure_bento(model, target=target, repo_name=repo)
     local_run(bento, port=port, timeout=timeout)
 
 
@@ -229,8 +240,9 @@ def run(
 def deploy(
     model: Annotated[str, typer.Argument()] = "",
     instance_type: Optional[str] = None,
+    repo: Optional[str] = None,
 ):
-    bento = ensure_bento(model)
+    bento = ensure_bento(model, repo_name=repo)
     if instance_type is not None:
         cloud_deploy(bento, DeploymentTarget(name=instance_type))
         return

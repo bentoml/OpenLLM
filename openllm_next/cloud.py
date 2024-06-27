@@ -5,12 +5,12 @@ import shutil
 import subprocess
 
 import typing
-import questionary
 import typer
 
 from openllm_next.accelerator_spec import ACCELERATOR_SPECS
 from openllm_next.common import (
     ERROR_STYLE,
+    INTERACTIVE,
     BentoInfo,
     DeploymentTarget,
     output,
@@ -29,9 +29,10 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
     required_envs = bento.bento_yaml.get("envs", [])
     required_env_names = [env["name"] for env in required_envs if "name" in env]
     if required_env_names:
-        questionary.print(
+        output(
             f"This model requires the following environment variables to run: {repr(required_env_names)}",
             style="yellow",
+            level=20,
         )
 
     for env_info in bento.bento_yaml.get("envs", []):
@@ -43,10 +44,25 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
             default = env_info["value"]
         else:
             default = ""
-        value = questionary.text(
-            f"{env_info['name']}:",
-            default=default,
-        ).ask()
+
+        if INTERACTIVE.get():
+            import questionary
+
+            value = questionary.text(
+                f"{env_info['name']}:",
+                default=default,
+            ).ask()
+        else:
+            if default == "":
+                output(
+                    f"Environment variable {env_info['name']} is required but not provided",
+                    style=ERROR_STYLE,
+                    level=20,
+                )
+                raise typer.Exit(1)
+            else:
+                value = default
+
         if value is None:
             raise typer.Exit(1)
         cmd += ["--env", f"{env_info['name']}={value}"]
@@ -64,6 +80,8 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
 
 
 def ensure_cloud_context():
+    import questionary
+
     cmd = ["bentoml", "cloud", "current-context"]
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
@@ -84,13 +102,13 @@ def ensure_cloud_context():
                 "Please visit https://cloud.bentoml.com to get your token",
                 style="yellow",
             )
-        token = questionary.text("Enter your token: (similar to cniluaxxxxxxxx)").ask()
-        if token is None:
-            raise typer.Exit(1)
         endpoint = questionary.text(
             "Enter the endpoint: (similar to https://my-org.cloud.bentoml.com)"
         ).ask()
         if endpoint is None:
+            raise typer.Exit(1)
+        token = questionary.text("Enter your token: (similar to cniluaxxxxxxxx)").ask()
+        if token is None:
             raise typer.Exit(1)
         cmd = [
             "bentoml",
@@ -129,7 +147,7 @@ def get_cloud_machine_spec():
             for it in instance_types
         ]
     except (subprocess.CalledProcessError, json.JSONDecodeError):
-        questionary.print("Failed to get cloud instance types", style=ERROR_STYLE)
+        output("Failed to get cloud instance types", style=ERROR_STYLE)
         return []
 
 

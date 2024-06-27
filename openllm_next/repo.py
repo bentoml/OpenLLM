@@ -8,11 +8,13 @@ import typer
 
 from openllm_next.common import (
     ERROR_STYLE,
+    INTERACTIVE,
     REPO_DIR,
     SUCCESS_STYLE,
     RepoInfo,
     load_config,
     save_config,
+    output,
 )
 
 UPDATE_INTERVAL = datetime.timedelta(days=3)
@@ -34,12 +36,12 @@ def list():
 def remove(name: str):
     config = load_config()
     if name not in config.repos:
-        questionary.print(f"Repo {name} does not exist", style=ERROR_STYLE)
+        output(f"Repo {name} does not exist", style=ERROR_STYLE)
         return
 
     del config.repos[name]
     save_config(config)
-    questionary.print(f"Repo {name} removed", style=SUCCESS_STYLE)
+    output(f"Repo {name} removed", style=SUCCESS_STYLE)
 
 
 @app.command()
@@ -65,13 +67,11 @@ def update():
                     depth=1,
                     branch=repo.branch,
                 )
-                questionary.print("")
-                questionary.print(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
+                output("")
+                output(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
             except:
                 shutil.rmtree(repo.path, ignore_errors=True)
-                questionary.print(
-                    f"Failed to clone repo {repo.name}", style=ERROR_STYLE
-                )
+                output(f"Failed to clone repo {repo.name}", style=ERROR_STYLE)
         else:
             try:
                 import dulwich.porcelain
@@ -83,17 +83,15 @@ def update():
                     force=True,
                 )
                 dulwich.porcelain.clean(str(repo.path), str(repo.path))
-                questionary.print("")
-                questionary.print(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
+                output("")
+                output(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
             except:
                 shutil.rmtree(repo.path, ignore_errors=True)
-                questionary.print(
-                    f"Failed to update repo {repo.name}", style=ERROR_STYLE
-                )
+                output(f"Failed to update repo {repo.name}", style=ERROR_STYLE)
     for c in REPO_DIR.glob("*/*/*"):
         if tuple(c.parts[-3:]) not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
-            questionary.print(f"Removed unused repo cache {c}")
+            output(f"Removed unused repo cache {c}")
     with open(REPO_DIR / "last_update", "w") as f:
         f.write(datetime.datetime.now().isoformat())
 
@@ -101,19 +99,34 @@ def update():
 def ensure_repo_updated():
     last_update_file = REPO_DIR / "last_update"
     if not last_update_file.exists():
-        choice = questionary.confirm(
-            "The repo cache is never updated, do you want to update it to fetch the latest model list?"
-        ).ask()
-        if choice:
-            update()
-        return
+        if INTERACTIVE.get():
+            choice = questionary.confirm(
+                "The repo cache is never updated, do you want to update it to fetch the latest model list?"
+            ).ask()
+            if choice:
+                update()
+            return
+        else:
+            output(
+                "The repo cache is never updated, please run `openllm repo update` to fetch the latest model list",
+                style="red",
+                level=20,
+            )
+            raise typer.Exit(1)
     last_update = datetime.datetime.fromisoformat(last_update_file.read_text().strip())
     if datetime.datetime.now() - last_update > UPDATE_INTERVAL:
-        choice = questionary.confirm(
-            "The repo cache is outdated, do you want to update it to fetch the latest model list?"
-        ).ask()
-        if choice:
-            update()
+        if INTERACTIVE.get():
+            choice = questionary.confirm(
+                "The repo cache is outdated, do you want to update it to fetch the latest model list?"
+            ).ask()
+            if choice:
+                update()
+        else:
+            output(
+                "The repo cache is outdated, please run `openllm repo update` to fetch the latest model list",
+                style="yellow",
+                level=10,
+            )
 
 
 GIT_REPO_RE = re.compile(
@@ -153,7 +166,7 @@ def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
 def add(name: str, repo: str):
     name = name.lower()
     if not name.isidentifier():
-        questionary.print(
+        output(
             f"Invalid repo name: {name}, should only contain letters, numbers and underscores",
             style=ERROR_STYLE,
         )
@@ -169,7 +182,7 @@ def add(name: str, repo: str):
 
     config.repos[name] = repo
     save_config(config)
-    questionary.print(f"Repo {name} added", style=SUCCESS_STYLE)
+    output(f"Repo {name} added", style=SUCCESS_STYLE)
 
 
 if __name__ == "__main__":

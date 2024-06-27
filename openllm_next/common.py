@@ -1,7 +1,6 @@
 import functools
 import signal
 import io
-from collections import UserList
 import asyncio
 import hashlib
 import json
@@ -13,7 +12,6 @@ import typing
 from contextlib import contextmanager, asynccontextmanager
 from types import SimpleNamespace
 
-import questionary
 import typer
 
 ERROR_STYLE = "red"
@@ -31,6 +29,7 @@ VENV_DIR.mkdir(exist_ok=True, parents=True)
 
 CONFIG_FILE = CLLAMA_HOME / "config.json"
 
+CHECKED = "☆"
 
 T = typing.TypeVar("T")
 
@@ -57,13 +56,15 @@ class ContextVar(typing.Generic[T]):
             self._stack.pop()
 
 
-VERBOSE_LEVEL = ContextVar(10)
-INTERACTIVE = ContextVar(True)
+VERBOSE_LEVEL = ContextVar(20)
+INTERACTIVE = ContextVar(False)
 FORCE = ContextVar(False)
 
 
-def output(content, level=0, style=None):
-    if level >= VERBOSE_LEVEL.get():
+def output(content, level=0, style=None, end=None):
+    import questionary
+
+    if level > VERBOSE_LEVEL.get():
         return
 
     if isinstance(content, (dict, list)):
@@ -76,11 +77,11 @@ def output(content, level=0, style=None):
             sort_dicts=False,
             sort_keys=False,
         )
-        questionary.print(out.getvalue(), style=style, end="")
+        questionary.print(out.getvalue(), style=style, end="" if end is None else end)
         out.close()
 
     if isinstance(content, str):
-        questionary.print(content, style=style)
+        questionary.print(content, style=style, end="\n" if end is None else end)
 
 
 class Config(SimpleNamespace):
@@ -251,15 +252,15 @@ def run_command(
     env = env or {}
     cmd = [str(c) for c in cmd]
     if not silent:
-        questionary.print("\n")
+        output("\n")
         if cwd:
-            questionary.print(f"$ cd {cwd}", style="bold")
+            output(f"$ cd {cwd}", style="bold")
         if env:
             for k, v in env.items():
-                questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
+                output(f"$ export {k}={shlex.quote(v)}", style="bold")
         if venv:
-            questionary.print(f"$ source {venv / 'bin' / 'activate'}", style="bold")
-        questionary.print(f"$ {' '.join(cmd)}", style="bold")
+            output(f"$ source {venv / 'bin' / 'activate'}", style="bold")
+        output(f"$ {' '.join(cmd)}", style="bold")
 
     if venv:
         py = venv / "bin" / "python"
@@ -290,13 +291,13 @@ def run_command(
                 env=env,
             )
     except subprocess.CalledProcessError:
-        questionary.print("Command failed", style=ERROR_STYLE)
+        output("Command failed", style=ERROR_STYLE)
         raise typer.Exit(1)
 
 
 async def stream_command_output(stream, style="gray"):
     async for line in stream:
-        questionary.print(line.decode(), style=style, end="")
+        output(line.decode(), style=style, end="")
 
 
 @asynccontextmanager
@@ -314,15 +315,15 @@ async def async_run_command(
     cmd = [str(c) for c in cmd]
 
     if not silent:
-        questionary.print("\n")
+        output("\n")
         if cwd:
-            questionary.print(f"$ cd {cwd}", style="bold")
+            output(f"$ cd {cwd}", style="bold")
         if env:
             for k, v in env.items():
-                questionary.print(f"$ export {k}={shlex.quote(v)}", style="bold")
+                output(f"$ export {k}={shlex.quote(v)}", style="bold")
         if venv:
-            questionary.print(f"$ source {venv / 'bin' / 'activate'}", style="bold")
-        questionary.print(f"$ {' '.join(cmd)}", style="bold")
+            output(f"$ source {venv / 'bin' / 'activate'}", style="bold")
+        output(f"$ {' '.join(cmd)}", style="bold")
 
     if venv:
         py = venv / "bin" / "python"
@@ -348,7 +349,7 @@ async def async_run_command(
         )
         yield proc
     except subprocess.CalledProcessError:
-        questionary.print("Command failed", style=ERROR_STYLE)
+        output("Command failed", style="red", level=20)
         raise typer.Exit(1)
     finally:
         if proc:

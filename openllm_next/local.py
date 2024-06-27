@@ -2,13 +2,12 @@ import asyncio
 import time
 import httpx
 
-import questionary
-
 from openllm_next.common import (
     BentoInfo,
     run_command,
     async_run_command,
     stream_command_output,
+    output,
 )
 from openllm_next.venv import ensure_venv
 
@@ -54,7 +53,7 @@ async def _run_model(
         stderr_streamer = None
         start_time = time.time()
 
-        questionary.print("Model loading...", style="green")
+        output("Model loading...", style="green")
         for _ in range(timeout):
             try:
                 resp = httpx.get(f"http://localhost:{port}/readyz", timeout=3)
@@ -72,7 +71,7 @@ async def _run_model(
                         )
                 await asyncio.sleep(1)
         else:
-            questionary.print("Model failed to load", style="red")
+            output("Model failed to load", style="red")
             server_proc.terminate()
             return
 
@@ -81,7 +80,7 @@ async def _run_model(
         if stderr_streamer:
             stderr_streamer.cancel()
 
-        questionary.print("Model is ready", style="green")
+        output("Model is ready", style="green")
         messages = []
         client = bentoml.AsyncHTTPClient(f"http://localhost:{port}", timeout=timeout)
         while True:
@@ -97,8 +96,8 @@ async def _run_model(
                 print()
             except KeyboardInterrupt:
                 break
-        questionary.print("\nStopping model server...", style="green")
-    questionary.print("Stopped model server", style="green")
+        output("\nStopping model server...", style="green")
+    output("Stopped model server", style="green")
 
 
 def run(bento: BentoInfo, port: int = 3000, timeout: int = 600):

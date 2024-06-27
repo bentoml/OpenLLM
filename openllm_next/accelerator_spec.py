@@ -6,9 +6,8 @@ import math
 from types import SimpleNamespace
 
 import psutil
-import questionary
 
-from openllm_next.common import BentoInfo, DeploymentTarget
+from openllm_next.common import BentoInfo, DeploymentTarget, output
 
 
 class Accelerator(SimpleNamespace):
@@ -106,9 +105,9 @@ def get_local_machine_spec():
             platform=platform,
         )
     except Exception:
-        questionary.print(
+        output(
             f"Failed to get local GPU info. Ensure nvidia driver is installed to enable local GPU deployment",
-            color="yellow",
+            style="yellow",
         )
         return DeploymentTarget(accelerators=[], source="local", platform=platform)
 

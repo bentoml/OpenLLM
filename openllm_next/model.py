@@ -15,12 +15,13 @@ from openllm_next.common import (
 from openllm_next.repo import ensure_repo_updated, parse_repo_url
 from openllm_next.accelerator_spec import can_run, DeploymentTarget
 
+
 app = typer.Typer()
 
 
 @app.command()
-def get(tag: str):
-    bento_info = ensure_bento(tag)
+def get(tag: str, repo: Optional[str] = None):
+    bento_info = ensure_bento(tag, repo_name=repo)
     if bento_info:
         with VERBOSE_LEVEL.patch(1):
             pyaml.pprint(
@@ -31,8 +32,8 @@ def get(tag: str):
 
 
 @app.command(name="list")
-def list_():
-    bentos = list_bento()
+def list_(repo: Optional[str] = None):
+    bentos = list_bento(repo_name=repo)
     output: dict[str, list[str]] = collections.defaultdict(list)
     for bento in bentos:
         output[bento.name].append(bento.version)
@@ -43,8 +44,12 @@ def list_():
     )
 
 
-def ensure_bento(model: str, target: Optional[DeploymentTarget] = None) -> BentoInfo:
-    bentos = list_bento(model)
+def ensure_bento(
+    model: str,
+    target: Optional[DeploymentTarget] = None,
+    repo_name: Optional[str] = None,
+) -> BentoInfo:
+    bentos = list_bento(model, repo_name=repo_name)
     if len(bentos) == 0:
         output(f"No model found for {model}", level=20, style="red")
         raise typer.Exit(1)
@@ -67,7 +72,7 @@ def ensure_bento(model: str, target: Optional[DeploymentTarget] = None) -> Bento
             style="red",
         )
         for bento in bentos:
-            output(f"  {bento}", level=20, style="red")
+            output(f"  {bento}", level=20)
         raise typer.Exit(1)
 
     filtered = [bento for bento in bentos if can_run(bento, target) > 0]
@@ -86,7 +91,7 @@ def ensure_bento(model: str, target: Optional[DeploymentTarget] = None) -> Bento
             style="red",
         )
         for bento in bentos:
-            output(f"  {bento}", level=20, style="red")
+            output(f"  {bento}", level=20)
         raise typer.Exit(1)
 
     return bentos[0]
@@ -98,6 +103,17 @@ def list_bento(
     include_alias: bool = False,
 ) -> typing.List[BentoInfo]:
     ensure_repo_updated()
+
+    if repo_name is not None:
+        config = load_config()
+        if repo_name not in config.repos:
+            output(
+                f"Repo `{repo_name}` not found, did you mean one of these?", level=20
+            )
+            for repo_name in config.repos:
+                output(f"  {repo_name}", level=20)
+            raise typer.Exit(1)
+
     if not tag:
         glob_pattern = "bentoml/bentos/*/*"
     elif ":" in tag:
