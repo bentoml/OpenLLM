@@ -10,3 +10,5 @@ venv/
 bentoml/client_id
 
 ChatTTS/
+asset/
+config/
