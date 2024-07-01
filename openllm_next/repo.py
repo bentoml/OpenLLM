@@ -7,23 +7,27 @@ import questionary
 import typer
 
 from openllm_next.common import (
-    ERROR_STYLE,
     INTERACTIVE,
     REPO_DIR,
-    SUCCESS_STYLE,
+    VERBOSE_LEVEL,
     RepoInfo,
     load_config,
-    save_config,
     output,
+    save_config,
 )
 
 UPDATE_INTERVAL = datetime.timedelta(days=3)
 
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    help="manage repos",
+)
 
 
 @app.command()
-def list():
+def list(verbose: bool = False):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
     config = load_config()
     pyaml.pprint(
         [parse_repo_url(repo, name) for name, repo in config.repos.items()],
@@ -36,12 +40,12 @@ def list():
 def remove(name: str):
     config = load_config()
     if name not in config.repos:
-        output(f"Repo {name} does not exist", style=ERROR_STYLE)
+        output(f"Repo {name} does not exist", style="red")
         return
 
     del config.repos[name]
     save_config(config)
-    output(f"Repo {name} removed", style=SUCCESS_STYLE)
+    output(f"Repo {name} removed", style="green")
 
 
 @app.command()
@@ -68,10 +72,10 @@ def update():
                     branch=repo.branch,
                 )
                 output("")
-                output(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
+                output(f"Repo `{repo.name}` updated", style="green")
             except:
                 shutil.rmtree(repo.path, ignore_errors=True)
-                output(f"Failed to clone repo {repo.name}", style=ERROR_STYLE)
+                output(f"Failed to clone repo {repo.name}", style="red")
         else:
             try:
                 import dulwich.porcelain
@@ -84,10 +88,10 @@ def update():
                 )
                 dulwich.porcelain.clean(str(repo.path), str(repo.path))
                 output("")
-                output(f"Repo `{repo.name}` updated", style=SUCCESS_STYLE)
+                output(f"Repo `{repo.name}` updated", style="green")
             except:
                 shutil.rmtree(repo.path, ignore_errors=True)
-                output(f"Failed to update repo {repo.name}", style=ERROR_STYLE)
+                output(f"Failed to update repo {repo.name}", style="red")
     for c in REPO_DIR.glob("*/*/*"):
         if tuple(c.parts[-3:]) not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
@@ -110,7 +114,6 @@ def ensure_repo_updated():
             output(
                 "The repo cache is never updated, please run `openllm repo update` to fetch the latest model list",
                 style="red",
-                level=20,
             )
             raise typer.Exit(1)
     last_update = datetime.datetime.fromisoformat(last_update_file.read_text().strip())
@@ -125,7 +128,6 @@ def ensure_repo_updated():
             output(
                 "The repo cache is outdated, please run `openllm repo update` to fetch the latest model list",
                 style="yellow",
-                level=10,
             )
 
 
@@ -137,11 +139,11 @@ GIT_REPO_RE = re.compile(
 def parse_repo_url(repo_url, repo_name=None) -> RepoInfo:
     """
     parse the git repo url to server, owner, repo name, branch
-    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm@main")
-    ('github.com', 'bojiang', 'bentovllm', 'main')
+    >>> parse_repo_url("git+https://github.com/bentoml/bentovllm@main")
+    ('github.com', 'bentoml', 'bentovllm', 'main')
 
-    >>> parse_repo_url("git+https://github.com/bojiang/bentovllm")
-    ('github.com', 'bojiang', 'bentovllm', 'main')
+    >>> parse_repo_url("git+https://github.com/bentoml/bentovllm")
+    ('github.com', 'bentoml', 'bentovllm', 'main')
     """
     match = GIT_REPO_RE.match(repo_url)
     if not match:
@@ -168,7 +170,7 @@ def add(name: str, repo: str):
     if not name.isidentifier():
         output(
             f"Invalid repo name: {name}, should only contain letters, numbers and underscores",
-            style=ERROR_STYLE,
+            style="red",
         )
         return
 
@@ -182,7 +184,7 @@ def add(name: str, repo: str):
 
     config.repos[name] = repo
     save_config(config)
-    output(f"Repo {name} added", style=SUCCESS_STYLE)
+    output(f"Repo {name} added", style="green")
 
 
 if __name__ == "__main__":

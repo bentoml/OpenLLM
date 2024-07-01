@@ -1,8 +1,7 @@
 import functools
-import typing
 import pathlib
 import shutil
-from types import SimpleNamespace
+import typing
 from typing import Iterable
 
 import typer
@@ -11,9 +10,9 @@ from openllm_next.common import (
     VENV_DIR,
     VERBOSE_LEVEL,
     BentoInfo,
-    md5,
-    run_command,
+    VenvSpec,
     output,
+    run_command,
 )
 
 
@@ -43,18 +42,6 @@ def _resolve_packages(requirement: typing.Union[pathlib.Path, str]) -> dict[str,
     return deps
 
 
-class EnvSpec(SimpleNamespace):
-    python_version: str
-    python_packages: dict[str, str]
-    name_prefix = ""
-
-    def __hash__(self):
-        return md5(
-            # self.python_version,
-            *sorted(self.python_packages.values()),
-        )
-
-
 @functools.lru_cache
 def _resolve_bento_env_specs(bento: BentoInfo):
     ver_file = bento.path / "env" / "python" / "version.txt"
@@ -71,12 +58,12 @@ def _resolve_bento_env_specs(bento: BentoInfo):
     }
     ver = ver_file.read_text().strip()
     return (
-        EnvSpec(
+        VenvSpec(
             python_version=ver,
             python_packages=preheat_packages,
             name_prefix=f"{bento.tag.replace(':', '_')}-1-",
         ),
-        EnvSpec(
+        VenvSpec(
             python_version=ver,
             python_packages=python_packages,
             name_prefix=f"{bento.tag.replace(':', '_')}-2-",
@@ -85,7 +72,7 @@ def _resolve_bento_env_specs(bento: BentoInfo):
 
 
 def _ensure_venv(
-    env_spec: EnvSpec,
+    env_spec: VenvSpec,
     parrent_venv: typing.Optional[pathlib.Path] = None,
 ) -> pathlib.Path:
     venv = VENV_DIR / str(hash(env_spec))
@@ -94,7 +81,10 @@ def _ensure_venv(
     if not venv.exists():
         output(f"Installing model dependencies({venv})...", style="green")
         try:
-            run_command(["python", "-m", "venv", venv], silent=VERBOSE_LEVEL.get() < 1)
+            run_command(
+                ["python", "-m", "venv", venv],
+                silent=VERBOSE_LEVEL.get() < 10,
+            )
             pyver = next(venv.glob("lib/python*")).name
             if parrent_venv is not None:
                 with open(
@@ -113,7 +103,7 @@ def _ensure_venv(
                     "--upgrade-strategy",
                     "only-if-needed",
                 ],
-                silent=VERBOSE_LEVEL.get() < 1,
+                silent=VERBOSE_LEVEL.get() < 10,
             )
             run_command(
                 [
@@ -124,7 +114,7 @@ def _ensure_venv(
                     "only-if-needed",
                     "--upgrade",
                 ],
-                silent=VERBOSE_LEVEL.get() < 1,
+                silent=VERBOSE_LEVEL.get() < 10,
             )
             with open(venv / "DONE", "w") as f:
                 f.write("DONE")
@@ -141,7 +131,7 @@ def _ensure_venv(
         return venv
 
 
-def _ensure_venvs(env_spec_list: Iterable[EnvSpec]) -> pathlib.Path:
+def _ensure_venvs(env_spec_list: Iterable[VenvSpec]) -> pathlib.Path:
     last_venv = None
     for env_spec in env_spec_list:
         last_venv = _ensure_venv(env_spec, last_venv)

@@ -3,21 +3,18 @@ import os
 import pathlib
 import shutil
 import subprocess
-
 import typing
+
 import typer
 
 from openllm_next.accelerator_spec import ACCELERATOR_SPECS
 from openllm_next.common import (
-    ERROR_STYLE,
     INTERACTIVE,
     BentoInfo,
     DeploymentTarget,
     output,
     run_command,
 )
-
-app = typer.Typer()
 
 
 def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None):
@@ -32,7 +29,6 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
         output(
             f"This model requires the following environment variables to run: {repr(required_env_names)}",
             style="yellow",
-            level=20,
         )
 
     for env_info in bento.bento_yaml.get("envs", []):
@@ -56,8 +52,7 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
             if default == "":
                 output(
                     f"Environment variable {env_info['name']} is required but not provided",
-                    style=ERROR_STYLE,
-                    level=20,
+                    style="red",
                 )
                 raise typer.Exit(1)
             else:
@@ -123,7 +118,7 @@ def ensure_cloud_context():
             result = subprocess.check_output(cmd)
             output("  Logged in successfully", style="green")
         except subprocess.CalledProcessError:
-            output("  Failed to login", style=ERROR_STYLE)
+            output("  Failed to login", style="red")
             raise typer.Exit(1)
 
 
@@ -147,7 +142,7 @@ def get_cloud_machine_spec():
             for it in instance_types
         ]
     except (subprocess.CalledProcessError, json.JSONDecodeError):
-        output("Failed to get cloud instance types", style=ERROR_STYLE)
+        output("Failed to get cloud instance types", style="red")
         return []
 
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
-import typing
 
 import functools
 import math
+import typing
 from types import SimpleNamespace
 
 import psutil

@@ -1,26 +1,35 @@
-from typing import Annotated, Optional
-from collections import defaultdict
+import random
 import sys
-import questionary
+from collections import defaultdict
+from typing import Annotated, Iterable, Optional
 
+import questionary
 import typer
+import typer.core
+from click import Context
 
 from openllm_next.accelerator_spec import (
     DeploymentTarget,
     can_run,
     get_local_machine_spec,
 )
-from openllm_next.cloud import app as cloud_app, ensure_cloud_context
-from openllm_next.cloud import get_cloud_machine_spec
 from openllm_next.cloud import deploy as cloud_deploy
-from openllm_next.common import INTERACTIVE, VERBOSE_LEVEL, output, CHECKED
+from openllm_next.cloud import ensure_cloud_context, get_cloud_machine_spec
+from openllm_next.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, output
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
-from openllm_next.model import app as model_app, ensure_bento
-from openllm_next.model import list_bento
+from openllm_next.model import app as model_app
+from openllm_next.model import ensure_bento, list_bento
 from openllm_next.repo import app as repo_app
 
+
+class OrderedCommands(typer.core.TyperGroup):
+    def list_commands(self, _: Context) -> Iterable[str]:
+        return list(self.commands)
+
+
 app = typer.Typer(
+    cls=OrderedCommands,
     no_args_is_help=True,
     help="`openllm hello` to get started. "
     "OpenLLM is a CLI tool to manage and deploy open source LLMs and"
@@ -29,7 +38,6 @@ app = typer.Typer(
 
 app.add_typer(repo_app, name="repo")
 app.add_typer(model_app, name="model")
-app.add_typer(cloud_app, name="cloud")
 
 
 def _select_bento_name(models, target):
@@ -47,7 +55,7 @@ def _select_bento_name(models, target):
         for (repo, name), score in model_name_groups.items()
     ]
     if not table_data:
-        output("No model found", level=20, style="red")
+        output("No model found", style="red")
         raise typer.Exit(1)
     table = tabulate(
         table_data,
@@ -79,7 +87,7 @@ def _select_bento_version(models, target, bento_name, repo):
         if model.name == bento_name and model.repo.name == repo
     ]
     if not table_data:
-        output(f"No model found for {bento_name} in {repo}", level=20, style="red")
+        output(f"No model found for {bento_name} in {repo}", style="red")
         raise typer.Exit(1)
     table = tabulate(
         table_data,
@@ -104,7 +112,6 @@ def _select_target(bento, targets):
     if not targets:
         output(
             "No available instance type, check your bentocloud account",
-            level=20,
             style="red",
         )
         raise typer.Exit(1)
@@ -183,19 +190,35 @@ def _select_action(bento, score):
     if action is None:
         raise typer.Exit(1)
     if action == "run":
-        local_run(bento)
+        try:
+            local_run(bento)
+        finally:
+            output(f"\nUse this command to run the action again:", style="green")
+            output(f"  $ openllm run {bento}", style="orange")
     elif action == "serve":
-        local_serve(bento)
+        try:
+            local_serve(bento)
+        finally:
+            output(f"\nUse this command to run the action again:", style="green")
+            output(f"  $ openllm serve {bento}", style="orange")
     elif action == "deploy":
         ensure_cloud_context()
         targets = get_cloud_machine_spec()
         target = _select_target(bento, targets)
-        cloud_deploy(bento, target)
+        try:
+            cloud_deploy(bento, target)
+        finally:
+            output(f"\nUse this command to run the action again:", style="green")
+            output(
+                f"  $ openllm deploy {bento} --instance-type {target.name}",
+                style="orange",
+            )
 
 
-@app.command()
+@app.command(help="get started interactively")
 def hello():
     INTERACTIVE.set(True)
+    VERBOSE_LEVEL.set(20)
 
     target = get_local_machine_spec()
     output(f"  Detected Platform: {target.platform}", style="green")
@@ -213,35 +236,48 @@ def hello():
     _select_action(bento, score)
 
 
-@app.command()
+@app.command(help="start an OpenAI API compatible chat server and chat in browser")
 def serve(
     model: Annotated[str, typer.Argument()] = "",
     repo: Optional[str] = None,
     port: int = 3000,
+    verbose: bool = False,
 ):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
     target = get_local_machine_spec()
     bento = ensure_bento(model, target=target, repo_name=repo)
     local_serve(bento, port=port)
 
 
-@app.command()
+@app.command(help="run the model and chat in terminal")
 def run(
     model: Annotated[str, typer.Argument()] = "",
     repo: Optional[str] = None,
-    port: int = 3000,
+    port: Optional[int] = None,
     timeout: int = 600,
+    verbose: bool = False,
 ):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
     target = get_local_machine_spec()
     bento = ensure_bento(model, target=target, repo_name=repo)
+    if port is None:
+        port = random.randint(30000, 40000)
     local_run(bento, port=port, timeout=timeout)
 
 
-@app.command()
+@app.command(
+    help="deploy an production-ready OpenAI API compatible chat server to bentocloud ($100 free credit)",
+)
 def deploy(
     model: Annotated[str, typer.Argument()] = "",
     instance_type: Optional[str] = None,
     repo: Optional[str] = None,
+    verbose: bool = False,
 ):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
     bento = ensure_bento(model, repo_name=repo)
     if instance_type is not None:
         cloud_deploy(bento, DeploymentTarget(name=instance_type))
@@ -252,25 +288,21 @@ def deploy(
     if not targets:
         output(
             "No available instance type, check your bentocloud account",
-            level=20,
             style="red",
         )
         raise typer.Exit(1)
     target = targets[0]
-    output(f"Recommended instance type: {target.name}", style="green")
+    output(
+        f"Recommended instance type: {target.name}",
+        style="green",
+    )
     cloud_deploy(bento, target)
-
-
-def typer_callback(verbose: int = 0):
-    if verbose:
-        VERBOSE_LEVEL.set(verbose)
 
 
 def main():
     if sys.version_info < (3, 9):
-        output("Python 3.8 or higher is required", level=20, style="red")
+        output("Python 3.8 or higher is required", style="red")
         sys.exit(1)
-    app.callback()(typer_callback)
     app()
 
 

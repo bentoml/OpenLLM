@@ -1,13 +1,14 @@
 import asyncio
 import time
+
 import httpx
 
 from openllm_next.common import (
     BentoInfo,
-    run_command,
     async_run_command,
-    stream_command_output,
     output,
+    run_command,
+    stream_command_output,
 )
 from openllm_next.venv import ensure_venv
 
@@ -47,7 +48,7 @@ async def _run_model(
     ) as server_proc:
         import bentoml
 
-        print("Model server started", server_proc.pid)
+        output(f"Model server started {server_proc.pid}")
 
         stdout_streamer = None
         stderr_streamer = None
@@ -86,14 +87,17 @@ async def _run_model(
         while True:
             try:
                 message = input("user: ")
+                if message == "":
+                    output("empty message, please enter something", style="yellow")
+                    continue
                 messages.append(dict(role="user", content=message))
-                print("assistant: ", end="")
+                output("assistant: ", end="", style="lightgreen")
                 assistant_message = ""
                 async for text in client.chat(messages=messages):  # type: ignore
                     assistant_message += text
-                    print(text, end="")
+                    output(text, end="", style="lightgreen")
                 messages.append(dict(role="assistant", content=assistant_message))
-                print()
+                output("")
             except KeyboardInterrupt:
                 break
         output("\nStopping model server...", style="green")

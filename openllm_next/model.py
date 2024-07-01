@@ -1,47 +1,72 @@
-import collections
 import typing
 from typing import Optional
 
-import pyaml
+import tabulate
 import typer
 
+from openllm_next.accelerator_spec import DeploymentTarget, can_run
 from openllm_next.common import (
+    FORCE,
     VERBOSE_LEVEL,
     BentoInfo,
     load_config,
     output,
-    FORCE,
 )
 from openllm_next.repo import ensure_repo_updated, parse_repo_url
-from openllm_next.accelerator_spec import can_run, DeploymentTarget
 
-
-app = typer.Typer()
+app = typer.Typer(
+    no_args_is_help=True,
+    help="manage models",
+)
 
 
 @app.command()
-def get(tag: str, repo: Optional[str] = None):
+def get(
+    tag: str,
+    repo: Optional[str] = None,
+    verbose: bool = False,
+):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
     bento_info = ensure_bento(tag, repo_name=repo)
     if bento_info:
-        with VERBOSE_LEVEL.patch(1):
-            pyaml.pprint(
-                bento_info,
-                sort_dicts=False,
-                sort_keys=False,
-            )
+        output(bento_info)
 
 
 @app.command(name="list")
-def list_(repo: Optional[str] = None):
-    bentos = list_bento(repo_name=repo)
-    output: dict[str, list[str]] = collections.defaultdict(list)
-    for bento in bentos:
-        output[bento.name].append(bento.version)
-    pyaml.pprint(
-        output,
-        sort_dicts=False,
-        sort_keys=False,
+def list_(
+    tag: Optional[str] = None,
+    repo: Optional[str] = None,
+    verbose: bool = False,
+):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
+
+    bentos = list_bento(tag=tag, repo_name=repo)
+    bentos.sort(key=lambda x: x.name)
+
+    seen = set()
+
+    def is_seen(value):
+        if value in seen:
+            return True
+        seen.add(value)
+        return False
+
+    table = tabulate.tabulate(
+        [
+            [
+                "" if is_seen(bento.name) else bento.name,
+                bento.tag,
+                bento.repo.name,
+                bento.pretty_accelerator,
+                ",".join(bento.platforms),
+            ]
+            for bento in bentos
+        ],
+        headers=["model", "version", "repo", "accelerators", "platforms"],
     )
+    output(table)
 
 
 def ensure_bento(
@@ -51,47 +76,45 @@ def ensure_bento(
 ) -> BentoInfo:
     bentos = list_bento(model, repo_name=repo_name)
     if len(bentos) == 0:
-        output(f"No model found for {model}", level=20, style="red")
+        output(f"No model found for {model}", style="red")
         raise typer.Exit(1)
 
     if len(bentos) == 1:
         if FORCE.get():
-            output(f"Found model {bentos[0]}", level=10, style="green")
+            output(f"Found model {bentos[0]}", style="green")
             return bentos[0]
         if target is None:
             return bentos[0]
         if can_run(bentos[0], target) <= 0:
             return bentos[0]
-        output(f"Found model {bentos[0]}", level=10, style="green")
+        output(f"Found model {bentos[0]}", style="green")
         return bentos[0]
 
     if target is None:
         output(
             f"Multiple models match {model}, did you mean one of these?",
-            level=20,
             style="red",
         )
         for bento in bentos:
-            output(f"  {bento}", level=20)
+            output(f"  {bento}")
         raise typer.Exit(1)
 
     filtered = [bento for bento in bentos if can_run(bento, target) > 0]
     if len(filtered) == 0:
-        output(f"No deployment target found for {model}", level=20, style="red")
+        output(f"No deployment target found for {model}", style="red")
         raise typer.Exit(1)
 
     if len(filtered) == 0:
-        output(f"No deployment target found for {model}", level=20, style="red")
+        output(f"No deployment target found for {model}", style="red")
         raise typer.Exit(1)
 
     if len(bentos) > 1:
         output(
             f"Multiple models match {model}, did you mean one of these?",
-            level=20,
             style="red",
         )
         for bento in bentos:
-            output(f"  {bento}", level=20)
+            output(f"  {bento}")
         raise typer.Exit(1)
 
     return bentos[0]
@@ -107,11 +130,9 @@ def list_bento(
     if repo_name is not None:
         config = load_config()
         if repo_name not in config.repos:
-            output(
-                f"Repo `{repo_name}` not found, did you mean one of these?", level=20
-            )
+            output(f"Repo `{repo_name}` not found, did you mean one of these?")
             for repo_name in config.repos:
-                output(f"  {repo_name}", level=20)
+                output(f"  {repo_name}")
             raise typer.Exit(1)
 
     if not tag:

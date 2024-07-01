@@ -1,22 +1,18 @@
-import functools
-import signal
-import io
 import asyncio
+import functools
 import hashlib
+import io
 import json
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 import typing
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from types import SimpleNamespace
 
 import typer
-
-ERROR_STYLE = "red"
-SUCCESS_STYLE = "green"
-
 
 CLLAMA_HOME = pathlib.Path.home() / ".openllm_next"
 REPO_DIR = CLLAMA_HOME / "repos"
@@ -56,7 +52,7 @@ class ContextVar(typing.Generic[T]):
             self._stack.pop()
 
 
-VERBOSE_LEVEL = ContextVar(20)
+VERBOSE_LEVEL = ContextVar(10)
 INTERACTIVE = ContextVar(False)
 FORCE = ContextVar(False)
 
@@ -67,7 +63,7 @@ def output(content, level=0, style=None, end=None):
     if level > VERBOSE_LEVEL.get():
         return
 
-    if isinstance(content, (dict, list)):
+    if not isinstance(content, str):
         import pyaml
 
         out = io.StringIO()
@@ -86,7 +82,7 @@ def output(content, level=0, style=None, end=None):
 
 class Config(SimpleNamespace):
     repos: dict[str, str] = {
-        "default": "git+https://github.com/bojiang/openllm-repo@main"
+        "default": "git+https://github.com/bentoml/openllm-repo@main"
     }
     default_repo: str = "default"
 
@@ -115,13 +111,13 @@ class RepoInfo(SimpleNamespace):
     def tolist(self):
         if VERBOSE_LEVEL.get() <= 0:
             return f"{self.name} ({self.url})"
-        if VERBOSE_LEVEL.get() <= 1:
+        if VERBOSE_LEVEL.get() <= 10:
             return dict(
                 name=self.name,
                 url=self.url,
                 path=str(self.path),
             )
-        if VERBOSE_LEVEL.get() <= 2:
+        if VERBOSE_LEVEL.get() <= 20:
             return dict(
                 name=self.name,
                 url=self.url,
@@ -166,6 +162,10 @@ class BentoInfo(SimpleNamespace):
         return yaml.safe_load(bento_file.read_text())
 
     @functools.cached_property
+    def platforms(self) -> list[str]:
+        return self.bento_yaml["labels"].get("platforms", "linux").split(",")
+
+    @functools.cached_property
     def pretty_yaml(self) -> dict:
         def _pretty_routes(routes):
             return {
@@ -183,28 +183,54 @@ class BentoInfo(SimpleNamespace):
                 "apis": _pretty_routes(self.bento_yaml["schema"]["routes"]),
                 "resources": self.bento_yaml["services"][0]["config"]["resources"],
                 "envs": self.bento_yaml["envs"],
+                "platforms": self.platforms,
             }
             return pretty_yaml
         return self.bento_yaml
+
+    @functools.cached_property
+    def pretty_accelerator(self) -> str:
+        from openllm_next.accelerator_spec import ACCELERATOR_SPECS
+
+        try:
+            resources = self.bento_yaml["services"][0]["config"]["resources"]
+            if resources["gpu"] > 0:
+                acc = ACCELERATOR_SPECS[resources["gpu_type"]]
+                return f"{acc.memory_size:.0f}GB x{resources['gpu']} ({acc.model})"
+            return ""
+        except KeyError:
+            return ""
 
     def tolist(self):
         verbose = VERBOSE_LEVEL.get()
         if verbose <= 0:
             return str(self)
-        if verbose <= 1:
+        if verbose <= 10:
             return dict(
                 tag=self.tag,
                 repo=self.repo.tolist(),
                 path=str(self.path),
                 model_card=self.pretty_yaml,
             )
-        if verbose <= 2:
+        if verbose <= 20:
             return dict(
                 tag=self.tag,
                 repo=self.repo.tolist(),
                 path=str(self.path),
                 bento_yaml=self.bento_yaml,
             )
+
+
+class VenvSpec(SimpleNamespace):
+    python_version: str
+    python_packages: dict[str, str]
+    name_prefix = ""
+
+    def __hash__(self):
+        return md5(
+            # self.python_version,
+            *sorted(self.python_packages.values()),
+        )
 
 
 class Accelerator(SimpleNamespace):
@@ -291,7 +317,7 @@ def run_command(
                 env=env,
             )
     except subprocess.CalledProcessError:
-        output("Command failed", style=ERROR_STYLE)
+        output("Command failed", style="red")
         raise typer.Exit(1)
 
 
@@ -349,7 +375,7 @@ async def async_run_command(
         )
         yield proc
     except subprocess.CalledProcessError:
-        output("Command failed", style="red", level=20)
+        output("Command failed", style="red")
         raise typer.Exit(1)
     finally:
         if proc:
