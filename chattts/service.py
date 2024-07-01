@@ -1,28 +1,50 @@
 import io
+import os
 from typing import Annotated
 
 import bentoml
+import fastapi
+import fastapi.staticfiles
 import yaml
-from bentoml.validators import ContentType
-
 from bento_constants import CONSTANT_YAML
+from bentoml.validators import ContentType
+from fastapi.responses import FileResponse
 
 CONSTANTS = yaml.safe_load(CONSTANT_YAML)
+ROOT_DIR = os.path.join(os.path.dirname(__file__), "ui", "build")
+
+ui_app = fastapi.FastAPI()
+ui_app.mount(
+    "/",
+    fastapi.staticfiles.StaticFiles(directory=ROOT_DIR, html=True),
+    name="static",
+)
 
 
-@bentoml.service(**CONSTANTS["service_config"])
+@bentoml.mount_asgi_app(ui_app, path="/")
+@bentoml.service(
+    **CONSTANTS["service_config"],
+    http={
+        "cors": {
+            "enabled": True,
+            "access_control_allow_origins": "*",
+            "access_control_allow_methods": "POST, OPTIONS",
+            "access_control_allow_headers": "Content-Type",
+        },
+    },
+)
 class Main:
     def __init__(self) -> None:
         import ChatTTS
 
         self.chat = ChatTTS.Chat()
-        self.chat.load(compile=True)
+        self.chat.load(compile=False)
 
     @bentoml.api
     def tts(
         self,
         text: str = "PUT YOUR TEXT HERE",
-        speaker: str = "2",
+        speaker: int = 2,
     ) -> Annotated[bytes, ContentType("audio/wav")]:
         import ChatTTS
 
@@ -35,7 +57,7 @@ class Main:
         import torchaudio
 
         if speaker:
-            seed = int(speaker, 16)
+            seed = int(speaker)
             torch.manual_seed(seed)
 
             if torch.cuda.is_available():
