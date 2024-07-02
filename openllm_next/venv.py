@@ -117,24 +117,6 @@ def _ensure_venv(
                     str(venv_py),
                     "-r",
                     venv / "requirements.txt",
-                    "--upgrade-strategy",
-                    "only-if-needed",
-                ],
-                silent=VERBOSE_LEVEL.get() < 10,
-            )
-            run_command(
-                [
-                    "python",
-                    "-m",
-                    "uv",
-                    "pip",
-                    "install",
-                    "-p",
-                    str(venv_py),
-                    "bentoml",
-                    "--upgrade-strategy",
-                    "only-if-needed",
-                    "--upgrade",
                 ],
                 silent=VERBOSE_LEVEL.get() < 10,
             )
