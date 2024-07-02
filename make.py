@@ -1,11 +1,12 @@
-import yaml
-import sys
-import subprocess
+import hashlib
 import os
-import shutil
-import tempfile
 import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
 
+import yaml
 
 with open("recipe.yaml") as f:
     RECIPE = yaml.safe_load(f)
@@ -19,6 +20,28 @@ CONSTANT_YAML = '''
 {}
 '''
 """
+
+
+def hash_file(file_path):
+    """计算单个文件的哈希值"""
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def hash_directory(directory_path):
+    """计算文件夹内容的哈希值"""
+    hasher = hashlib.sha256()
+
+    for root, _, files in sorted(os.walk(directory_path)):
+        for file in sorted(files):
+            file_path = os.path.join(root, file)
+            file_hash = hash_file(file_path)
+            hasher.update(file_hash.encode())
+
+    return hasher.hexdigest()
 
 
 if __name__ == "__main__":
@@ -40,6 +63,17 @@ if __name__ == "__main__":
 
             with open(tempdir / "bento_constants.py", "w") as f:
                 f.write(CONSTANT_YAML_TMPL.format(yaml.dump(config)))
+
+            labels = config.get("extra_labels", {})
+            yaml_content = yaml.load(
+                (tempdir / "bentofile.yaml").read_text(), Loader=yaml.SafeLoader
+            )
+            with open(tempdir / "bentofile.yaml", "w") as f:
+                yaml_content["labels"] = dict(yaml_content.get("labels", {}), **labels)
+                f.write(yaml.dump(yaml_content))
+
+            directory_hash = hash_directory(tempdir)
+            model_version = f"{model_version}-{directory_hash[:7]}"
 
             subprocess.run(
                 ["bentoml", "build", str(tempdir), "--version", model_version],

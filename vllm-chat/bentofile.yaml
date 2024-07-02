@@ -2,9 +2,9 @@ service: "service:VLLM"
 labels:
   owner: bentoml-team
   platforms: linux
+  service_home: /chat
   source_repo: https://github.com/bentoml/openllm-repo-recipe.git
   source_directory: vllm-chat
-  service_home: /chat
 include:
 - "*.py"
 - "ui/*"
@@ -17,6 +17,6 @@ include:
 - "chat_templates/generation_configs/*.json"
 python:
   requirements_txt: "./requirements.txt"
-  lock_packages: false
+  lock_packages: true
 envs:
   - name: HF_TOKEN
