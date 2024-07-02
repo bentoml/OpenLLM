@@ -1,6 +1,4 @@
-"phi3:3.8b-mini-instruct-4k-fp16":
-  alias:
-    - 3.8b
+"phi3:3.8b-instruct-fp16":
   project: vllm-chat
   service_config:
     name: phi3
@@ -15,11 +13,9 @@
     dtype: half
   chat_template: phi-3
   extra_labels:
-    openllm_alias: 3.8b
+    openllm_alias: 3.8b,3.8b-mini,3.8b-mini-instruct-4k-fp16
     openllm_hf_model_id: microsoft/Phi-3-mini-4k-instruct
 "llama2:7b-chat-fp16":
-  alias:
-    - 7b
   project: vllm-chat
   service_config:
     name: llama2
@@ -34,11 +30,9 @@
     dtype: half
   chat_template: llama-2-chat
   extra_labels:
-    openllm_alias: 7b
+    openllm_alias: 7b,7b-chat
     openllm_hf_model_id: meta-llama/Llama-2-7b-chat-hf
 "llama2:13b-chat-fp16":
-  alias:
-    - 13b
   project: vllm-chat
   service_config:
     name: llama2
@@ -53,11 +47,9 @@
     dtype: half
   chat_template: llama-2-chat
   extra_labels:
-    openllm_alias: 13b
+    openllm_alias: 13b,13b-chat
     openllm_hf_model_id: meta-llama/Llama-2-13b-chat-hf
 "llama2:70b-chat-fp16":
-  alias:
-    - 70b
   project: vllm-chat
   service_config:
     name: llama2
@@ -72,11 +64,9 @@
     dtype: half
   chat_template: llama-2-chat
   extra_labels:
-    openllm_alias: 70b
+    openllm_alias: 70b,70b-chat
     openllm_hf_model_id: meta-llama/Llama-2-70b-chat-hf
 "llama2:7b-chat-awq-4bit":
-  alias:
-    - 7b-4bit
   project: vllm-chat
   service_config:
     name: llama2
@@ -92,11 +82,9 @@
     enforce_eager: true
   chat_template: llama-2-chat
   extra_labels:
-    openllm_alias: 7b-4bit
+    openllm_alias: 7b-4bit,7b-chat-4bit
     openllm_hf_model_id: TheBloke/Llama-2-7B-Chat-AWQ
 "mistral:7b-instruct-awq-4bit":
-  alias:
-    - 7b-4bit
   project: vllm-chat
   service_config:
     name: mistral
@@ -113,11 +101,9 @@
     dtype: half
   chat_template: mistral-instruct
   extra_labels:
-    openllm_alias: 7b-4bit
+    openllm_alias: 7b-4bit,7b-instruct-4bit
     openllm_hf_model_id: TheBloke/Mistral-7B-Instruct-v0.1-AWQ
 "mistral:7b-instruct-fp16":
-  alias:
-    - 7b
   project: vllm-chat
   service_config:
     name: mistral
@@ -133,11 +119,9 @@
     dtype: half
   chat_template: mistral-instruct
   extra_labels:
-    openllm_alias: 7b
+    openllm_alias: 7b,7b-instruct
     openllm_hf_model_id: mistralai/Mistral-7B-Instruct-v0.1
 "llama3:8b-instruct-awq-4bit":
-  alias:
-    - 8b-4bit
   project: vllm-chat
   service_config:
     name: llama3
@@ -151,11 +135,9 @@
     max_model_len: 2048
     quantization: awq
   extra_labels:
-    openllm_alias: 8b-4bit
+    openllm_alias: 8b-4bit,8b-instruct-4bit
     openllm_hf_model_id: casperhansen/llama-3-8b-instruct-awq
 "llama3:70b-instruct-awq-4bit":
-  alias:
-    - 70b-4bit
   project: vllm-chat
   service_config:
     name: llama3
@@ -169,11 +151,9 @@
     max_model_len: 2048
     quantization: awq
   extra_labels:
-    openllm_alias: 70b-4bit
+    openllm_alias: 70b-4bit,70b-instruct-4bit
     openllm_hf_model_id: casperhansen/llama-3-70b-instruct-awq
 "llama3:8b-instruct-fp16":
-  alias:
-    - 8b
   project: vllm-chat
   service_config:
     name: llama3
@@ -187,11 +167,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 8b
+    openllm_alias: 8b,8b-instruct
     openllm_hf_model_id: meta-llama/Meta-Llama-3-8B-Instruct
 "llama3:70b-instruct-fp16":
-  alias:
-    - 70b
   project: vllm-chat
   service_config:
     name: llama3
@@ -204,11 +182,9 @@
     model: meta-llama/Meta-Llama-3-70B-Instruct
     max_model_len: 2048
   extra_labels:
-    openllm_alias: 70b
+    openllm_alias: 70b,70b-instruct
     openllm_hf_model_id: meta-llama/Meta-Llama-3-70B-Instruct
 "gemma:2b-instruct-fp16":
-  alias:
-    - 2b
   project: vllm-chat
   service_config:
     name: gemma
@@ -222,11 +198,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 2b
+    openllm_alias: 2b,2b-instruct
     openllm_hf_model_id: google/gemma-2b-it
 "gemma:7b-instruct-fp16":
-  alias:
-    - 7b
   project: vllm-chat
   service_config:
     name: gemma
@@ -240,11 +214,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 7b
+    openllm_alias: 7b,7b-instruct
     openllm_hf_model_id: google/gemma-7b-it
 "gemma:7b-instruct-awq-4bit":
-  alias:
-    - 7b-4bit
   project: vllm-chat
   service_config:
     name: gemma
@@ -259,7 +231,7 @@
     quantization: awq
   chat_template: gemma-it
   extra_labels:
-    openllm_alias: 7b-4bit
+    openllm_alias: 7b-4bit,7b-instruct-4bit
     openllm_hf_model_id: casperhansen/gemma-7b-it-awq
 "mixtral:8x7b-instruct-v0.1-fp16":
   project: vllm-chat
@@ -296,8 +268,6 @@
     openllm_alias: 8x7b-4bit
     openllm_hf_model_id: casperhansen/mixtral-instruct-awq
 "qwen2:0.5b-instruct-fp16":
-  alias:
-    - 0.5b
   project: vllm-chat
   service_config:
     name: qwen2
@@ -311,11 +281,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 0.5b
+    openllm_alias: 0.5b,0.5b-instruct
     openllm_hf_model_id: Qwen/Qwen2-0.5B-Instruct
 "qwen2:1.5b-instruct-fp16":
-  alias:
-    - 1.5b
   project: vllm-chat
   service_config:
     name: qwen2
@@ -329,11 +297,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 1.5b
+    openllm_alias: 1.5b,1.5b-instruct
     openllm_hf_model_id: Qwen/Qwen2-1.5B-Instruct
 "qwen2:7b-instruct-awq-4bit":
-  alias:
-    - 7b-4bit
   project: vllm-chat
   service_config:
     name: qwen2
@@ -347,11 +313,9 @@
     max_model_len: 2048
     quantization: awq
   extra_labels:
-    openllm_alias: 7b-4bit
+    openllm_alias: 7b-4bit,7b-instruct-4bit
     openllm_hf_model_id: Qwen/Qwen2-7B-Instruct-AWQ
 "qwen2:7b-instruct-fp16":
-  alias:
-    - 7b
   project: vllm-chat
   service_config:
     name: qwen2
@@ -365,11 +329,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 7b
+    openllm_alias: 7b,7b-instruct
     openllm_hf_model_id: Qwen/Qwen2-7B-Instruct
 "qwen2:72b-instruct-awq-4bit":
-  alias:
-    - 72b-4bit
   project: vllm-chat
   service_config:
     name: qwen2
@@ -383,11 +345,9 @@
     max_model_len: 2048
     quantization: awq
   extra_labels:
-    openllm_alias: 72b-4bit
+    openllm_alias: 72b-4bit,72b-instruct-4bit
     openllm_hf_model_id: Qwen/Qwen2-72B-Instruct-AWQ
 "qwen2:57b-a14b-instruct-fp16":
-  alias:
-    - 57b-a14b
   project: vllm-chat
   service_config:
     name: qwen2
@@ -401,11 +361,9 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 57b-a14b
+    openllm_alias: 57b-a14b,57b-a14b-instruct
     openllm_hf_model_id: Qwen/Qwen2-57B-A14B-Instruct
 "qwen2:72b-instruct-fp16":
-  alias:
-    - 72b
   project: vllm-chat
   service_config:
     name: qwen2
@@ -419,5 +377,5 @@
     max_model_len: 2048
     dtype: half
   extra_labels:
-    openllm_alias: 72b
+    openllm_alias: 72b,72b-instruct
     openllm_hf_model_id: Qwen/Qwen2-72B-Instruct
