@@ -223,6 +223,16 @@ def hello():
         output("  Detected Accelerators: None", style="yellow")
 
     models = list_bento()
+    if not models:
+        output(
+            "No model found, you probably need to update the model repo:",
+            style="red",
+        )
+        output(
+            "  $ openllm repo update",
+            style="orange",
+        )
+        raise typer.Exit(1)
 
     bento_name, repo = _select_bento_name(models, target)
     bento, score = _select_bento_version(models, target, bento_name, repo)

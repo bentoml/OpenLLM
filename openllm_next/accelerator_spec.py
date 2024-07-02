@@ -102,7 +102,7 @@ def get_local_machine_spec():
             compute_capability = nvmlDeviceGetCudaComputeCapability(handle)
             if compute_capability < (7, 5):
                 output(
-                    f"GPU {name.decode()} with compute capability {compute_capability} "
+                    f"GPU {name} with compute capability {compute_capability} "
                     "may not be supported, 7.5 or higher is recommended. check "
                     "https://developer.nvidia.com/cuda-gpus for more information",
                     style="yellow",
@@ -113,11 +113,12 @@ def get_local_machine_spec():
             source="local",
             platform=platform,
         )
-    except Exception:
+    except Exception as e:
         output(
             f"Failed to get local GPU info. Ensure nvidia driver is installed to enable local GPU deployment",
             style="yellow",
         )
+        output(f"Error: {e}", style="red", level=20)
         return DeploymentTarget(accelerators=[], source="local", platform=platform)
 
 
