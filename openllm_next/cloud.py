@@ -14,7 +14,10 @@ from openllm_next.common import (
     DeploymentTarget,
     output,
     run_command,
+    OpenLLMTyper,
 )
+
+app = OpenLLMTyper()
 
 
 def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None):

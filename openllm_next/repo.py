@@ -4,7 +4,6 @@ import shutil
 
 import pyaml
 import questionary
-import typer
 
 from openllm_next.common import (
     INTERACTIVE,
@@ -14,14 +13,12 @@ from openllm_next.common import (
     load_config,
     output,
     save_config,
+    OpenLLMTyper,
 )
 
 UPDATE_INTERVAL = datetime.timedelta(days=3)
 
-app = typer.Typer(
-    no_args_is_help=True,
-    help="manage repos",
-)
+app = OpenLLMTyper(help="manage repos")
 
 
 @app.command()

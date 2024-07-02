@@ -1,12 +1,11 @@
 import random
 import sys
 from collections import defaultdict
-from typing import Annotated, Iterable, Optional
+from typing import Annotated, Optional
+import os
 
 import questionary
 import typer
-import typer.core
-from click import Context
 
 from openllm_next.accelerator_spec import (
     DeploymentTarget,
@@ -15,7 +14,8 @@ from openllm_next.accelerator_spec import (
 )
 from openllm_next.cloud import deploy as cloud_deploy
 from openllm_next.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm_next.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, output
+from openllm_next.common import INTERACTIVE, VERBOSE_LEVEL, output, CHECKED
+from openllm_next.common import DO_NOT_TRACK, OpenLLMTyper
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
 from openllm_next.model import app as model_app
@@ -23,14 +23,7 @@ from openllm_next.model import ensure_bento, list_bento
 from openllm_next.repo import app as repo_app
 
 
-class OrderedCommands(typer.core.TyperGroup):
-    def list_commands(self, _: Context) -> Iterable[str]:
-        return list(self.commands)
-
-
-app = typer.Typer(
-    cls=OrderedCommands,
-    no_args_is_help=True,
+app = OpenLLMTyper(
     help="`openllm hello` to get started. "
     "OpenLLM is a CLI tool to manage and deploy open source LLMs and"
     " get an OpenAI API compatible chat server in seconds.",
@@ -193,13 +186,13 @@ def _select_action(bento, score):
         try:
             local_run(bento)
         finally:
-            output(f"\nUse this command to run the action again:", style="green")
+            output("\nUse this command to run the action again:", style="green")
             output(f"  $ openllm run {bento}", style="orange")
     elif action == "serve":
         try:
             local_serve(bento)
         finally:
-            output(f"\nUse this command to run the action again:", style="green")
+            output("\nUse this command to run the action again:", style="green")
             output(f"  $ openllm serve {bento}", style="orange")
     elif action == "deploy":
         ensure_cloud_context()
@@ -208,7 +201,7 @@ def _select_action(bento, score):
         try:
             cloud_deploy(bento, target)
         finally:
-            output(f"\nUse this command to run the action again:", style="green")
+            output("\nUse this command to run the action again:", style="green")
             output(
                 f"  $ openllm deploy {bento} --instance-type {target.name}",
                 style="orange",
@@ -297,6 +290,22 @@ def deploy(
         style="green",
     )
     cloud_deploy(bento, target)
+
+
+@app.callback(invoke_without_command=True)
+def typer_callback(
+    verbose: int = 0,
+    do_not_track: bool = typer.Option(
+        False,
+        "--do-not-track",
+        help="Whether to disable usage tracking",
+        envvar=DO_NOT_TRACK,
+    ),
+):
+    if verbose:
+        VERBOSE_LEVEL.set(verbose)
+    if do_not_track:
+        os.environ[DO_NOT_TRACK] = str(True)
 
 
 def main():
