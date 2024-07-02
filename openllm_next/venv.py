@@ -145,3 +145,16 @@ def _ensure_venvs(env_spec_list: Iterable[VenvSpec]) -> pathlib.Path:
 
 def ensure_venv(bento: BentoInfo) -> pathlib.Path:
     return _ensure_venvs(_resolve_bento_env_specs(bento))
+
+
+def _check_venv(env_spec: VenvSpec) -> bool:
+    venv = VENV_DIR / str(hash(env_spec))
+    if not venv.exists():
+        return False
+    if venv.exists() and not (venv / "DONE").exists():
+        return False
+    return True
+
+
+def check_venv(bento: BentoInfo) -> bool:
+    return all(_check_venv(env_spec) for env_spec in _resolve_bento_env_specs(bento))

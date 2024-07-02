@@ -1,8 +1,8 @@
+import os
 import random
 import sys
 from collections import defaultdict
 from typing import Annotated, Optional
-import os
 
 import questionary
 import typer
@@ -12,16 +12,22 @@ from openllm_next.accelerator_spec import (
     can_run,
     get_local_machine_spec,
 )
+from openllm_next.clean import app as clean_app
 from openllm_next.cloud import deploy as cloud_deploy
 from openllm_next.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm_next.common import INTERACTIVE, VERBOSE_LEVEL, output, CHECKED
-from openllm_next.common import DO_NOT_TRACK, OpenLLMTyper
+from openllm_next.common import (
+    CHECKED,
+    DO_NOT_TRACK,
+    INTERACTIVE,
+    VERBOSE_LEVEL,
+    OpenLLMTyper,
+    output,
+)
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
 from openllm_next.model import app as model_app
 from openllm_next.model import ensure_bento, list_bento
 from openllm_next.repo import app as repo_app
-
 
 app = OpenLLMTyper(
     help="`openllm hello` to get started. "
@@ -31,6 +37,7 @@ app = OpenLLMTyper(
 
 app.add_typer(repo_app, name="repo")
 app.add_typer(model_app, name="model")
+app.add_typer(clean_app, name="clean")
 
 
 def _select_bento_name(models, target):
