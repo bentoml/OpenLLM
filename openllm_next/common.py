@@ -1,28 +1,27 @@
 from __future__ import annotations
 
-import attr
-import time
-import functools
-import signal
-import io
-import click
 import asyncio
+import functools
 import hashlib
+import io
 import json
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 import sysconfig
+import time
 import typing
 from contextlib import asynccontextmanager, contextmanager
 from types import SimpleNamespace
 
+import attr
+import click
 import typer
 import typer.core
-
-from bentoml._internal.utils.analytics import CliEvent
 from bentoml._internal.utils.analytics import BENTOML_DO_NOT_TRACK as DO_NOT_TRACK
+from bentoml._internal.utils.analytics import CliEvent
 
 ERROR_STYLE = "red"
 SUCCESS_STYLE = "green"
@@ -377,13 +376,13 @@ def run_command(
     if not silent:
         output("\n")
         if cwd:
-            output(f"$ cd {cwd}", style="bold")
+            output(f"$ cd {cwd}", style="orange")
         if env:
             for k, v in env.items():
-                output(f"$ export {k}={shlex.quote(v)}", style="bold")
+                output(f"$ export {k}={shlex.quote(v)}", style="orange")
         if venv:
-            output(f"$ source {venv / 'bin' / 'activate'}", style="bold")
-        output(f"$ {' '.join(cmd)}", style="bold")
+            output(f"$ source {venv / 'bin' / 'activate'}", style="orange")
+        output(f"$ {' '.join(cmd)}", style="orange")
 
     if venv:
         py = venv / bin_dir / f"python{sysconfig.get_config_var('EXE')}"
@@ -440,13 +439,13 @@ async def async_run_command(
     if not silent:
         output("\n")
         if cwd:
-            output(f"$ cd {cwd}", style="bold")
+            output(f"$ cd {cwd}", style="orange")
         if env:
             for k, v in env.items():
-                output(f"$ export {k}={shlex.quote(v)}", style="bold")
+                output(f"$ export {k}={shlex.quote(v)}", style="orange")
         if venv:
-            output(f"$ source {venv / 'bin' / 'activate'}", style="bold")
-        output(f"$ {' '.join(cmd)}", style="bold")
+            output(f"$ source {venv / 'bin' / 'activate'}", style="orange")
+        output(f"$ {' '.join(cmd)}", style="orange")
 
     if venv:
         py = venv / "bin" / "python"
