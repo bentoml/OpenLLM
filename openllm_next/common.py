@@ -8,6 +8,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import sysconfig
 import typing
 from contextlib import asynccontextmanager, contextmanager
 from types import SimpleNamespace
@@ -277,6 +278,7 @@ def run_command(
 
     env = env or {}
     cmd = [str(c) for c in cmd]
+    bin_dir = "Scripts" if os.name == "nt" else "bin"
     if not silent:
         output("\n")
         if cwd:
@@ -289,7 +291,7 @@ def run_command(
         output(f"$ {' '.join(cmd)}", style="bold")
 
     if venv:
-        py = venv / "bin" / "python"
+        py = venv / bin_dir / f"python{sysconfig.get_config_var('EXE')}"
     else:
         py = sys.executable
 

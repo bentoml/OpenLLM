@@ -19,6 +19,7 @@ dependencies = [
     "nvidia-ml-py",
     "dulwich",
     "tabulate",
+    "uv",
 ]
 
 [project.scripts]

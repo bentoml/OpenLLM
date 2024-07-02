@@ -1,4 +1,5 @@
 import functools
+import os
 import pathlib
 import shutil
 import typing
@@ -71,6 +72,13 @@ def _resolve_bento_env_specs(bento: BentoInfo):
     )
 
 
+def _get_lib_dir(venv: pathlib.Path) -> pathlib.Path:
+    if os.name == "nt":
+        return venv / "Lib/site-packages"
+    else:
+        return next(venv.glob("lib/python*")) / "site-packages"
+
+
 def _ensure_venv(
     env_spec: VenvSpec,
     parrent_venv: typing.Optional[pathlib.Path] = None,
@@ -80,24 +88,33 @@ def _ensure_venv(
         shutil.rmtree(venv, ignore_errors=True)
     if not venv.exists():
         output(f"Installing model dependencies({venv})...", style="green")
+
+        venv_py = (
+            venv / "Scripts" / "python.exe"
+            if os.name == "nt"
+            else venv / "bin" / "python"
+        )
         try:
             run_command(
-                ["python", "-m", "venv", venv],
+                ["python", "-m", "uv", "venv", venv],
                 silent=VERBOSE_LEVEL.get() < 10,
             )
-            pyver = next(venv.glob("lib/python*")).name
+            lib_dir = _get_lib_dir(venv)
             if parrent_venv is not None:
-                with open(
-                    venv / "lib" / pyver / "site-packages" / f"{parrent_venv.name}.pth",
-                    "w+",
-                ) as f:
-                    f.write(str(parrent_venv / "lib" / pyver / "site-packages"))
+                parent_lib_dir = _get_lib_dir(parrent_venv)
+                with open(lib_dir / f"{parrent_venv.name}.pth", "w+") as f:
+                    f.write(str(parent_lib_dir))
             with open(venv / "requirements.txt", "w") as f:
                 f.write("\n".join(sorted(env_spec.python_packages.values())))
             run_command(
                 [
-                    venv / "bin" / "pip",
+                    "python",
+                    "-m",
+                    "uv",
+                    "pip",
                     "install",
+                    "-p",
+                    str(venv_py),
                     "-r",
                     venv / "requirements.txt",
                     "--upgrade-strategy",
@@ -107,8 +124,13 @@ def _ensure_venv(
             )
             run_command(
                 [
-                    venv / "bin" / "pip",
+                    "python",
+                    "-m",
+                    "uv",
+                    "pip",
                     "install",
+                    "-p",
+                    str(venv_py),
                     "bentoml",
                     "--upgrade-strategy",
                     "only-if-needed",
