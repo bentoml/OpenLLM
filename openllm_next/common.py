@@ -20,7 +20,8 @@ import attr
 import click
 import typer
 import typer.core
-from bentoml._internal.utils.analytics import BENTOML_DO_NOT_TRACK as DO_NOT_TRACK
+from bentoml._internal.utils.analytics import \
+    BENTOML_DO_NOT_TRACK as DO_NOT_TRACK
 from bentoml._internal.utils.analytics import CliEvent
 
 ERROR_STYLE = "red"
@@ -181,17 +182,26 @@ class Config(SimpleNamespace):
     }
     default_repo: str = "default"
 
+    def tolist(self):
+        return dict(
+            repos=self.repos,
+            default_repo=self.default_repo,
+        )
+
 
 def load_config():
     if CONFIG_FILE.exists():
-        with open(CONFIG_FILE) as f:
-            return Config(**json.load(f))
+        try:
+            with open(CONFIG_FILE) as f:
+                return Config(**json.load(f))
+        except json.JSONDecodeError:
+            return Config()
     return Config()
 
 
 def save_config(config):
     with open(CONFIG_FILE, "w") as f:
-        json.dump(config.dict(), f, indent=2)
+        json.dump(config.tolist(), f, indent=2)
 
 
 class RepoInfo(SimpleNamespace):
