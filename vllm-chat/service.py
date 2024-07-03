@@ -165,54 +165,58 @@ class VLLM:
         """
         from vllm import SamplingParams
 
-        if OVERRIDE_CHAT_TEMPLATE:  # community chat template
-            gen_config = _get_gen_config(CONSTANTS["chat_template"])
-            if not stop:
-                if gen_config["stop_str"]:
-                    stop = [gen_config["stop_str"]]
-                else:
-                    stop = []
-            system_prompt = gen_config["system_prompt"]
-            self.tokenizer.chat_template = gen_config["template"]
-        else:
-            if not stop:
-                if self.tokenizer.eos_token is not None:
-                    stop = [self.tokenizer.eos_token]
-                else:
-                    stop = []
-            system_prompt = None
+        try:
+            if OVERRIDE_CHAT_TEMPLATE:  # community chat template
+                gen_config = _get_gen_config(CONSTANTS["chat_template"])
+                if not stop:
+                    if gen_config["stop_str"]:
+                        stop = [gen_config["stop_str"]]
+                    else:
+                        stop = []
+                system_prompt = gen_config["system_prompt"]
+                self.tokenizer.chat_template = gen_config["template"]
+            else:
+                if not stop:
+                    if self.tokenizer.eos_token is not None:
+                        stop = [self.tokenizer.eos_token]
+                    else:
+                        stop = []
+                system_prompt = None
 
-        # normalize inputs
-        if stop_token_ids is None:
-            stop_token_ids = []
+            # normalize inputs
+            if stop_token_ids is None:
+                stop_token_ids = []
 
-        SAMPLING_PARAM = SamplingParams(
-            max_tokens=max_tokens,
-            stop_token_ids=stop_token_ids,
-            stop=stop,
-        )
-        if system_prompt and messages[0].get("role") != "system":
-            messages = [dict(role="system", content=system_prompt)] + messages
+            SAMPLING_PARAM = SamplingParams(
+                max_tokens=max_tokens,
+                stop_token_ids=stop_token_ids,
+                stop=stop,
+            )
+            if system_prompt and messages[0].role != "system":
+                messages = [dict(role="system", content=system_prompt)] + messages
 
-        prompt = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
+            prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
 
-        stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
+            stream = await self.engine.add_request(uuid.uuid4().hex, prompt, SAMPLING_PARAM)
 
-        cursor = 0
-        strip_flag = True
-        async for request_output in stream:
-            text = request_output.outputs[0].text
-            assistant_message = text[cursor:]
-            if not strip_flag:  # strip the leading whitespace
-                yield assistant_message
-            elif assistant_message.strip():
-                strip_flag = False
-                yield assistant_message.lstrip()
-            cursor = len(text)
+            cursor = 0
+            strip_flag = True
+            async for request_output in stream:
+                text = request_output.outputs[0].text
+                assistant_message = text[cursor:]
+                if not strip_flag:  # strip the leading whitespace
+                    yield assistant_message
+                elif assistant_message.strip():
+                    strip_flag = False
+                    yield assistant_message.lstrip()
+                cursor = len(text)
+        except Exception as e:
+            logger.error(f"Error in chat API: {e}")
+            yield f"Error in chat API: {e}"
 
 
 @functools.lru_cache(maxsize=1)
