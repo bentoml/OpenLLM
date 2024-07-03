@@ -217,17 +217,21 @@ class BentoInfo(SimpleNamespace):
         return self.bento_yaml
 
     @functools.cached_property
-    def pretty_accelerator(self) -> str:
+    def pretty_gpu(self) -> str:
+        parts = []
         from openllm_next.accelerator_spec import ACCELERATOR_SPECS
 
         try:
             resources = self.bento_yaml["services"][0]["config"]["resources"]
-            if resources["gpu"] > 0:
+            if resources["gpu"] > 1:
                 acc = ACCELERATOR_SPECS[resources["gpu_type"]]
-                return f"{acc.memory_size:.0f}GB x{resources['gpu']} ({acc.model})"
-            return ""
+                return f"{acc.memory_size:.0f}Gx{resources['gpu']}"
+            elif resources["gpu"] > 0:
+                acc = ACCELERATOR_SPECS[resources["gpu_type"]]
+                return f"{acc.memory_size:.0f}G"
         except KeyError:
-            return ""
+            pass
+        return ""
 
     def tolist(self):
         verbose = VERBOSE_LEVEL.get()

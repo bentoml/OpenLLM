@@ -57,12 +57,12 @@ def list_(
                 "" if is_seen(bento.name) else bento.name,
                 bento.tag,
                 bento.repo.name,
-                bento.pretty_accelerator,
+                bento.pretty_gpu,
                 ",".join(bento.platforms),
             ]
             for bento in bentos
         ],
-        headers=["model", "version", "repo", "accelerators", "platforms"],
+        headers=["model", "version", "repo", "required VRAM", "platforms"],
     )
     output(table)
 

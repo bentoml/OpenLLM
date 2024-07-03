@@ -141,44 +141,52 @@ def _select_action(bento, score):
     if score > 0:
         options = [
             questionary.Separator("Available actions"),
-            questionary.Separator("0. Run the model in terminal"),
-            questionary.Choice(f"  $ openllm run {bento}", value="run"),
-            questionary.Separator(" "),
-            questionary.Separator("1. Serve the model locally and get a chat server"),
-            questionary.Choice(f"  $ openllm serve {bento}", value="serve"),
-            questionary.Separator(" "),
-            questionary.Separator(
-                "2. Deploy the model to bentocloud and get a scalable chat server"
+            questionary.Choice(
+                "0. Run the model in terminal",
+                value="run",
+                shortcut_key="0",
             ),
-            questionary.Choice(f"  $ openllm deploy {bento}", value="deploy"),
+            questionary.Separator(f"  $ openllm run {bento}"),
+            questionary.Separator(" "),
+            questionary.Choice(
+                "1. Serve the model locally and get a chat server",
+                value="serve",
+                shortcut_key="1",
+            ),
+            questionary.Separator(f"  $ openllm serve {bento}"),
+            questionary.Separator(" "),
+            questionary.Choice(
+                "2. Deploy the model to bentocloud and get a scalable chat server",
+                value="deploy",
+                shortcut_key="2",
+            ),
+            questionary.Separator(f"  $ openllm deploy {bento}"),
         ]
     else:
         options = [
             questionary.Separator("Available actions"),
-            questionary.Separator("0. Run the model in terminal"),
             questionary.Choice(
-                f"  $ openllm run {bento}",
+                "0. Run the model in terminal",
                 value="run",
                 disabled="insufficient res.",
                 shortcut_key="0",
             ),
+            questionary.Separator(f"  $ openllm run {bento}"),
             questionary.Separator(" "),
-            questionary.Separator("1. Serve the model locally and get a chat server"),
             questionary.Choice(
-                f"  $ openllm serve {bento}",
+                "1. Serve the model locally and get a chat server",
                 value="serve",
                 disabled="insufficient res.",
                 shortcut_key="1",
             ),
+            questionary.Separator(f"  $ openllm serve {bento}"),
             questionary.Separator(" "),
-            questionary.Separator(
-                "2. Deploy the model to bentocloud and get a scalable chat server"
-            ),
             questionary.Choice(
-                f"  $ openllm deploy {bento}",
+                "2. Deploy the model to bentocloud and get a scalable chat server",
                 value="deploy",
                 shortcut_key="2",
             ),
+            questionary.Separator(f"  $ openllm deploy {bento}"),
         ]
     action = questionary.select("Select an action", options).ask()
     if action is None:
