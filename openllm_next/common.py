@@ -246,7 +246,7 @@ class VenvSpec(SimpleNamespace):
     def __hash__(self):
         return md5(
             # self.python_version,
-            *sorted(self.python_packages.values()),
+            *sorted(self.python_packages),
         )
 
 
