@@ -20,6 +20,7 @@ dependencies = [
     "dulwich",
     "tabulate",
     "uv",
+    "openai==1.35.9",
 ]
 
 [project.scripts]

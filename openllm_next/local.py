@@ -46,7 +46,6 @@ async def _run_model(
         venv=venv,
         silent=False,
     ) as server_proc:
-        import bentoml
 
         output(f"Model server started {server_proc.pid}")
 
@@ -82,8 +81,12 @@ async def _run_model(
             stderr_streamer.cancel()
 
         output("Model is ready", style="green")
-        messages = []
-        client = bentoml.AsyncHTTPClient(f"http://localhost:{port}", timeout=timeout)
+        messages: list[dict[str, str]] = []
+
+        from openai import AsyncOpenAI
+
+        client = AsyncOpenAI(base_url=f"http://localhost:{port}/v1")
+        model_id = (await client.models.list()).data[0].id
         while True:
             try:
                 message = input("user: ")
@@ -93,7 +96,13 @@ async def _run_model(
                 messages.append(dict(role="user", content=message))
                 output("assistant: ", end="", style="lightgreen")
                 assistant_message = ""
-                async for text in client.chat(messages=messages):  # type: ignore
+                stream = await client.chat.completions.create(
+                    model=model_id,
+                    messages=messages,  # type: ignore
+                    stream=True,
+                )
+                async for chunk in stream:
+                    text = chunk.choices[0].delta.content or ""
                     assistant_message += text
                     output(text, end="", style="lightgreen")
                 messages.append(dict(role="assistant", content=assistant_message))
