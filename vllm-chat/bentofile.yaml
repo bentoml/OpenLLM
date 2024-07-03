@@ -2,9 +2,7 @@ service: "service:VLLM"
 labels:
   owner: bentoml-team
   platforms: linux
-  service_home: /chat
-  source_repo: https://github.com/bentoml/openllm-repo-recipe.git
-  source_directory: vllm-chat
+  source: https://github.com/bentoml/openllm-repo-recipe/tree/main/vllm-chat
 include:
 - "*.py"
 - "ui/*"

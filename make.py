@@ -73,7 +73,7 @@ if __name__ == "__main__":
                 f.write(yaml.dump(yaml_content))
 
             directory_hash = hash_directory(tempdir)
-            model_version = f"{model_version}-{directory_hash[:7]}"
+            model_version = f"{model_version}-{directory_hash[:4]}"
 
             subprocess.run(
                 ["bentoml", "build", str(tempdir), "--version", model_version],
