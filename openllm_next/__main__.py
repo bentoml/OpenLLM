@@ -76,7 +76,7 @@ def _select_bento_version(models, target, bento_name, repo):
     ]
 
     table_data = [
-        [model.version, CHECKED if score > 0 else ""]
+        [model.tag, CHECKED if score > 0 else ""]
         for model, score in model_infos
         if model.name == bento_name and model.repo.name == repo
     ]

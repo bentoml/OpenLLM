@@ -46,6 +46,18 @@ def remove(name: str):
     output(f"Repo {name} removed", style="green")
 
 
+def _complete_alias(repo_name: str):
+    from openllm_next.model import list_bento
+
+    for bento in list_bento(repo_name=repo_name):
+        path = bento.path
+        alias = bento.labels.get("openllm_alias", "").strip()
+        if alias:
+            for a in alias.split(","):
+                with open(bento.path.parent / a, "w") as f:
+                    f.write(bento.version)
+
+
 @app.command()
 def update():
     import dulwich
@@ -69,6 +81,7 @@ def update():
                     depth=1,
                     branch=repo.branch,
                 )
+                _complete_alias(repo_name)
                 output("")
                 output(f"Repo `{repo.name}` updated", style="green")
             except:
@@ -91,7 +104,8 @@ def update():
                 shutil.rmtree(repo.path, ignore_errors=True)
                 output(f"Failed to update repo {repo.name}", style="red")
     for c in REPO_DIR.glob("*/*/*"):
-        if tuple(c.parts[-3:]) not in repos_in_use:
+        repo_spec = tuple(c.parts[-3:])
+        if repo_spec not in repos_in_use:
             shutil.rmtree(c, ignore_errors=True)
             output(f"Removed unused repo cache {c}")
     with open(REPO_DIR / "last_update", "w") as f:

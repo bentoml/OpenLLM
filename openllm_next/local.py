@@ -14,7 +14,7 @@ from openllm_next.venv import ensure_venv
 
 
 def _get_serve_cmd(bento: BentoInfo, port: int = 3000):
-    cmd = ["bentoml", "serve", bento.tag]
+    cmd = ["bentoml", "serve", bento.bentoml_tag]
     if port != 3000:
         cmd += ["--port", str(port)]
     env = {

@@ -21,7 +21,7 @@ app = OpenLLMTyper()
 
 
 def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None):
-    cmd = ["bentoml", "deploy", bento.tag]
+    cmd = ["bentoml", "deploy", bento.bentoml_tag]
     env = {
         "BENTOML_HOME": f"{bento.repo.path}/bentoml",
     }

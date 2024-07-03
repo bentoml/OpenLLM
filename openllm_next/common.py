@@ -149,6 +149,7 @@ class RepoInfo(SimpleNamespace):
 class BentoInfo(SimpleNamespace):
     repo: RepoInfo
     path: pathlib.Path
+    alias: str = ""
 
     def __str__(self):
         if self.repo.name == "default":
@@ -161,6 +162,12 @@ class BentoInfo(SimpleNamespace):
 
     @property
     def tag(self) -> str:
+        if self.alias:
+            return f"{self.path.parent.name}:{self.alias}"
+        return f"{self.path.parent.name}:{self.path.name}"
+
+    @property
+    def bentoml_tag(self) -> str:
         return f"{self.path.parent.name}:{self.path.name}"
 
     @property
@@ -170,6 +177,10 @@ class BentoInfo(SimpleNamespace):
     @property
     def version(self) -> str:
         return self.path.name
+
+    @property
+    def labels(self) -> dict[str, str]:
+        return self.bento_yaml["labels"]
 
     @functools.cached_property
     def bento_yaml(self) -> dict:

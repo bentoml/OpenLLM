@@ -149,18 +149,12 @@ def list_bento(
         repo = parse_repo_url(repo_url, _repo_name)
         for path in repo.path.glob(glob_pattern):
             if path.is_dir() and (path / "bento.yaml").exists():
-                model = BentoInfo(
-                    repo=repo,
-                    path=path,
-                )
+                model = BentoInfo(repo=repo, path=path)
             elif path.is_file():
                 with open(path) as f:
                     origin_name = f.read().strip()
                 origin_path = path.parent / origin_name
-                model = BentoInfo(
-                    repo=repo,
-                    path=origin_path,
-                )
+                model = BentoInfo(alias=path.name, repo=repo, path=origin_path)
             else:
                 model = None
             if model:
