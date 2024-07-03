@@ -25,13 +25,16 @@ class Accelerator(SimpleNamespace):
 
 
 class Resource(SimpleNamespace):
-    cpu: int
+    cpu: int = 0
     memory: float
-    gpu: int
-    gpu_type: str
+    gpu: int = 0
+    gpu_type: str = ""
 
     def __hash__(self):
         return hash((self.cpu, self.memory, self.gpu, self.gpu_type))
+    
+    def __bool__(self):
+        return any(value is not None for value in self.__dict__.values())
 
 
 ACCELERATOR_SPEC_DICT: dict[str, dict] = {
@@ -133,11 +136,17 @@ def can_run(
     if target is None:
         target = get_local_machine_spec()
 
-    resource_spec = Resource(**(bento.bento_yaml["services"][0]["config"]["resources"]))
-    platforms = bento.bento_yaml["labels"].get("platforms", "linux").split(",")
+    resource_spec = Resource(**(bento.bento_yaml["services"][0]["config"].get("resources", {})))
+    labels = bento.bento_yaml.get("labels", {})
+    platforms = labels.get("platforms", "linux").split(",")
 
     if target.platform not in platforms:
         return 0.0
+    
+    # return 1.0 if no resource is specified
+    if not resource_spec:
+        return 0.5
+    
     if resource_spec.gpu > 0:
         required_gpu = ACCELERATOR_SPECS[resource_spec.gpu_type]
         filtered_accelerators = [
