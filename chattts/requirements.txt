@@ -11,5 +11,5 @@ nemo-text-processing
 WeTextProcessing
 pysoundfile
 dulwich
-#git+https://github.com/2noise/ChatTTS.git@c0c9ac6
 git+https://github.com/2noise/ChatTTS.git@e3ec3295721d8c730571fb4aee7524a4e1db9eab
+fastapi
