@@ -213,6 +213,38 @@
     max_model_len: 2048
     quantization: awq
   chat_template: gemma-it
+"mixtral:8x7b-instruct-v0.1-fp16":
+  alias:
+    - 8x7b
+  project: vllm-chat
+  service_config:
+    name: mixtral
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 2
+      gpu_type: nvidia-a100-80g
+  engine_config:
+    model: mistralai/Mixtral-8x7B-Instruct-v0.1
+    max_model_len: 2048
+  chat_template: mistral-instruct
+"mixtral:8x7b-instruct-v0.1-awq-4bit":
+  alias:
+    - 8x7b-4bit
+  project: vllm-chat
+  service_config:
+    name: mixtral
+    traffic:
+      timeout: 300
+    resources:
+      gpu: 1
+      gpu_type: nvidia-tesla-a100
+  engine_config:
+    model: casperhansen/mixtral-instruct-awq
+    max_model_len: 2048
+    quantization: awq
+    gpu_memory_utilization: 0.8
+  chat_template: mistral-instruct
 "qwen2:0.5b-instruct-fp16":
   alias:
     - 0.5b
