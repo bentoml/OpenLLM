@@ -8,13 +8,13 @@ import typing
 import typer
 
 from openllm_next.accelerator_spec import ACCELERATOR_SPECS
+from openllm_next.analytic import OpenLLMTyper
 from openllm_next.common import (
     INTERACTIVE,
     BentoInfo,
     DeploymentTarget,
     output,
     run_command,
-    OpenLLMTyper,
 )
 
 app = OpenLLMTyper()

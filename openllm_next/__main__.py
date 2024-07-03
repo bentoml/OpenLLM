@@ -12,17 +12,11 @@ from openllm_next.accelerator_spec import (
     can_run,
     get_local_machine_spec,
 )
+from openllm_next.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm_next.clean import app as clean_app
 from openllm_next.cloud import deploy as cloud_deploy
 from openllm_next.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm_next.common import (
-    CHECKED,
-    DO_NOT_TRACK,
-    INTERACTIVE,
-    VERBOSE_LEVEL,
-    OpenLLMTyper,
-    output,
-)
+from openllm_next.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, output
 from openllm_next.local import run as local_run
 from openllm_next.local import serve as local_serve
 from openllm_next.model import app as model_app

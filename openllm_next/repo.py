@@ -4,7 +4,9 @@ import shutil
 
 import pyaml
 import questionary
+import typer
 
+from openllm_next.analytic import OpenLLMTyper
 from openllm_next.common import (
     INTERACTIVE,
     REPO_DIR,
@@ -13,7 +15,6 @@ from openllm_next.common import (
     load_config,
     output,
     save_config,
-    OpenLLMTyper,
 )
 
 UPDATE_INTERVAL = datetime.timedelta(days=3)

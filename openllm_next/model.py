@@ -5,13 +5,13 @@ import tabulate
 import typer
 
 from openllm_next.accelerator_spec import DeploymentTarget, can_run
+from openllm_next.analytic import OpenLLMTyper
 from openllm_next.common import (
+    FORCE,
     VERBOSE_LEVEL,
     BentoInfo,
     load_config,
     output,
-    FORCE,
-    OpenLLMTyper,
 )
 from openllm_next.repo import ensure_repo_updated, parse_repo_url
 

@@ -3,13 +3,8 @@ import shutil
 
 import questionary
 
-from openllm_next.common import (
-    REPO_DIR,
-    VENV_DIR,
-    VERBOSE_LEVEL,
-    OpenLLMTyper,
-    output,
-)
+from openllm_next.analytic import OpenLLMTyper
+from openllm_next.common import REPO_DIR, VENV_DIR, VERBOSE_LEVEL, output
 
 app = OpenLLMTyper(help="clean up and release disk space used by OpenLLM")
 
