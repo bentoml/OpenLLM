@@ -15,7 +15,8 @@ Acknowledgements
 
 This project makes use of the following open-source projects:
 
-* [blrchen/chatgpt-lite](https://github.com/blrchen/chatgpt-lite)
+* [bentoml/bentoml](https://github.com/bentoml/bentoml) for production level model serving
+* [blrchen/chatgpt-lite](https://github.com/blrchen/chatgpt-lite) for a fancy Web Chat UI
 * [chujiezheng/chat_templates](https://github.com/chujiezheng/chat_templates)
 
 We are grateful to the developers and contributors of these projects for their hard work and dedication.
