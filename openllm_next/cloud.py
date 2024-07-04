@@ -84,48 +84,67 @@ def ensure_cloud_context():
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
         context = json.loads(result)
-        output(f"  BentoCloud already logged in: {context['endpoint']}", style="green")
+        output(f"  bentoml already logged in: {context['endpoint']}", style="green")
     except subprocess.CalledProcessError:
-        action = questionary.select(
-            "BentoCloud not logged in",
-            choices=[
-                "I have a BentoCloud account",
-                "get an account in two minutes",
-            ],
-        ).ask()
-        if action is None:
-            raise typer.Exit(1)
-        elif action == "get an account in two minutes":
+        output("  bentoml not logged in", style="red")
+        if not INTERACTIVE.get():
             output(
-                "Please visit https://cloud.bentoml.com to get your token",
+                "\n  get bentoml logged in by:",
+            )
+            output(
+                "    $ bentoml cloud login",
+                style="orange",
+            )
+            output("")
+            output(
+                """  * you may need to visit https://cloud.bentoml.com to get an account. you can also bring your own bentoml cluster (BYOC) to your team from https://bentoml.com/contact""",
                 style="yellow",
             )
-        endpoint = questionary.text(
-            "Enter the endpoint: (similar to https://my-org.cloud.bentoml.com)"
-        ).ask()
-        if endpoint is None:
             raise typer.Exit(1)
-        token = questionary.text("Enter your token: (similar to cniluaxxxxxxxx)").ask()
-        if token is None:
-            raise typer.Exit(1)
-        cmd = [
-            "bentoml",
-            "cloud",
-            "login",
-            "--api-token",
-            token,
-            "--endpoint",
-            endpoint,
-        ]
-        try:
-            result = subprocess.check_output(cmd)
-            output("  Logged in successfully", style="green")
-        except subprocess.CalledProcessError:
-            output("  Failed to login", style="red")
-            raise typer.Exit(1)
+        else:
+            action = questionary.select(
+                "Choose an action:",
+                choices=[
+                    "I have a BentoCloud account",
+                    "get an account in two minutes",
+                ],
+            ).ask()
+            if action is None:
+                raise typer.Exit(1)
+            elif action == "get an account in two minutes":
+                output(
+                    "Please visit https://cloud.bentoml.com to get your token",
+                    style="yellow",
+                )
+            endpoint = questionary.text(
+                "Enter the endpoint: (similar to https://my-org.cloud.bentoml.com)"
+            ).ask()
+            if endpoint is None:
+                raise typer.Exit(1)
+            token = questionary.text(
+                "Enter your token: (similar to cniluaxxxxxxxx)"
+            ).ask()
+            if token is None:
+                raise typer.Exit(1)
+            cmd = [
+                "bentoml",
+                "cloud",
+                "login",
+                "--api-token",
+                token,
+                "--endpoint",
+                endpoint,
+            ]
+            try:
+                result = subprocess.check_output(cmd)
+                output("  Logged in successfully", style="green")
+            except subprocess.CalledProcessError:
+                output("  Failed to login", style="red")
+                raise typer.Exit(1)
 
 
 def get_cloud_machine_spec():
+    ensure_cloud_context()
     cmd = ["bentoml", "deployment", "list-instance-types", "-o", "json"]
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
