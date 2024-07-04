@@ -4,7 +4,13 @@ import shutil
 import questionary
 
 from openllm_next.analytic import OpenLLMTyper
-from openllm_next.common import REPO_DIR, VENV_DIR, VERBOSE_LEVEL, output
+from openllm_next.common import (
+    CONFIG_FILE,
+    REPO_DIR,
+    VENV_DIR,
+    VERBOSE_LEVEL,
+    output,
+)
 
 app = OpenLLMTyper(help="clean up and release disk space used by OpenLLM")
 
@@ -48,9 +54,17 @@ def repos(verbose: bool = False):
     output("All repositories have been removed", style="green")
 
 
+@app.command(help="Reset configurations to default")
+def configs(verbose: bool = False):
+    if verbose:
+        VERBOSE_LEVEL.set(20)
+    shutil.rmtree(CONFIG_FILE, ignore_errors=True)
+    output("All configurations have been reset", style="green")
+
+
 @app.command(
     name="all",
-    help="Clean up all above",
+    help="Clean up all above and bring OpenLLM to a fresh start",
 )
 def all_cache(verbose: bool = False):
     if verbose:
@@ -58,3 +72,4 @@ def all_cache(verbose: bool = False):
     repos()
     venvs()
     model_cache()
+    configs()
