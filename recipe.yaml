@@ -379,3 +379,18 @@
   extra_labels:
     openllm_alias: 72b,72b-instruct
     openllm_hf_model_id: Qwen/Qwen2-72B-Instruct
+"phi3:3.8b-instruct-ggml-q4":
+  project: llamacpp-chat
+  service_config:
+    name: phi3
+    traffic:
+      timeout: 300
+    resources:
+      memory: 3Gi
+  engine_config:
+    model: microsoft/Phi-3-mini-4k-instruct-gguf
+    max_model_len: 2048
+  chat_template: phi-3
+  extra_labels:
+    openllm_alias: 3.8b-q4,3.8b-mini-q4,3.8b-mini-instruct-4k-ggml-q4
+    openllm_hf_model_id: microsoft/Phi-3-mini-4k-instruct-gguf

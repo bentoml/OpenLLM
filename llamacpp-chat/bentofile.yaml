@@ -1,0 +1,14 @@
+service: "service:Phi3"
+labels:
+  owner: bentoml-team
+  platforms: macos
+  source_repo: https://github.com/bentoml/openllm-repo-recipe/tree/main/llamacpp-chat
+include:
+- "*.py"
+- "ui/*"
+python:
+  requirements_txt: "./requirements.txt"
+  lock_packages: false
+envs:
+- name: CMAKE_ARGS
+  value: "-DLLAMA_METAL=on"
