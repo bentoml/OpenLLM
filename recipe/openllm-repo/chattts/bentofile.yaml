@@ -1,0 +1,15 @@
+service: "service:Main"
+labels:
+  owner: bentoml-team
+  stage: demo
+  platforms: linux, macos
+include:
+- "*.py"
+- "ui/build/*"
+- "ui/build/*/*"
+python:
+  requirements_txt: "./requirements.txt"
+  lock_packages: true
+docker:
+  system_packages:
+    - libsox-dev

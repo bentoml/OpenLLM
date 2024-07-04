@@ -1,0 +1,15 @@
+torch==2.3.0
+torchaudio
+transformers
+omegaconf~=2.3.0
+tqdm
+einops
+vector_quantize_pytorch
+vocos
+pyyaml
+nemo-text-processing
+WeTextProcessing
+pysoundfile
+dulwich
+git+https://github.com/2noise/ChatTTS.git@e3ec3295721d8c730571fb4aee7524a4e1db9eab
+fastapi
