@@ -85,7 +85,7 @@ async def _run_model(
 
         from openai import AsyncOpenAI
 
-        client = AsyncOpenAI(base_url=f"http://localhost:{port}/v1")
+        client = AsyncOpenAI(base_url=f"http://localhost:{port}/v1", api_key="local")
         model_id = (await client.models.list()).data[0].id
         while True:
             try:

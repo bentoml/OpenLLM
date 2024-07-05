@@ -50,7 +50,6 @@ def _complete_alias(repo_name: str):
     from openllm_next.model import list_bento
 
     for bento in list_bento(repo_name=repo_name):
-        path = bento.path
         alias = bento.labels.get("openllm_alias", "").strip()
         if alias:
             for a in alias.split(","):
@@ -81,7 +80,6 @@ def update():
                     depth=1,
                     branch=repo.branch,
                 )
-                _complete_alias(repo_name)
                 output("")
                 output(f"Repo `{repo.name}` updated", style="green")
             except:
@@ -110,6 +108,8 @@ def update():
             output(f"Removed unused repo cache {c}")
     with open(REPO_DIR / "last_update", "w") as f:
         f.write(datetime.datetime.now().isoformat())
+    for repo_name in config.repos:
+        _complete_alias(repo_name)
 
 
 def ensure_repo_updated():
