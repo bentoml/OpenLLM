@@ -98,10 +98,10 @@ There are a few ways to contribute to the repository structure for OpenLLM:
 
 ### Adding bentos
 
-OpenLLM now also manages a [generated bento repository](https://github.com/bentoml/openllm-repo/tree/main). If you update and modify and generated bentos, make sure to update the recipe and added the generated bentos under `bentoml/bentos`.
+OpenLLM now also manages a [generated bento repository](https://github.com/bentoml/openllm-models/tree/main). If you update and modify and generated bentos, make sure to update the recipe and added the generated bentos under `bentoml/bentos`.
 
 ### Adding repos
 
-If you wish to create a your own managed git repo, you should follow the structure of [bentoml/openllm-repo](https://github.com/bentoml/openllm-repo/tree/main).
+If you wish to create a your own managed git repo, you should follow the structure of [bentoml/openllm-models](https://github.com/bentoml/openllm-models/tree/main).
 
 To add your custom repo, do `openllm repo add <repo_alias> <git_url>`

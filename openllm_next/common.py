@@ -90,7 +90,7 @@ def output(content, level=0, style=None, end=None):
 
 class Config(SimpleNamespace):
     repos: dict[str, str] = {
-        "default": "git+https://github.com/bentoml/openllm-repo@main"
+        "default": "git+https://github.com/bentoml/openllm-models@main"
     }
     default_repo: str = "default"
 
