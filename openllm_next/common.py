@@ -218,7 +218,6 @@ class BentoInfo(SimpleNamespace):
 
     @functools.cached_property
     def pretty_gpu(self) -> str:
-        parts = []
         from openllm_next.accelerator_spec import ACCELERATOR_SPECS
 
         try:
