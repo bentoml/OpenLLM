@@ -153,7 +153,7 @@ jobs:
           fi
       - name: Download Python artifacts
         if: ${{ !startsWith(github.event.ref, 'refs/tags') }}
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # ratchet:actions/download-artifact@v4
         with:
           name: binary-artefacts
           path: openllm-python/dist
@@ -233,7 +233,7 @@ jobs:
       - name: Install PyOxidizer ${{ env.PYOXIDIZER_VERSION }}
         run: pip install pyoxidizer==${{ env.PYOXIDIZER_VERSION }}
       - name: Download staged binaries
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # ratchet:actions/download-artifact@v4
         with:
           name: staged-${{ runner.os }}
           path: openllm-python/archives
