@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openllm-next"
+version = "0.0.1"
+description = "A description of your package."
+authors = [{name = "oasiszero", email = "oasis0.com@gmail.com"}]
+license = {file = "LICENSE"}
+dependencies = [
+    "bentoml",
+    "typer",
+    "questionary",
+    "pyaml",
+    "psutil",
+    "pathlib",
+    "pip_requirements_parser",
+    "nvidia-ml-py",
+    "dulwich",
+    "tabulate",
+    "uv",
+    "openai==1.35.9",
+]
+
+[project.scripts]
+openllm = "openllm_next.__main__:main"
+
+[tool.typer]
+src-dir = "openllm_next"
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
