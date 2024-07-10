@@ -1,34 +1,189 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "openllm-next"
-version = "0.0.1"
-description = "A description of your package."
-authors = [{name = "oasiszero", email = "oasis0.com@gmail.com"}]
-license = {file = "LICENSE"}
-dependencies = [
-    "bentoml",
-    "typer",
-    "questionary",
-    "pyaml",
-    "psutil",
-    "pathlib",
-    "pip_requirements_parser",
-    "nvidia-ml-py",
-    "dulwich",
-    "tabulate",
-    "uv",
-    "openai==1.35.9",
+name = "openllm"
+description = "OpenLLM: Self-hosting LLMs Made Easy."
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [{ name = "BentoML Team", email = "contact@bentoml.com" }]
+dynamic = ["version"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Environment :: GPU :: NVIDIA CUDA :: 12",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+  "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: System Administrators",
+  "Typing :: Typed",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
+dependencies = [
+  "bentoml",
+  "typer",
+  "questionary",
+  "pyaml",
+  "psutil",
+  "pathlib",
+  "pip_requirements_parser",
+  "nvidia-ml-py",
+  "dulwich",
+  "tabulate",
+  "uv",
+  "openai==1.35.9",
+]
+keywords = [
+  "MLOps",
+  "AI",
+  "BentoML",
+  "Model Serving",
+  "Model Deployment",
+  "LLMOps",
+  "Falcon",
+  "Vicuna",
+  "Llama 2",
+  "Fine tuning",
+  "Serverless",
+  "Large Language Model",
+  "Generative AI",
+  "StableLM",
+  "Alpaca",
+  "PyTorch",
+  "Mistral",
+  "vLLM",
+  "Transformers",
+]
+license = "Apache-2.0"
+requires-python = ">=3.9"
 
 [project.scripts]
-openllm = "openllm_next.__main__:main"
+openllm = "openllm.__main__:app"
+
+[project.urls]
+Blog = "https://modelserving.com"
+Documentation = "https://github.com/bentoml/OpenLLM#readme"
+GitHub = "https://github.com/bentoml/OpenLLM"
+Homepage = "https://bentoml.com"
+Tracker = "https://github.com/bentoml/OpenLLM/issues"
+Twitter = "https://twitter.com/bentomlai"
 
 [tool.typer]
-src-dir = "openllm_next"
+src-dir = "src/openllm"
 
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
+[build-system]
+requires = [
+  "hatchling==1.25.0",
+  "hatch-vcs==0.4.0",
+  "hatch-fancy-pypi-readme==24.1.0",
+]
+build-backend = 'hatchling.build'
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+[tool.hatch.build.hooks.vcs]
+version-file = "src/openllm/_version.py"
+[tool.hatch.version.raw-options]
+git_describe_command = [
+  "git",
+  "describe",
+  "--dirty",
+  "--tags",
+  "--long",
+  "--first-parent",
+]
+version_scheme = "post-release"
+fallback_version = "0.0.0"
+[tool.hatch.metadata]
+allow-direct-references = true
+[tool.hatch.build.targets.wheel]
+only-include = ["src/openllm"]
+sources = ["src"]
+[tool.hatch.build.targets.sdist]
+exclude = ["/.git_archival.txt", "/.python-version-default"]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+# PyPI doesn't support the <picture> tag.
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+<p align="center">
+  <a href="https://github.com/bentoml/openllm">
+    <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/main-banner.png" alt="Banner for OpenLLM" />
+  </a>
+</p>
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme intro stop -->"
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme intro start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bentoml/openllm/main/.github/assets/output.gif" alt="Gif showing OpenLLM Intro" />
+</p>
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+end-before = "\n<!-- hatch-fancy-pypi-readme meta stop -->"
+path = "README.md"
+start-after = "<!-- hatch-fancy-pypi-readme meta start -->\n"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+## Release Information
+"""
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "CHANGELOG.md"
+pattern = "\n(###.+?\n)## "
+start-after = "<!-- towncrier release notes start -->"
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+text = """
+---
+[Click me for full changelog](https://github.com/bentoml/openllm/blob/main/CHANGELOG.md)
+"""
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+issue_format = "[#{issue}](https://github.com/bentoml/openllm/issues/{issue})"
+name = "openllm"
+start_string = "<!-- towncrier release notes start -->\n"
+template = "changelog.d/template.md.jinja"
+title_format = ""
+underlines = ["", "", ""]
+[[tool.towncrier.section]]
+path = ""
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Backwards-incompatible Changes"
+showcontent = true
+[[tool.towncrier.type]]
+directory = "deprecation"
+name = "Deprecations"
+showcontent = true
+[[tool.towncrier.type]]
+directory = "change"
+name = "Changes"
+showcontent = true
+[[tool.towncrier.type]]
+directory = "refactor"
+name = "Refactor"
+showcontent = true
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
+[[tool.towncrier.type]]
+directory = "fix"
+name = "Bug fix"
+showcontent = true

@@ -31,12 +31,7 @@ repos:
       - id: editorconfig-checker
         verbose: true
         alias: ec
-        types_or: [python, javascript]
-        exclude: |
-          (?x)^(
-              openllm-python/src/openllm_cli/entrypoint.py |
-              openllm-python/src/_openllm_tiny/_entrypoint.py
-          )$
+        types_or: [python]
   - repo: meta
     hooks:
       - id: check-hooks-apply
@@ -55,11 +50,3 @@ repos:
       - id: check-added-large-files
       - id: debug-statements
       - id: check-merge-conflict
-  - repo: https://github.com/econchick/interrogate
-    rev: 1.7.0
-    hooks:
-      - id: interrogate
-        verbose: true
-        types: [python]
-        exclude: ^(docs|tools|openllm-python/tests)
-        args: [--config=pyproject.toml]

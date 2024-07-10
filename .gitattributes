@@ -1,5 +1,3 @@
-**/_next/ linguist-generated=true
-
 * text=auto eol=lf
 # Needed for setuptools-scm-git-archive
 .git_archival.txt  export-subst

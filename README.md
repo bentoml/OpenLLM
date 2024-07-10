@@ -34,8 +34,6 @@ OpenLLM helps developers **run any open-source LLMs**, such as Llama 2 and Mistr
 
 <br/>
 
-<!-- hatch-fancy-pypi-readme interim start -->
-
 ## 💾 TL/DR
 
 For starter, we provide two ways to quickly try out OpenLLM:
@@ -98,7 +96,6 @@ OpenLLM currently supports the following models. By default, OpenLLM doesn't inc
 
 <summary>Baichuan</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Baichuan server:
@@ -106,22 +103,20 @@ Run the following command to quickly spin up a Baichuan server:
 ```bash
 openllm start baichuan-inc/baichuan-7b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Baichuan variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=baichuan) to see more Baichuan-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Baichuan models via `openllm start`:
-
 
 - [baichuan-inc/baichuan2-7b-base](https://huggingface.co/baichuan-inc/baichuan2-7b-base)
 - [baichuan-inc/baichuan2-7b-chat](https://huggingface.co/baichuan-inc/baichuan2-7b-chat)
@@ -134,7 +129,6 @@ You can specify any of the following Baichuan models via `openllm start`:
 
 <summary>ChatGLM</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a ChatGLM server:
@@ -142,22 +136,20 @@ Run the following command to quickly spin up a ChatGLM server:
 ```bash
 openllm start thudm/chatglm-6b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any ChatGLM variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=chatglm) to see more ChatGLM-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following ChatGLM models via `openllm start`:
-
 
 - [thudm/chatglm-6b](https://huggingface.co/thudm/chatglm-6b)
 - [thudm/chatglm-6b-int8](https://huggingface.co/thudm/chatglm-6b-int8)
@@ -172,7 +164,6 @@ You can specify any of the following ChatGLM models via `openllm start`:
 
 <summary>Cohere</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Cohere server:
@@ -180,22 +171,20 @@ Run the following command to quickly spin up a Cohere server:
 ```bash
 openllm start CohereForAI/c4ai-command-r-plus --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Cohere variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=commandr) to see more Cohere-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Cohere models via `openllm start`:
-
 
 - [CohereForAI/c4ai-command-r-plus](https://huggingface.co/CohereForAI/c4ai-command-r-plus)
 - [CohereForAI/c4ai-command-r-v01](https://huggingface.co/CohereForAI/c4ai-command-r-v01)
@@ -206,7 +195,6 @@ You can specify any of the following Cohere models via `openllm start`:
 
 <summary>Dbrx</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Dbrx server:
@@ -214,22 +202,20 @@ Run the following command to quickly spin up a Dbrx server:
 ```bash
 openllm start databricks/dbrx-instruct --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Dbrx variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=dbrx) to see more Dbrx-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Dbrx models via `openllm start`:
-
 
 - [databricks/dbrx-instruct](https://huggingface.co/databricks/dbrx-instruct)
 - [databricks/dbrx-base](https://huggingface.co/databricks/dbrx-base)
@@ -240,7 +226,6 @@ You can specify any of the following Dbrx models via `openllm start`:
 
 <summary>DollyV2</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a DollyV2 server:
@@ -248,22 +233,20 @@ Run the following command to quickly spin up a DollyV2 server:
 ```bash
 openllm start databricks/dolly-v2-3b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any DollyV2 variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=dolly_v2) to see more DollyV2-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following DollyV2 models via `openllm start`:
-
 
 - [databricks/dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b)
 - [databricks/dolly-v2-7b](https://huggingface.co/databricks/dolly-v2-7b)
@@ -275,7 +258,6 @@ You can specify any of the following DollyV2 models via `openllm start`:
 
 <summary>Falcon</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Falcon server:
@@ -283,22 +265,20 @@ Run the following command to quickly spin up a Falcon server:
 ```bash
 openllm start tiiuae/falcon-7b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Falcon variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=falcon) to see more Falcon-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Falcon models via `openllm start`:
-
 
 - [tiiuae/falcon-7b](https://huggingface.co/tiiuae/falcon-7b)
 - [tiiuae/falcon-40b](https://huggingface.co/tiiuae/falcon-40b)
@@ -311,7 +291,6 @@ You can specify any of the following Falcon models via `openllm start`:
 
 <summary>Gemma</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Gemma server:
@@ -319,22 +298,20 @@ Run the following command to quickly spin up a Gemma server:
 ```bash
 openllm start google/gemma-7b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Gemma variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=gemma) to see more Gemma-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Gemma models via `openllm start`:
-
 
 - [google/gemma-7b](https://huggingface.co/google/gemma-7b)
 - [google/gemma-7b-it](https://huggingface.co/google/gemma-7b-it)
@@ -347,7 +324,6 @@ You can specify any of the following Gemma models via `openllm start`:
 
 <summary>GPTNeoX</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a GPTNeoX server:
@@ -355,22 +331,20 @@ Run the following command to quickly spin up a GPTNeoX server:
 ```bash
 openllm start eleutherai/gpt-neox-20b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any GPTNeoX variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=gpt_neox) to see more GPTNeoX-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following GPTNeoX models via `openllm start`:
-
 
 - [eleutherai/gpt-neox-20b](https://huggingface.co/eleutherai/gpt-neox-20b)
 
@@ -380,7 +354,6 @@ You can specify any of the following GPTNeoX models via `openllm start`:
 
 <summary>Llama</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Llama server:
@@ -388,22 +361,20 @@ Run the following command to quickly spin up a Llama server:
 ```bash
 openllm start NousResearch/llama-2-7b-hf --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Llama variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=llama) to see more Llama-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Llama models via `openllm start`:
-
 
 - [meta-llama/Llama-2-70b-chat-hf](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf)
 - [meta-llama/Llama-2-13b-chat-hf](https://huggingface.co/meta-llama/Llama-2-13b-chat-hf)
@@ -424,7 +395,6 @@ You can specify any of the following Llama models via `openllm start`:
 
 <summary>Mistral</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Mistral server:
@@ -432,22 +402,20 @@ Run the following command to quickly spin up a Mistral server:
 ```bash
 openllm start mistralai/Mistral-7B-Instruct-v0.1 --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Mistral variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mistral) to see more Mistral-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Mistral models via `openllm start`:
-
 
 - [HuggingFaceH4/zephyr-7b-alpha](https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha)
 - [HuggingFaceH4/zephyr-7b-beta](https://huggingface.co/HuggingFaceH4/zephyr-7b-beta)
@@ -461,7 +429,6 @@ You can specify any of the following Mistral models via `openllm start`:
 
 <summary>Mixtral</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Mixtral server:
@@ -469,22 +436,20 @@ Run the following command to quickly spin up a Mixtral server:
 ```bash
 openllm start mistralai/Mixtral-8x7B-Instruct-v0.1 --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Mixtral variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mixtral) to see more Mixtral-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Mixtral models via `openllm start`:
-
 
 - [mistralai/Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1)
 - [mistralai/Mixtral-8x7B-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1)
@@ -495,7 +460,6 @@ You can specify any of the following Mixtral models via `openllm start`:
 
 <summary>MPT</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a MPT server:
@@ -503,22 +467,20 @@ Run the following command to quickly spin up a MPT server:
 ```bash
 openllm start mosaicml/mpt-7b-instruct --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any MPT variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=mpt) to see more MPT-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following MPT models via `openllm start`:
-
 
 - [mosaicml/mpt-7b](https://huggingface.co/mosaicml/mpt-7b)
 - [mosaicml/mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct)
@@ -534,7 +496,6 @@ You can specify any of the following MPT models via `openllm start`:
 
 <summary>OPT</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a OPT server:
@@ -542,22 +503,20 @@ Run the following command to quickly spin up a OPT server:
 ```bash
 openllm start facebook/opt-1.3b
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any OPT variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=opt) to see more OPT-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following OPT models via `openllm start`:
-
 
 - [facebook/opt-125m](https://huggingface.co/facebook/opt-125m)
 - [facebook/opt-350m](https://huggingface.co/facebook/opt-350m)
@@ -572,7 +531,6 @@ You can specify any of the following OPT models via `openllm start`:
 
 <summary>Phi</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Phi server:
@@ -580,22 +538,20 @@ Run the following command to quickly spin up a Phi server:
 ```bash
 openllm start microsoft/Phi-3-mini-4k-instruct --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Phi variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=phi) to see more Phi-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Phi models via `openllm start`:
-
 
 - [microsoft/Phi-3-mini-4k-instruct](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct)
 - [microsoft/Phi-3-mini-128k-instruct](https://huggingface.co/microsoft/Phi-3-mini-128k-instruct)
@@ -610,7 +566,6 @@ You can specify any of the following Phi models via `openllm start`:
 
 <summary>Qwen</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Qwen server:
@@ -618,22 +573,20 @@ Run the following command to quickly spin up a Qwen server:
 ```bash
 openllm start qwen/Qwen-7B-Chat --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Qwen variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=qwen) to see more Qwen-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Qwen models via `openllm start`:
-
 
 - [qwen/Qwen-7B-Chat](https://huggingface.co/qwen/Qwen-7B-Chat)
 - [qwen/Qwen-7B-Chat-Int8](https://huggingface.co/qwen/Qwen-7B-Chat-Int8)
@@ -648,7 +601,6 @@ You can specify any of the following Qwen models via `openllm start`:
 
 <summary>StableLM</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a StableLM server:
@@ -656,22 +608,20 @@ Run the following command to quickly spin up a StableLM server:
 ```bash
 openllm start stabilityai/stablelm-tuned-alpha-3b --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any StableLM variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=stablelm) to see more StableLM-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following StableLM models via `openllm start`:
-
 
 - [stabilityai/stablelm-tuned-alpha-3b](https://huggingface.co/stabilityai/stablelm-tuned-alpha-3b)
 - [stabilityai/stablelm-tuned-alpha-7b](https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b)
@@ -684,7 +634,6 @@ You can specify any of the following StableLM models via `openllm start`:
 
 <summary>StarCoder</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a StarCoder server:
@@ -692,22 +641,20 @@ Run the following command to quickly spin up a StarCoder server:
 ```bash
 openllm start bigcode/starcoder --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any StarCoder variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=starcoder) to see more StarCoder-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following StarCoder models via `openllm start`:
-
 
 - [bigcode/starcoder](https://huggingface.co/bigcode/starcoder)
 - [bigcode/starcoderbase](https://huggingface.co/bigcode/starcoderbase)
@@ -718,7 +665,6 @@ You can specify any of the following StarCoder models via `openllm start`:
 
 <summary>Yi</summary>
 
-
 ### Quickstart
 
 Run the following command to quickly spin up a Yi server:
@@ -726,22 +672,20 @@ Run the following command to quickly spin up a Yi server:
 ```bash
 openllm start 01-ai/Yi-6B --trust-remote-code
 ```
+
 You can run the following code in a different terminal to interact with the server:
+
 ```python
 import openllm_client
 client = openllm_client.HTTPClient('http://localhost:3000')
 client.generate('What are large language models?')
 ```
 
-
 > **Note:** Any Yi variants can be deployed with OpenLLM. Visit the [HuggingFace Model Hub](https://huggingface.co/models?sort=trending&search=yi) to see more Yi-compatible models.
-
-
 
 ### Supported models
 
 You can specify any of the following Yi models via `openllm start`:
-
 
 - [01-ai/Yi-6B](https://huggingface.co/01-ai/Yi-6B)
 - [01-ai/Yi-34B](https://huggingface.co/01-ai/Yi-34B)
@@ -829,8 +773,6 @@ await llm.ainvoke('What is the difference between a duck and a goose? And why th
 async for it in llm.astream('What is the difference between a duck and a goose? And why there are so many Goose in Canada?'):
   print(it, flush=True, end='')
 ```
-
-<!-- hatch-fancy-pypi-readme interim stop -->
 
 <!-- hatch-fancy-pypi-readme meta start -->
 

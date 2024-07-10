@@ -44,6 +44,12 @@ Before you can start developing, you'll need to set up your environment:
    git branch --set-upstream-to=upstream/main
    ```
 
+6. (Optional) Link `.python-version-default` to `.python-version`:
+
+   ```bash
+   ln .python-version-default .python-version
+   ```
+
 ## Development Workflow
 
 There are a few ways to contribute to the repository structure for OpenLLM:

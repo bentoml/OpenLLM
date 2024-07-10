@@ -1,6 +1,0 @@
-ipython
-jupyter
-tomlkit
-ghapi
-pre-commit
-orjson
