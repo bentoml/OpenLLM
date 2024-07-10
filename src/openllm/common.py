@@ -22,16 +22,16 @@ ERROR_STYLE = 'red'
 SUCCESS_STYLE = 'green'
 
 
-CLLAMA_HOME = pathlib.Path.home() / '.openllm'
-REPO_DIR = CLLAMA_HOME / 'repos'
-TEMP_DIR = CLLAMA_HOME / 'temp'
-VENV_DIR = CLLAMA_HOME / 'venv'
+OPENLLM_HOME = pathlib.Path(os.getenv('OPENLLM_HOME', pathlib.Path.home() / '.openllm'))
+REPO_DIR = OPENLLM_HOME / 'repos'
+TEMP_DIR = OPENLLM_HOME / 'temp'
+VENV_DIR = OPENLLM_HOME / 'venv'
 
 REPO_DIR.mkdir(exist_ok=True, parents=True)
 TEMP_DIR.mkdir(exist_ok=True, parents=True)
 VENV_DIR.mkdir(exist_ok=True, parents=True)
 
-CONFIG_FILE = CLLAMA_HOME / 'config.json'
+CONFIG_FILE = OPENLLM_HOME / 'config.json'
 
 CHECKED = '☆'
 

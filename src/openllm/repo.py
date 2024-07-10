@@ -175,5 +175,11 @@ def add(name: str, repo: str):
   output(f'Repo {name} added', style='green')
 
 
+@app.command()
+def default():
+  output((info := parse_repo_url(load_config().repos['default'], 'default')).path)
+  return info.path
+
+
 if __name__ == '__main__':
   app()
