@@ -48,7 +48,6 @@ fi
 release_package() {
   local version="$1"
   echo "Releasing version ${version}..."
-  towncrier build --yes --version "${version}"
   git add CHANGELOG.md changelog.d
   git commit -S -sm "infra: prepare for release ${version} [generated] [skip ci]"
   git push origin main
