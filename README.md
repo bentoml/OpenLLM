@@ -6,10 +6,6 @@
     <h1 align="center">🦾 OpenLLM: Self-Hosting LLMs Made Easy</h1>
     <a href="https://pypi.org/project/openllm">
         <img src="https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold" alt="pypi_status" />
-    </a><a href="https://test.pypi.org/project/openllm/">
-        <img src="https://img.shields.io/badge/Nightly-PyPI?logo=pypi&label=PyPI&color=gray&link=https%3A%2F%2Ftest.pypi.org%2Fproject%2Fopenllm%2F" alt="test_pypi_status" />
-    </a><a href="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml">
-        <img src="https://github.com/bentoml/OpenLLM/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci" />
     </a><a href="https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main">
         <img src="https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg" alt="pre-commit.ci status" />
     </a><br><a href="https://twitter.com/bentomlai">
