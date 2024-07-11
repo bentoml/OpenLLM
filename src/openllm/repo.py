@@ -2,6 +2,7 @@ import datetime
 import re
 import shutil
 
+import typing
 import pyaml
 import questionary
 import typer
@@ -129,7 +130,7 @@ def ensure_repo_updated():
 GIT_REPO_RE = re.compile(r'git\+https://(?P<server>.+)/(?P<owner>.+)/(?P<repo>.+?)(@(?P<branch>.+))?$')
 
 
-def parse_repo_url(repo_url: str, repo_name: str | None = None) -> RepoInfo:
+def parse_repo_url(repo_url: str, repo_name: typing.Optional[str] = None) -> RepoInfo:
   """
   parse the git repo url to server, owner, repo name, branch
   >>> parse_repo_url('git+https://github.com/bentoml/bentovllm@main')
