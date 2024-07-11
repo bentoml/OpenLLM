@@ -105,20 +105,15 @@ for chunk in chat_completion:
 
 </details>
 
-<details>
-
-<summary>LangChain</summary>
-
-</details>
 
 <details>
 
 <summary>LlamaIndex</summary>
 
-```
+```python
 from llama_index.llms.openai import OpenAI
 
-llm = OpenAI(api_bese="http://localhost:3000/v1", model="casperhansen/llama-3-8b-instruct-awq", api_key="dummy")
+llm = OpenAI(api_bese="http://localhost:3000/v1", model="meta-llama/Meta-Llama-3-8B-Instruct", api_key="dummy")
 ...
 ```
 </details>
