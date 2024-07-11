@@ -18,7 +18,7 @@ def _get_serve_cmd(bento: BentoInfo, port: int = 3000):
 def serve(bento: BentoInfo, port: int = 3000):
   venv = ensure_venv(bento)
   cmd, env, cwd = _get_serve_cmd(bento, port=port)
-  output('Access the Chat UI at localhost:3000/chat')
+  output('Access the Chat UI at http://localhost:3000/chat (or with you IP)')
   run_command(cmd, env=env, cwd=cwd, venv=venv)
 
 
