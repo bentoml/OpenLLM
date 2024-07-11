@@ -48,11 +48,11 @@ class ContextVar(typing.Generic[T]):
       return self._stack[-1]
     return self._default
 
-  def set(self, value):
+  def set(self, value: T):
     self._stack.append(value)
 
   @contextmanager
-  def patch(self, value):
+  def patch(self, value: T):
     self._stack.append(value)
     try:
       yield
@@ -91,7 +91,7 @@ class Config(SimpleNamespace):
     return dict(repos=self.repos, default_repo=self.default_repo)
 
 
-def load_config():
+def load_config() -> Config:
   if CONFIG_FILE.exists():
     try:
       with open(CONFIG_FILE) as f:
@@ -101,7 +101,7 @@ def load_config():
   return Config()
 
 
-def save_config(config):
+def save_config(config: Config) -> None:
   with open(CONFIG_FILE, 'w') as f:
     json.dump(config.tolist(), f, indent=2)
 

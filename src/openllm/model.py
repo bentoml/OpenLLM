@@ -12,7 +12,7 @@ from openllm.repo import ensure_repo_updated, parse_repo_url
 app = OpenLLMTyper(help='manage models')
 
 
-@app.command()
+@app.command(help='get model')
 def get(tag: str, repo: Optional[str] = None, verbose: bool = False):
   if verbose:
     VERBOSE_LEVEL.set(20)
@@ -21,8 +21,8 @@ def get(tag: str, repo: Optional[str] = None, verbose: bool = False):
     output(bento_info)
 
 
-@app.command(name='list')
-def list_(tag: Optional[str] = None, repo: Optional[str] = None, verbose: bool = False):
+@app.command(name='list', help='list available models')
+def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: bool = False):
   if verbose:
     VERBOSE_LEVEL.set(20)
 
