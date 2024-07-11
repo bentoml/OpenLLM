@@ -115,6 +115,12 @@ for chunk in chat_completion:
 
 <summary>LlamaIndex</summary>
 
+```
+from llama_index.llms.openai import OpenAI
+
+llm = OpenAI(api_bese="http://localhost:3000/v1", model="casperhansen/llama-3-8b-instruct-awq", api_key="dummy")
+...
+```
 </details>
 
 ## Chat UI
