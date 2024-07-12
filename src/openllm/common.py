@@ -33,7 +33,7 @@ VENV_DIR.mkdir(exist_ok=True, parents=True)
 
 CONFIG_FILE = OPENLLM_HOME / 'config.json'
 
-CHECKED = '☆'
+CHECKED = 'Yes'
 
 T = typing.TypeVar('T')
 
@@ -84,7 +84,7 @@ def output(content, level=0, style=None, end=None):
 
 
 class Config(SimpleNamespace):
-  repos: dict[str, str] = {'default': 'git+https://github.com/bentoml/openllm-models@main'}
+  repos: dict[str, str] = {'default': 'https://github.com/bentoml/openllm-models@main'}
   default_repo: str = 'default'
 
   def tolist(self):
@@ -117,18 +117,17 @@ class RepoInfo(SimpleNamespace):
 
   def tolist(self):
     if VERBOSE_LEVEL.get() <= 0:
-      return f'{self.name} ({self.url})'
+      return f'{self.name} ({self.url}@{self.branch})'
     if VERBOSE_LEVEL.get() <= 10:
-      return dict(name=self.name, url=self.url, path=str(self.path))
+      return dict(name=self.name, url=f"{self.url}@{self.branch}", path=str(self.path))
     if VERBOSE_LEVEL.get() <= 20:
       return dict(
         name=self.name,
-        url=self.url,
+        url=f"{self.url}@{self.branch}",
         path=str(self.path),
         server=self.server,
         owner=self.owner,
         repo=self.repo,
-        branch=self.branch,
       )
 
 

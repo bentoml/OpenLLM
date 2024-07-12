@@ -14,7 +14,7 @@ from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
 from openllm.cloud import deploy as cloud_deploy
 from openllm.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, output
+from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
 from openllm.local import run as local_run
 from openllm.local import serve as local_serve
 from openllm.model import app as model_app
@@ -32,15 +32,15 @@ app.add_typer(model_app, name='model')
 app.add_typer(clean_app, name='clean')
 
 
-def _select_bento_name(models, target):
+def _select_bento_name(models: list[BentoInfo], target: DeploymentTarget):
   from tabulate import tabulate
 
   options = []
-  model_infos = [[model.repo.name, model.name, can_run(model, target)] for model in models]
-  model_name_groups = defaultdict(lambda: 0)
+  model_infos = [(model.repo.name, model.name, can_run(model, target)) for model in models]
+  model_name_groups = defaultdict(lambda: 0.0)
   for repo, name, score in model_infos:
     model_name_groups[(repo, name)] += score
-  table_data = [[name, repo, CHECKED if score > 0 else ''] for (repo, name), score in model_name_groups.items()]
+  table_data = [(name, repo, CHECKED if score > 0 else '') for (repo, name), score in model_name_groups.items()]
   if not table_data:
     output('No model found', style='red')
     raise typer.Exit(1)

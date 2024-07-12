@@ -6,14 +6,12 @@
   },
   "venvPath": ".",
   "venv": ".venv",
-  "pythonVersion": "3.12",
+  "pythonVersion": "3.9",
   "enableExperimentalFeatures": true,
   "reportMissingImports": "warning",
   "reportMissingTypeStubs": false,
   "reportPrivateUsage": "warning",
   "reportUnknownArgumentType": "warning",
-  "reportUnknownMemberType": "warning",
-  "reportUnknownVariableType": "warning",
   "reportUnsupportedDunderAll": "warning",
   "reportWildcardImportFromLibrary": "warning"
 }

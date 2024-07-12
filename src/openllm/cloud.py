@@ -99,7 +99,7 @@ def ensure_cloud_context():
         raise typer.Exit(1)
 
 
-def get_cloud_machine_spec():
+def get_cloud_machine_spec() -> list[DeploymentTarget]:
   ensure_cloud_context()
   cmd = ['bentoml', 'deployment', 'list-instance-types', '-o', 'json']
   try:
