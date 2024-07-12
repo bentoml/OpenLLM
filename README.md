@@ -41,7 +41,7 @@ https://github.com/bentoml/OpenLLM/assets/5886138/2aa5f9e4-859c-4be8-91b3-91d8a8
 
 OpenLLM supports a variety of state-of-the-art LLMs. Here are some of the models supported by OpenLLM, each listed with a commonly used model size.
 
-| Model   | Parameters | Quantinize | Required VRAM | Start a Server                  |
+| Model   | Parameters | Quantinize | Required GPU  | Start a Server                  |
 | ------- | ---------- | ---------- | ------------- | ------------------------------- |
 | Llama 3 | 8B         | -          | 24G           | `openllm serve llama3:8b`       |
 | Llama 3 | 8B         | AWQ 4bit   | 12G           | `openllm serve llama3:8b-4bit`  |
