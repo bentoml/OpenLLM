@@ -185,8 +185,6 @@ Once the deployment is complete, you can run model inference on the BentoCloud c
 
 OpenLLM is actively maintained by the BentoML team. Feel free to reach out and join us in our pursuit to make LLMs more accessible and easy to use 👉 [Join our Slack community!](https://l.bentoml.com/join-slack)
 
-Also, engage with like-minded individuals passionate about LLMs, AI, and more on the [OpenLLM Discord](https://l.bentoml.com/join-openllm-discord)!
-
 ## Contributing
 
 As an open-source project, we welcome contributions of all kinds, such as new features, bug fixes, and documentation. Here are some of the ways to contribute:
