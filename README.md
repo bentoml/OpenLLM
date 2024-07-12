@@ -201,6 +201,7 @@ As an open-source project, we welcome contributions of all kinds, such as new fe
 This project uses the following open-source projects:
 
 - [bentoml/bentoml](https://github.com/bentoml/bentoml) for production level model serving
+- [vllm-project/vllm](https://github.com/vllm-project/vllm) for production level LLM backend
 - [blrchen/chatgpt-lite](https://github.com/blrchen/chatgpt-lite) for a fancy Web Chat UI
 - [chujiezheng/chat_templates](https://github.com/chujiezheng/chat_templates)
 - [astral-sh/uv](https://github.com/astral-sh/uv) for blazing fast model requirements installing
