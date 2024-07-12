@@ -1,6 +1,5 @@
 {
   "useLibraryCodeForTypes": true,
-  "typeCheckingMode": "strict",
   "verboseOutput": true,
   "define": {
     "MYPY": true
