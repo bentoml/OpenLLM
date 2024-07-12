@@ -64,7 +64,7 @@ def ensure_cloud_context():
   try:
     result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
     context = json.loads(result)
-    output(f"  bentoml already logged in: {context['endpoint']}", style='green')
+    output(f"  bentoml already logged in: {context['endpoint']}", style='green', level=20)
   except subprocess.CalledProcessError:
     output('  bentoml not logged in', style='red')
     if not INTERACTIVE.get():
