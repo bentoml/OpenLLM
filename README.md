@@ -20,7 +20,7 @@ OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API*
 ## Get Started
 
 ```bash
-pip install openllm
+pip install openllm  # or pip3 install openllm
 openllm hello
 ```
 
