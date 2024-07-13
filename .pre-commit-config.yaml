@@ -2,13 +2,13 @@ ci:
   autoupdate_schedule: weekly
   skip: [mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
-  autoupdate_commit_msg: 'ci: pre-commit autoupdate [pre-commit.ci]'
-  autofix_prs: false
+  autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
+  autofix_prs: true
 default_language_version:
   python: python3.11 # NOTE: sync with .python-version-default
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.5.1'
+    rev: "v0.5.1"
     hooks:
       - id: ruff
         alias: r
@@ -20,13 +20,13 @@ repos:
         verbose: true
         types_or: [python, pyi, jupyter]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.10.1'
+    rev: "v1.10.1"
     hooks:
       - id: mypy
         args: [--strict]
         additional_dependencies: [pydantic]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: '2.7.3'
+    rev: "2.7.3"
     hooks:
       - id: editorconfig-checker
         verbose: true
@@ -44,7 +44,7 @@ repos:
       - id: end-of-file-fixer
         verbose: true
       - id: check-yaml
-        args: ['--unsafe']
+        args: ["--unsafe"]
       - id: check-toml
       - id: check-docstring-first
       - id: check-added-large-files

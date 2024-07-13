@@ -1,7 +1,7 @@
 extend-include = ["*.ipynb"]
 preview = true
 line-length = 119
-indent-width = 2
+indent-width = 4
 
 [format]
 preview = true

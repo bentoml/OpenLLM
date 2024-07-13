@@ -10,10 +10,10 @@ from openllm.analytic import OpenLLMTyper
 from openllm.common import FORCE, VERBOSE_LEVEL, BentoInfo, load_config, output
 from openllm.repo import ensure_repo_updated, parse_repo_url
 
-app = OpenLLMTyper(help="manage models")
+app = OpenLLMTyper(help='manage models')
 
 
-@app.command(help="get model")
+@app.command(help='get model')
 def get(tag: str, repo: Optional[str] = None, verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
@@ -22,10 +22,8 @@ def get(tag: str, repo: Optional[str] = None, verbose: bool = False):
         output(bento_info)
 
 
-@app.command(name="list", help="list available models")
-def list_model(
-    tag: Optional[str] = None, repo: Optional[str] = None, verbose: bool = False
-):
+@app.command(name='list', help='list available models')
+def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
 
@@ -43,69 +41,61 @@ def list_model(
     table = tabulate.tabulate(
         [
             [
-                "" if is_seen(bento.name) else bento.name,
+                '' if is_seen(bento.name) else bento.name,
                 bento.tag,
                 bento.repo.name,
                 bento.pretty_gpu,
-                ",".join(bento.platforms),
+                ','.join(bento.platforms),
             ]
             for bento in bentos
         ],
-        headers=["model", "version", "repo", "required GPU RAM", "platforms"],
+        headers=['model', 'version', 'repo', 'required GPU RAM', 'platforms'],
     )
     output(table)
 
 
-def ensure_bento(
-    model: str,
-    target: Optional[DeploymentTarget] = None,
-    repo_name: Optional[str] = None,
-) -> BentoInfo:
+def ensure_bento(model: str, target: Optional[DeploymentTarget] = None, repo_name: Optional[str] = None) -> BentoInfo:
     bentos = list_bento(model, repo_name=repo_name)
     if len(bentos) == 0:
-        output(f"No model found for {model}", style="red")
+        output(f'No model found for {model}', style='red')
         raise typer.Exit(1)
 
     if len(bentos) == 1:
         if FORCE.get():
-            output(f"Found model {bentos[0]}", style="green")
+            output(f'Found model {bentos[0]}', style='green')
             return bentos[0]
         if target is None:
             return bentos[0]
         if can_run(bentos[0], target) <= 0:
             return bentos[0]
-        output(f"Found model {bentos[0]}", style="green")
+        output(f'Found model {bentos[0]}', style='green')
         return bentos[0]
 
     if target is None:
-        output(
-            f"Multiple models match {model}, did you mean one of these?", style="red"
-        )
+        output(f'Multiple models match {model}, did you mean one of these?', style='red')
         for bento in bentos:
-            output(f"  {bento}")
+            output(f'  {bento}')
         raise typer.Exit(1)
 
     filtered = [bento for bento in bentos if can_run(bento, target) > 0]
     if len(filtered) == 0:
-        output(f"No deployment target found for {model}", style="red")
+        output(f'No deployment target found for {model}', style='red')
         raise typer.Exit(1)
 
     if len(filtered) == 0:
-        output(f"No deployment target found for {model}", style="red")
+        output(f'No deployment target found for {model}', style='red')
         raise typer.Exit(1)
 
     if len(bentos) > 1:
-        output(
-            f"Multiple models match {model}, did you mean one of these?", style="red"
-        )
+        output(f'Multiple models match {model}, did you mean one of these?', style='red')
         for bento in bentos:
-            output(f"  {bento}")
+            output(f'  {bento}')
         raise typer.Exit(1)
 
     return bentos[0]
 
 
-NUMBER_RE = re.compile(r"\d+")
+NUMBER_RE = re.compile(r'\d+')
 
 
 def _extract_first_number(s: str):
@@ -117,27 +107,25 @@ def _extract_first_number(s: str):
 
 
 def list_bento(
-    tag: typing.Optional[str] = None,
-    repo_name: typing.Optional[str] = None,
-    include_alias: bool = False,
+    tag: typing.Optional[str] = None, repo_name: typing.Optional[str] = None, include_alias: bool = False
 ) -> typing.List[BentoInfo]:
     ensure_repo_updated()
 
     if repo_name is not None:
         config = load_config()
         if repo_name not in config.repos:
-            output(f"Repo `{repo_name}` not found, did you mean one of these?")
+            output(f'Repo `{repo_name}` not found, did you mean one of these?')
             for repo_name in config.repos:
-                output(f"  {repo_name}")
+                output(f'  {repo_name}')
             raise typer.Exit(1)
 
     if not tag:
-        glob_pattern = "bentoml/bentos/*/*"
-    elif ":" in tag:
-        bento_name, version = tag.split(":")
-        glob_pattern = f"bentoml/bentos/{bento_name}/{version}"
+        glob_pattern = 'bentoml/bentos/*/*'
+    elif ':' in tag:
+        bento_name, version = tag.split(':')
+        glob_pattern = f'bentoml/bentos/{bento_name}/{version}'
     else:
-        glob_pattern = f"bentoml/bentos/{tag}/*"
+        glob_pattern = f'bentoml/bentos/{tag}/*'
 
     model_list = []
     config = load_config()
@@ -148,15 +136,10 @@ def list_bento(
 
         paths = sorted(
             repo.path.glob(glob_pattern),
-            key=lambda x: (
-                x.parent.name,
-                _extract_first_number(x.name),
-                len(x.name),
-                x.name,
-            ),
+            key=lambda x: (x.parent.name, _extract_first_number(x.name), len(x.name), x.name),
         )
         for path in paths:
-            if path.is_dir() and (path / "bento.yaml").exists():
+            if path.is_dir() and (path / 'bento.yaml').exists():
                 model = BentoInfo(repo=repo, path=path)
             elif path.is_file():
                 with open(path) as f:
