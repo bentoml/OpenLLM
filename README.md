@@ -13,7 +13,7 @@
 OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API** endpoints with **a single command**.
 
 - 🔬 Build for fast and production usages
-- 🚂 Support llama3, qwen2, gemma, etc, and many quantized versions [full list](https://github.com/bentoml/openllm-models)
+- 🚂 Support llama3, qwen2, gemma, etc, and many **quantized** versions [full list](https://github.com/bentoml/openllm-models)
 - ⛓️ OpenAI-compatible API
 - 💬 Built-in ChatGPT like UI
 - 🔥 Accelerated LLM decoding with state-of-the-art inference backends
@@ -33,9 +33,10 @@ then run
 openllm hello
 ```
 
-to explore models interactively. It will guide you to run LLMs either locally or in the cloud.
+to explore models interactively. It will guide you to run LLMs.
 
-https://github.com/bentoml/OpenLLM/assets/5886138/2aa5f9e4-859c-4be8-91b3-91d8a810ef73
+[![asciicast](https://asciinema.org/a/JiwZIuG6Hd0RciKZPDZG8IdWb.svg)](https://asciinema.org/a/JiwZIuG6Hd0RciKZPDZG8IdWb)
+
 
 ## Supported models
 
