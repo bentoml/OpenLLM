@@ -35,8 +35,7 @@ openllm hello
 
 to explore models interactively. It will guide you to run LLMs.
 
-[![asciicast](https://asciinema.org/a/JiwZIuG6Hd0RciKZPDZG8IdWb.svg)](https://asciinema.org/a/JiwZIuG6Hd0RciKZPDZG8IdWb)
-
+![hello](https://github.com/user-attachments/assets/5af19f23-1b34-4c45-b1e0-a6798b4586d1)
 
 ## Supported models
 
