@@ -8,8 +8,6 @@
 [![X](https://badgen.net/badge/icon/@bentomlai/000000?icon=twitter&label=Follow)](https://twitter.com/bentomlai)
 [![Community](https://badgen.net/badge/icon/Community/562f5d?icon=slack&label=Join)](https://l.bentoml.com/join-slack)
 
-## Introduction
-
 OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API** endpoints with **a single command**.
 
 - 🔬 Build for fast and production usages
@@ -19,21 +17,14 @@ OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API*
 - 🔥 Accelerated LLM decoding with state-of-the-art inference backends
 - 🌥️ Ready for enterprise-grade cloud deployment (Kubernetes, Docker and BentoCloud)
 
-## Get started
-
-Install (Python 3.9 and above)
+## Get Started
 
 ```bash
 pip install openllm
-```
-
-then run
-
-```bash
 openllm hello
 ```
 
-to explore models interactively. It will guide you to run LLMs.
+to explore models interactively. It will guide you to run LLMs locally or deploy to cloud.
 
 ![hello](https://github.com/user-attachments/assets/5af19f23-1b34-4c45-b1e0-a6798b4586d1)
 
