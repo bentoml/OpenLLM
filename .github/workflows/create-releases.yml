@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # ratchet:actions/setup-python@v5
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # ratchet:actions/setup-python@v5
         with:
           python-version-file: .python-version-default
       - name: Build
@@ -41,3 +41,21 @@ jobs:
         uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0 # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
+  release-notes:
+    if: github.repository_owner == 'bentoml'
+    needs:
+      - release
+    name: Create release notes from generated tags
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Create release
+        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # ratchet:softprops/action-gh-release@v2
+        with:
+          # Use GH feature to populate the changelog automatically
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |-
+            dist/*
