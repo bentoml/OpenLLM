@@ -13,21 +13,21 @@
 OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API** endpoints with **a single command**.
 
 - 🔬 Build for fast and production usages
-- 🚂 Support a wide range of open-source LLMs including llama3, qwen2, gemma, etc and fine-tuned or quantized versions
-- ⛓️ OpenAI-compatible API, easy to integrate with any openai dependent Apps
-- 💬 Built-in ChatGPT like UI to interact with the LLM directly
+- 🚂 Support llama3, qwen2, gemma, etc, and many quantized versions [full list](https://github.com/bentoml/openllm-models)
+- ⛓️ OpenAI-compatible API
+- 💬 Built-in ChatGPT like UI
 - 🔥 Accelerated LLM decoding with state-of-the-art inference backends
-- 🌥️ Optionally deploy to K8S or BentoCloud for an enterprise-grade LLM API service
+- 🌥️ Ready for enterprise-grade cloud deployment (Kubernetes, Docker and BentoCloud)
 
 ## Get started
 
-Install OpenLLM with pip. OpenLLM currently supports Python 3.9 and above:
+Install (Python 3.9 and above)
 
 ```bash
 pip install openllm
 ```
 
-One can then run:
+then run
 
 ```bash
 openllm hello
