@@ -1,6 +1,4 @@
-<div align="center">
-    <h1 align="center">🦾 OpenLLM: Self-Hosting LLMs Made Easy</h1>
-</div>
+# 🦾 OpenLLM: Self-Hosting LLMs Made Easy
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202-green.svg)](https://github.com/bentoml/OpenLLM/blob/main/LICENSE)
 [![Releases](https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/openllm)
