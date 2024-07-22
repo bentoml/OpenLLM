@@ -43,7 +43,7 @@ jobs:
         with:
           print-hash: true
       - name: Create release
-        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # ratchet:softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # ratchet:softprops/action-gh-release@v2
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
