@@ -30,17 +30,17 @@ to explore models interactively. It will guide you to run LLMs locally or deploy
 
 OpenLLM supports a variety of state-of-the-art LLMs. Here are some of the models supported by OpenLLM, each listed with a commonly used model size.
 
-| Model   | Parameters | Quantinize | Required GPU  | Start a Server                  |
-| ------- | ---------- | ---------- | ------------- | ------------------------------- |
-| Llama 3 | 8B         | -          | 24G           | `openllm serve llama3:8b`       |
-| Llama 3 | 8B         | AWQ 4bit   | 12G           | `openllm serve llama3:8b-4bit`  |
-| Llama 3 | 70B        | AWQ 4bit   | 80G           | `openllm serve llama3:70b-4bit` |
-| Llama 2 | 7B         | -          | 16G           | `openllm serve llama2:7b`       |
-| Llama 2 | 7B         | AWQ 4bit   | 12G           | `openllm serve llama2:7b-4bit`  |
-| Mistral | 7B         | -          | 24G           | `openllm serve mistral:7b`      |
-| Qwen2   | 1.5B       | -          | 12G           | `openllm serve qwen2:1.5b`      |
-| Gemma   | 7B         | -          | 24G           | `openllm serve gemma:7b`        |
-| Phi3    | 3.8B       | -          | 12G           | `openllm serve phi3:3.8b`       |
+| Model     | Parameters | Quantinize | Required GPU  | Start a Server                    |
+| --------- | ---------- | ---------- | ------------- | --------------------------------- |
+| Llama 3.1 | 8B         | -          | 24G           | `openllm serve llama3.1:8b`       |
+| Llama 3.1 | 8B         | AWQ 4bit   | 12G           | `openllm serve llama3.1:8b-4bit`  |
+| Llama 3.1 | 70B        | AWQ 4bit   | 80G           | `openllm serve llama3.1:70b-4bit` |
+| Llama 2   | 7B         | -          | 16G           | `openllm serve llama2:7b`         |
+| Llama 2   | 7B         | AWQ 4bit   | 12G           | `openllm serve llama2:7b-4bit`    |
+| Mistral   | 7B         | -          | 24G           | `openllm serve mistral:7b`        |
+| Qwen2     | 1.5B       | -          | 12G           | `openllm serve qwen2:1.5b`        |
+| Gemma     | 7B         | -          | 24G           | `openllm serve gemma:7b`          |
+| Phi3      | 3.8B       | -          | 12G           | `openllm serve phi3:3.8b`         |
 
 ...
 
