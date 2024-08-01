@@ -6,41 +6,36 @@
 [![X](https://badgen.net/badge/icon/@bentomlai/000000?icon=twitter&label=Follow)](https://twitter.com/bentomlai)
 [![Community](https://badgen.net/badge/icon/Community/562f5d?icon=slack&label=Join)](https://l.bentoml.com/join-slack)
 
-OpenLLM lets developers run any **open-source LLMs** as **OpenAI-compatible API** endpoints with **a single command**.
+OpenLLM allows developers to run **any open-source LLMs** (Llama 3.1, Qwen2, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
 
-- 🔬 Build for fast and production usages
-- 🚂 Support llama3, qwen2, gemma, etc, and many **quantized** versions [full list](https://github.com/bentoml/openllm-models)
-- ⛓️ OpenAI-compatible API
-- 💬 Built-in ChatGPT like UI
-- 🔥 Accelerated LLM decoding with state-of-the-art inference backends
-- 🌥️ Ready for enterprise-grade cloud deployment (Kubernetes, Docker and BentoCloud)
+Understand the [design philosophy of OpenLLM](https://www.bentoml.com/blog/from-ollama-to-openllm-running-llms-in-the-cloud).
 
 ## Get Started
+
+Run the following commands to install OpenLLM and explore it interactively.
 
 ```bash
 pip install openllm  # or pip3 install openllm
 openllm hello
 ```
 
-to explore models interactively. It will guide you to run LLMs locally or deploy to cloud.
-
 ![hello](https://github.com/user-attachments/assets/5af19f23-1b34-4c45-b1e0-a6798b4586d1)
 
 ## Supported models
 
-OpenLLM supports a variety of state-of-the-art LLMs. Here are some of the models supported by OpenLLM, each listed with a commonly used model size.
+OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also add a [model repository to run custom models](#set-up-a-custom-repository) with OpenLLM.
 
-| Model   | Parameters | Quantinize | Required GPU  | Start a Server                  |
-| ------- | ---------- | ---------- | ------------- | ------------------------------- |
-| Llama 3 | 8B         | -          | 24G           | `openllm serve llama3:8b`       |
-| Llama 3 | 8B         | AWQ 4bit   | 12G           | `openllm serve llama3:8b-4bit`  |
-| Llama 3 | 70B        | AWQ 4bit   | 80G           | `openllm serve llama3:70b-4bit` |
-| Llama 2 | 7B         | -          | 16G           | `openllm serve llama2:7b`       |
-| Llama 2 | 7B         | AWQ 4bit   | 12G           | `openllm serve llama2:7b-4bit`  |
-| Mistral | 7B         | -          | 24G           | `openllm serve mistral:7b`      |
-| Qwen2   | 1.5B       | -          | 12G           | `openllm serve qwen2:1.5b`      |
-| Gemma   | 7B         | -          | 24G           | `openllm serve gemma:7b`        |
-| Phi3    | 3.8B       | -          | 12G           | `openllm serve phi3:3.8b`       |
+| Model     | Parameters | Quantinize | Required GPU  | Start a Server                    |
+| --------- | ---------- | ---------- | ------------- | --------------------------------- |
+| Llama 3.1 | 8B         | -          | 24G           | `openllm serve llama3.1:8b`       |
+| Llama 3.1 | 8B         | AWQ 4bit   | 12G           | `openllm serve llama3.1:8b-4bit`  |
+| Llama 3.1 | 70B        | AWQ 4bit   | 80G           | `openllm serve llama3.1:70b-4bit` |
+| Llama 2   | 7B         | -          | 16G           | `openllm serve llama2:7b`         |
+| Llama 2   | 7B         | AWQ 4bit   | 12G           | `openllm serve llama2:7b-4bit`    |
+| Mistral   | 7B         | -          | 24G           | `openllm serve mistral:7b`        |
+| Qwen2     | 1.5B       | -          | 12G           | `openllm serve qwen2:1.5b`        |
+| Gemma     | 7B         | -          | 24G           | `openllm serve gemma:7b`          |
+| Phi3      | 3.8B       | -          | 12G           | `openllm serve phi3:3.8b`         |
 
 ...
 
@@ -106,7 +101,7 @@ llm = OpenAI(api_bese="http://localhost:3000/v1", model="meta-llama/Meta-Llama-3
 
 ## Chat UI
 
-OpenLLM provides a chat user interface (UI) at the `/chat` endpoint for an LLM server. You can visit the chat UI at http://localhost:3000/chat and start different conversations with the model.
+OpenLLM provides a chat UI at the `/chat` endpoint for the launched LLM server at http://localhost:3000/chat.
 
 <img width="800" alt="openllm_ui" src="https://github.com/bentoml/OpenLLM/assets/5886138/8b426b2b-67da-4545-8b09-2dc96ff8a707">
 
