@@ -5,7 +5,8 @@ import shutil
 
 import typer
 
-from openllm.common import VENV_DIR, VERBOSE_LEVEL, BentoInfo, VenvSpec, output, run_command
+from openllm.common import (VENV_DIR, VERBOSE_LEVEL, BentoInfo, VenvSpec,
+                            output, run_command)
 
 
 @functools.lru_cache
@@ -33,6 +34,10 @@ def _ensure_venv(env_spec: VenvSpec) -> pathlib.Path:
         venv_py = venv / 'Scripts' / 'python.exe' if os.name == 'nt' else venv / 'bin' / 'python'
         try:
             run_command(['python', '-m', 'uv', 'venv', venv], silent=VERBOSE_LEVEL.get() < 10)
+            run_command(
+                ['python', '-m', 'uv', 'pip', 'install', '-p', str(venv_py), 'bentoml'],
+                silent=VERBOSE_LEVEL.get() < 10,
+            )
             with open(venv / 'requirements.txt', 'w') as f:
                 f.write(env_spec.normalized_requirements_txt)
             run_command(
