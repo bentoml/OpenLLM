@@ -15,7 +15,7 @@ def _resolve_packages(requirement: typing.Union[pathlib.Path, str]):
     from pip_requirements_parser import RequirementsFile
 
     requirements_txt = RequirementsFile.from_file(str(requirement), include_nested=True)
-    return requirements_txt.requirements
+    return requirements_txt
 
 
 def _filter_preheat_packages(requirements: Iterable) -> list[str]:
@@ -43,14 +43,19 @@ def _resolve_bento_env_specs(bento: BentoInfo):
         lock_file = bento.path / 'env' / 'python' / 'requirements.txt'
 
     reqs = _resolve_packages(lock_file)
-    preheat_packages = _filter_preheat_packages(reqs)
+    packages = reqs.requirements
+    options = reqs.options
+    preheat_packages = _filter_preheat_packages(packages)
     ver = ver_file.read_text().strip()
     return (
         VenvSpec(
             python_version=ver, python_packages=preheat_packages, name_prefix=f"{bento.tag.replace(':', '_')}-1-"
         ),
         VenvSpec(
-            python_version=ver, python_packages=[v.line for v in reqs], name_prefix=f"{bento.tag.replace(':', '_')}-2-"
+            python_version=ver,
+            python_packages=[v.line for v in packages],
+            options=[o.line for o in options],
+            name_prefix=f"{bento.tag.replace(':', '_')}-2-",
         ),
     )
 
@@ -78,7 +83,8 @@ def _ensure_venv(env_spec: VenvSpec, parrent_venv: typing.Optional[pathlib.Path]
                 with open(lib_dir / f'{parrent_venv.name}.pth', 'w+') as f:
                     f.write(str(parent_lib_dir))
             with open(venv / 'requirements.txt', 'w') as f:
-                f.write('\n'.join(sorted(env_spec.python_packages)))
+                with open(venv / 'requirements.txt', 'w') as f:
+                    f.write('\n'.join(env_spec.options + sorted(env_spec.python_packages)))
             run_command(
                 ['python', '-m', 'uv', 'pip', 'install', '-p', str(venv_py), '-r', venv / 'requirements.txt'],
                 silent=VERBOSE_LEVEL.get() < 10,

@@ -167,6 +167,10 @@ class BentoInfo(SimpleNamespace):
     def labels(self) -> dict[str, str]:
         return self.bento_yaml['labels']
 
+    @property
+    def envs(self) -> list[dict[str, str]]:
+        return self.bento_yaml['envs']
+
     @functools.cached_property
     def bento_yaml(self) -> dict:
         import yaml
@@ -227,7 +231,8 @@ class BentoInfo(SimpleNamespace):
 
 class VenvSpec(SimpleNamespace):
     python_version: str
-    python_packages: dict[str, str]
+    python_packages: list[str]
+    options: list[str] = []
     name_prefix = ''
 
     def __hash__(self):

@@ -104,7 +104,7 @@ class OpenLLMTyper(typer.Typer):
                                 cmd_name=command_name,
                                 duration_in_ms=duration_in_ns / 1e6,
                                 error_type=type(e).__name__,
-                                return_code=2 if isinstance(e, KeyboardInterrupt) else 1,
+                                return_code=(2 if isinstance(e, KeyboardInterrupt) else 1),
                             )
                         )
                         raise
