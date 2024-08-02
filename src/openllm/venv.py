@@ -53,7 +53,7 @@ def _ensure_venv(
                 ["python", "-m", "uv", "venv", venv], silent=VERBOSE_LEVEL.get() < 10
             )
             with open(venv / "requirements.txt", "w") as f:
-                f.write("\n".join(sorted(env_spec.normalize_requirements())))
+                f.write(env_spec.normalized_requirements_txt)
             run_command(
                 [
                     "python",
@@ -70,8 +70,10 @@ def _ensure_venv(
             )
             with open(venv / "DONE", "w") as f:
                 f.write("DONE")
-        except Exception:
+        except Exception as e:
             shutil.rmtree(venv, ignore_errors=True)
+            if VERBOSE_LEVEL.get() >= 10:
+                output(e, style="red")
             output(
                 f"Failed to install dependencies to {venv}. Cleaned up.", style="red"
             )

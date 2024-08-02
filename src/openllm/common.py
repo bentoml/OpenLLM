@@ -350,10 +350,13 @@ def run_command(
                 env=env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                check=True,
             )
         else:
-            return subprocess.run(cmd, cwd=cwd, env=env)
-    except subprocess.CalledProcessError:
+            return subprocess.run(cmd, cwd=cwd, env=env, check=True)
+    except Exception as e:
+        if VERBOSE_LEVEL.get() >= 10:
+            output(e, style="red")
         output("Command failed", style="red")
         raise typer.Exit(1)
 
