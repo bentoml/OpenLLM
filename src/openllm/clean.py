@@ -9,7 +9,6 @@ from openllm.common import CONFIG_FILE, REPO_DIR, VENV_DIR, VERBOSE_LEVEL, outpu
 
 app = OpenLLMTyper(help="clean up and release disk space used by OpenLLM")
 
-
 HUGGINGFACE_CACHE = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
 
 

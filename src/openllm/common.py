@@ -21,7 +21,6 @@ import typer.core
 ERROR_STYLE = "red"
 SUCCESS_STYLE = "green"
 
-
 OPENLLM_HOME = pathlib.Path(os.getenv("OPENLLM_HOME", pathlib.Path.home() / ".openllm"))
 REPO_DIR = OPENLLM_HOME / "repos"
 TEMP_DIR = OPENLLM_HOME / "temp"
@@ -39,6 +38,7 @@ T = typing.TypeVar("T")
 
 
 class ContextVar(typing.Generic[T]):
+
     def __init__(self, default: T):
         self._stack: list[T] = []
         self._default = default
@@ -188,6 +188,7 @@ class BentoInfo(SimpleNamespace):
 
     @functools.cached_property
     def pretty_yaml(self) -> dict:
+
         def _pretty_routes(routes):
             return {
                 route["route"]: {
