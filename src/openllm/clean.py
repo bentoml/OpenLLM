@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 
@@ -6,57 +7,72 @@ import questionary
 from openllm.analytic import OpenLLMTyper
 from openllm.common import CONFIG_FILE, REPO_DIR, VENV_DIR, VERBOSE_LEVEL, output
 
-app = OpenLLMTyper(help='clean up and release disk space used by OpenLLM')
+app = OpenLLMTyper(help="clean up and release disk space used by OpenLLM")
 
 
-HUGGINGFACE_CACHE = pathlib.Path.home() / '.cache' / 'huggingface' / 'hub'
+HUGGINGFACE_CACHE = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
 
 
-@app.command(help='Clean up all the cached models from huggingface')
+@app.command(help="Clean up all the cached models from huggingface")
 def model_cache(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
-    used_space = sum(f.stat().st_size for f in HUGGINGFACE_CACHE.rglob('*'))
+    used_space = sum(f.stat().st_size for f in HUGGINGFACE_CACHE.rglob("*"))
     sure = questionary.confirm(
-        f'This will remove all models cached by Huggingface (~{used_space / 1024 / 1024:.2f}MB), are you sure?'
+        f"This will remove all models cached by Huggingface (~{used_space / 1024 / 1024:.2f}MB), are you sure?"
     ).ask()
     if not sure:
         return
     shutil.rmtree(HUGGINGFACE_CACHE, ignore_errors=True)
-    output('All models cached by Huggingface have been removed', style='green')
+    output("All models cached by Huggingface have been removed", style="green")
 
 
-@app.command(help='Clean up all the virtual environments created by OpenLLM')
+@app.command(help="Clean up all the virtual environments created by OpenLLM")
 def venvs(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
-    used_space = sum(f.stat().st_size for f in VENV_DIR.rglob('*'))
+
+    # Set to store paths of files to avoid double counting
+    seen_paths = set()
+    used_space = 0
+
+    for f in VENV_DIR.rglob("*"):
+        if os.name == "nt":  # Windows system
+            # On Windows, directly add file sizes without considering hard links
+            used_space += f.stat().st_size
+        else:
+            # On non-Windows systems, use inodes to avoid double counting
+            stat = f.stat()
+            if stat.st_ino not in seen_paths:
+                seen_paths.add(stat.st_ino)
+                used_space += stat.st_size
+
     sure = questionary.confirm(
-        f'This will remove all virtual environments created by OpenLLM (~{used_space / 1024 / 1024:.2f}MB), are you sure?'
+        f"This will remove all virtual environments created by OpenLLM (~{used_space / 1024 / 1024:.2f}MB), are you sure?"
     ).ask()
     if not sure:
         return
     shutil.rmtree(VENV_DIR, ignore_errors=True)
-    output('All virtual environments have been removed', style='green')
+    output("All virtual environments have been removed", style="green")
 
 
-@app.command(help='Clean up all the repositories cloned by OpenLLM')
+@app.command(help="Clean up all the repositories cloned by OpenLLM")
 def repos(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
     shutil.rmtree(REPO_DIR, ignore_errors=True)
-    output('All repositories have been removed', style='green')
+    output("All repositories have been removed", style="green")
 
 
-@app.command(help='Reset configurations to default')
+@app.command(help="Reset configurations to default")
 def configs(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
     shutil.rmtree(CONFIG_FILE, ignore_errors=True)
-    output('All configurations have been reset', style='green')
+    output("All configurations have been reset", style="green")
 
 
-@app.command(name='all', help='Clean up all above and bring OpenLLM to a fresh start')
+@app.command(name="all", help="Clean up all above and bring OpenLLM to a fresh start")
 def all_cache(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
