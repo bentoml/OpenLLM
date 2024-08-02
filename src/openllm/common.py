@@ -21,7 +21,6 @@ import typer.core
 ERROR_STYLE = 'red'
 SUCCESS_STYLE = 'green'
 
-
 OPENLLM_HOME = pathlib.Path(os.getenv('OPENLLM_HOME', pathlib.Path.home() / '.openllm'))
 REPO_DIR = OPENLLM_HOME / 'repos'
 TEMP_DIR = OPENLLM_HOME / 'temp'
@@ -231,14 +230,33 @@ class BentoInfo(SimpleNamespace):
 
 class VenvSpec(SimpleNamespace):
     python_version: str
-    python_packages: list[str]
-    options: list[str] = []
+    requirements_txt: str
     name_prefix = ''
+
+    @functools.cached_property
+    def normalized_requirements_txt(self) -> str:
+        parameter_lines: list[str] = []
+        dependency_lines: list[str] = []
+        comment_lines: list[str] = []
+
+        for line in self.requirements_txt.splitlines():
+            if not line.strip():
+                continue
+            elif line.strip().startswith('#'):
+                comment_lines.append(line.strip())
+            elif line.strip().startswith('-'):
+                parameter_lines.append(line.strip())
+            else:
+                dependency_lines.append(line.strip())
+
+        parameter_lines.sort()
+        dependency_lines.sort()
+        return '\n'.join(parameter_lines + dependency_lines).strip()
 
     def __hash__(self):
         return md5(
             # self.python_version,
-            *sorted(self.python_packages)
+            self.normalized_requirements_txt
         )
 
 
@@ -307,11 +325,13 @@ def run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=False)
     try:
         if silent:
             return subprocess.run(  # type: ignore
-                cmd, cwd=cwd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                cmd, cwd=cwd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
             )
         else:
-            return subprocess.run(cmd, cwd=cwd, env=env)
-    except subprocess.CalledProcessError:
+            return subprocess.run(cmd, cwd=cwd, env=env, check=True)
+    except Exception as e:
+        if VERBOSE_LEVEL.get() >= 10:
+            output(e, style='red')
         output('Command failed', style='red')
         raise typer.Exit(1)
 

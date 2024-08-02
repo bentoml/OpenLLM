@@ -61,7 +61,6 @@ ACCELERATOR_SPEC_DICT: dict[str, dict] = {
     'nvidia-tesla-a100': {'model': 'A100', 'memory_size': 40.0},
 }
 
-
 ACCELERATOR_SPECS: dict[str, Accelerator] = {key: Accelerator(**value) for key, value in ACCELERATOR_SPEC_DICT.items()}
 
 

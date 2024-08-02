@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 
@@ -7,7 +8,6 @@ from openllm.analytic import OpenLLMTyper
 from openllm.common import CONFIG_FILE, REPO_DIR, VENV_DIR, VERBOSE_LEVEL, output
 
 app = OpenLLMTyper(help='clean up and release disk space used by OpenLLM')
-
 
 HUGGINGFACE_CACHE = pathlib.Path.home() / '.cache' / 'huggingface' / 'hub'
 
@@ -30,7 +30,22 @@ def model_cache(verbose: bool = False):
 def venvs(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
-    used_space = sum(f.stat().st_size for f in VENV_DIR.rglob('*'))
+
+    # Set to store paths of files to avoid double counting
+    seen_paths = set()
+    used_space = 0
+
+    for f in VENV_DIR.rglob('*'):
+        if os.name == 'nt':  # Windows system
+            # On Windows, directly add file sizes without considering hard links
+            used_space += f.stat().st_size
+        else:
+            # On non-Windows systems, use inodes to avoid double counting
+            stat = f.stat()
+            if stat.st_ino not in seen_paths:
+                seen_paths.add(stat.st_ino)
+                used_space += stat.st_size
+
     sure = questionary.confirm(
         f'This will remove all virtual environments created by OpenLLM (~{used_space / 1024 / 1024:.2f}MB), are you sure?'
     ).ask()
