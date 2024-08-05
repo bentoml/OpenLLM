@@ -5,8 +5,7 @@ import shutil
 
 import typer
 
-from openllm.common import (VENV_DIR, VERBOSE_LEVEL, BentoInfo, VenvSpec,
-                            output, run_command)
+from openllm.common import VENV_DIR, VERBOSE_LEVEL, BentoInfo, VenvSpec, output, run_command
 
 
 @functools.lru_cache
