@@ -96,6 +96,9 @@ def list_bento(
 ) -> typing.List[BentoInfo]:
     ensure_repo_updated()
 
+    if repo_name is None and tag and "/" in tag:
+        repo_name, tag = tag.split("/", 1)
+
     if repo_name is not None:
         config = load_config()
         if repo_name not in config.repos:
