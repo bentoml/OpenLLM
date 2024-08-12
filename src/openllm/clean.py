@@ -5,8 +5,7 @@ import shutil
 import questionary
 
 from openllm.analytic import OpenLLMTyper
-from openllm.common import (CONFIG_FILE, REPO_DIR, VENV_DIR, VERBOSE_LEVEL,
-                            output)
+from openllm.common import CONFIG_FILE, REPO_DIR, VENV_DIR, VERBOSE_LEVEL, output
 
 app = OpenLLMTyper(help='clean up and release disk space used by OpenLLM')
 

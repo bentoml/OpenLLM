@@ -9,14 +9,12 @@ from typing import Annotated, Optional
 import questionary
 import typer
 
-from openllm.accelerator_spec import (DeploymentTarget, can_run,
-                                      get_local_machine_spec)
+from openllm.accelerator_spec import DeploymentTarget, can_run, get_local_machine_spec
 from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
 from openllm.cloud import deploy as cloud_deploy
 from openllm.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm.common import (CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo,
-                            output)
+from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
 from openllm.local import run as local_run
 from openllm.local import serve as local_serve
 from openllm.model import app as model_app
@@ -41,7 +39,7 @@ def _select_bento_name(models: list[BentoInfo], target: DeploymentTarget):
     model_infos = [(model.repo.name, model.name, can_run(model, target)) for model in models]
     model_name_groups = defaultdict(lambda: 0.0)
     for repo, name, score in model_infos:
-        model_name_groups[(repo, name)] += score
+        model_name_groups[repo, name] += score
     table_data = [(name, repo, CHECKED if score > 0 else '') for (repo, name), score in model_name_groups.items()]
     if not table_data:
         output('No model found', style='red')
