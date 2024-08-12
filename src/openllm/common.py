@@ -61,7 +61,6 @@ class ContextVar(typing.Generic[T]):
 
 VERBOSE_LEVEL = ContextVar(10)
 INTERACTIVE = ContextVar(False)
-FORCE = ContextVar(False)
 
 
 def output(content, level=0, style=None, end=None):

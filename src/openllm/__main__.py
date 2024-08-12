@@ -9,12 +9,14 @@ from typing import Annotated, Optional
 import questionary
 import typer
 
-from openllm.accelerator_spec import DeploymentTarget, can_run, get_local_machine_spec
+from openllm.accelerator_spec import (DeploymentTarget, can_run,
+                                      get_local_machine_spec)
 from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
 from openllm.cloud import deploy as cloud_deploy
 from openllm.cloud import ensure_cloud_context, get_cloud_machine_spec
-from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
+from openllm.common import (CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo,
+                            output)
 from openllm.local import run as local_run
 from openllm.local import serve as local_serve
 from openllm.model import app as model_app
