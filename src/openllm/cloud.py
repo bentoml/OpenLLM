@@ -14,6 +14,13 @@ from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, output, run
 app = OpenLLMTyper()
 
 
+def resolve_cloud_config() -> pathlib.Path:
+    env = os.environ.get('BENTOML_HOME')
+    if env is not None:
+        return pathlib.Path(env) / '.yatai.yaml'
+    return pathlib.Path.home() / 'bentoml' / '.yatai.yaml'
+
+
 def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None):
     cmd = ['bentoml', 'deploy', bento.bentoml_tag]
     env = {'BENTOML_HOME': f'{bento.repo.path}/bentoml'}
@@ -53,8 +60,10 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
     if target:
         cmd += ['--instance-type', target.name]
 
-    assert (pathlib.Path.home() / 'bentoml' / '.yatai.yaml').exists()
-    shutil.copy(pathlib.Path.home() / 'bentoml' / '.yatai.yaml', bento.repo.path / 'bentoml' / '.yatai.yaml')
+    base_config = resolve_cloud_config()
+    if not base_config.exists():
+        raise Exception('Cannot find cloud config.')
+    shutil.copy(base_config, bento.repo.path / 'bentoml' / '.yatai.yaml')
 
     return cmd, env, None
 
