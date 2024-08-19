@@ -9,8 +9,7 @@ import typer
 
 from openllm.accelerator_spec import ACCELERATOR_SPECS
 from openllm.analytic import OpenLLMTyper
-from openllm.common import (INTERACTIVE, BentoInfo, DeploymentTarget, output,
-                            run_command)
+from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, output, run_command
 
 app = OpenLLMTyper()
 

@@ -54,11 +54,7 @@ def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: b
     output(table)
 
 
-def ensure_bento(
-    model: str,
-    target: Optional[DeploymentTarget] = None,
-    repo_name: Optional[str] = None,
-) -> BentoInfo:
+def ensure_bento(model: str, target: Optional[DeploymentTarget] = None, repo_name: Optional[str] = None) -> BentoInfo:
     bentos = list_bento(model, repo_name=repo_name)
     if len(bentos) == 0:
         output(f'No model found for {model}', style='red')
@@ -67,9 +63,11 @@ def ensure_bento(
     if len(bentos) == 1:
         output(f'Found model {bentos[0]}', style='green')
         if target is not None and can_run(bentos[0], target) <= 0:
-            output(f'The machine({target.name}) with {target.accelerators_repr} does not appear to have sufficient '
-                   f'resources to run model {bentos[0]}\n',
-                   style='yellow')
+            output(
+                f'The machine({target.name}) with {target.accelerators_repr} does not appear to have sufficient '
+                f'resources to run model {bentos[0]}\n',
+                style='yellow',
+            )
         return bentos[0]
 
     # multiple models, pick one according to target
@@ -90,14 +88,12 @@ def _extract_first_number(s: str):
 
 
 def list_bento(
-    tag: typing.Optional[str] = None,
-    repo_name: typing.Optional[str] = None,
-    include_alias: bool = False,
+    tag: typing.Optional[str] = None, repo_name: typing.Optional[str] = None, include_alias: bool = False
 ) -> typing.List[BentoInfo]:
     ensure_repo_updated()
 
-    if repo_name is None and tag and "/" in tag:
-        repo_name, tag = tag.split("/", 1)
+    if repo_name is None and tag and '/' in tag:
+        repo_name, tag = tag.split('/', 1)
 
     if repo_name is not None:
         config = load_config()
