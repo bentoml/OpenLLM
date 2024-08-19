@@ -39,7 +39,7 @@ def _select_bento_name(models: list[BentoInfo], target: DeploymentTarget):
     model_infos = [(model.repo.name, model.name, can_run(model, target)) for model in models]
     model_name_groups = defaultdict(lambda: 0.0)
     for repo, name, score in model_infos:
-        model_name_groups[(repo, name)] += score
+        model_name_groups[repo, name] += score
     table_data = [(name, repo, CHECKED if score > 0 else '') for (repo, name), score in model_name_groups.items()]
     if not table_data:
         output('No model found', style='red')
