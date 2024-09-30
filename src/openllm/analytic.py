@@ -12,16 +12,16 @@ import click
 import typer
 import typer.core
 
-DO_NOT_TRACK = 'BENTOML_DO_NOT_TRACK'
+DO_NOT_TRACK = "BENTOML_DO_NOT_TRACK"
 
 
 class EventMeta(ABC):
     @property
     def event_name(self):
         # camel case to snake case
-        event_name = re.sub(r'(?<!^)(?=[A-Z])', '_', self.__class__.__name__).lower()
+        event_name = re.sub(r"(?<!^)(?=[A-Z])", "_", self.__class__.__name__).lower()
         # remove "_event" suffix
-        suffix_to_remove = '_event'
+        suffix_to_remove = "_event"
         if event_name.endswith(suffix_to_remove):
             event_name = event_name[: -len(suffix_to_remove)]
         return event_name
@@ -42,22 +42,28 @@ class OpenllmCliEvent(CliEvent):
 
 
 class OrderedCommands(typer.core.TyperGroup):
-    def list_commands(self, _: click.Context) -> typing.Iterable[str]:
+    def list_commands(self, _: click.Context) -> typing.Iterable[str]:  # type: ignore
         return list(self.commands)
 
 
 class OpenLLMTyper(typer.Typer):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        no_args_is_help = kwargs.pop('no_args_is_help', True)
-        context_settings = kwargs.pop('context_settings', {})
-        if 'help_option_names' not in context_settings:
-            context_settings['help_option_names'] = ('-h', '--help')
-        if 'max_content_width' not in context_settings:
-            context_settings['max_content_width'] = int(os.environ.get('COLUMNS', str(120)))
-        klass = kwargs.pop('cls', OrderedCommands)
+        no_args_is_help = kwargs.pop("no_args_is_help", True)
+        context_settings = kwargs.pop("context_settings", {})
+        if "help_option_names" not in context_settings:
+            context_settings["help_option_names"] = ("-h", "--help")
+        if "max_content_width" not in context_settings:
+            context_settings["max_content_width"] = int(
+                os.environ.get("COLUMNS", str(120))
+            )
+        klass = kwargs.pop("cls", OrderedCommands)
 
         super().__init__(
-            *args, cls=klass, no_args_is_help=no_args_is_help, context_settings=context_settings, **kwargs
+            *args,
+            cls=klass,
+            no_args_is_help=no_args_is_help,
+            context_settings=context_settings,
+            **kwargs,
         )
 
     # NOTE: Since OpenLLMTyper only wraps command to add analytics, the default type-hint for @app.command
@@ -73,7 +79,9 @@ class OpenLLMTyper(typer.Typer):
                 def wrapped(ctx: click.Context, *args, **kwargs):
                     from bentoml._internal.utils.analytics import track
 
-                    do_not_track = os.environ.get(DO_NOT_TRACK, str(False)).lower() == 'true'
+                    do_not_track = (
+                        os.environ.get(DO_NOT_TRACK, str(False)).lower() == "true"
+                    )
 
                     # so we know that the root program is openllm
                     command_name = ctx.info_name
@@ -82,7 +90,7 @@ class OpenLLMTyper(typer.Typer):
                         command_group = ctx.parent.info_name
                     elif ctx.parent.info_name == ctx.find_root().info_name:
                         # openllm run
-                        command_group = 'openllm'
+                        command_group = "openllm"
 
                     if do_not_track:
                         return f(*args, **kwargs)
@@ -92,7 +100,9 @@ class OpenLLMTyper(typer.Typer):
                         duration_in_ns = time.time_ns() - start_time
                         track(
                             OpenllmCliEvent(
-                                cmd_group=command_group, cmd_name=command_name, duration_in_ms=duration_in_ns / 1e6
+                                cmd_group=command_group,
+                                cmd_name=command_name,
+                                duration_in_ms=duration_in_ns / 1e6,
                             )
                         )
                         return return_value
@@ -104,7 +114,9 @@ class OpenLLMTyper(typer.Typer):
                                 cmd_name=command_name,
                                 duration_in_ms=duration_in_ns / 1e6,
                                 error_type=type(e).__name__,
-                                return_code=(2 if isinstance(e, KeyboardInterrupt) else 1),
+                                return_code=(
+                                    2 if isinstance(e, KeyboardInterrupt) else 1
+                                ),
                             )
                         )
                         raise
