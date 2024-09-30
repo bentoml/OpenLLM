@@ -13,7 +13,7 @@ from openllm.common import (VENV_DIR, VERBOSE_LEVEL, BentoInfo, EnvVars,
 
 @functools.lru_cache
 def _resolve_bento_venv_spec(
-    bento: BentoInfo, runtime_envs: Optional[EnvVars] = None
+    bento: BentoInfo, runtime_envs: Optional[EnvVars] = None,
 ) -> VenvSpec:
     ver_file = bento.path / "env" / "python" / "version.txt"
     assert ver_file.exists(), f"cannot find version file in {bento.path}"
@@ -77,6 +77,7 @@ def _ensure_venv(venv_spec: VenvSpec) -> pathlib.Path:
                     venv / "requirements.txt",
                 ],
                 silent=VERBOSE_LEVEL.get() < 10,
+                env=venv_spec.envs,
             )
             with open(venv / "DONE", "w") as f:
                 f.write("DONE")
