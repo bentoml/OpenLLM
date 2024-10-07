@@ -39,7 +39,7 @@ jobs:
       - name: dry ls
         run: ls -rthlaR
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@897895f1e160c830e369f9779632ebc134688e1b # ratchet:pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@f7600683efdcb7656dec5b29656edb7bc586e597 # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
       - name: Create release
