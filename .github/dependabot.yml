@@ -1,13 +1,23 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    groups:
+      actions-dependencies:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
   - package-ecosystem: pip
-    directory: "/"
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
+    groups:
+      production-dependencies:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
