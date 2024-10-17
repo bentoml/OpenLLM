@@ -163,7 +163,7 @@ def ensure_repo_updated():
                 'The repo cache is never updated, do you want to update it to fetch the latest model list?'
             ).ask()
             if choice:
-                update()
+                cmd_update()
             return
         else:
             output(
@@ -178,7 +178,7 @@ def ensure_repo_updated():
                 'The repo cache is outdated, do you want to update it to fetch the latest model list?'
             ).ask()
             if choice:
-                update()
+                cmd_update()
         else:
             output(
                 'The repo cache is outdated, please run `openllm repo update` to fetch the latest model list',
