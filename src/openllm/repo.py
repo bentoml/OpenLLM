@@ -148,6 +148,8 @@ def _clone_repo(repo: RepoInfo):
 
 
 def ensure_repo_updated():
+    if TEST_REPO:
+        return
     last_update_file = REPO_DIR / 'last_update'
     if not last_update_file.exists():
         if INTERACTIVE.get():
