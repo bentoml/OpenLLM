@@ -3,6 +3,9 @@ import re
 import shutil
 import typing
 
+from pathlib import Path
+import os
+
 import pyaml
 import questionary
 import typer
@@ -11,22 +14,25 @@ from openllm.analytic import OpenLLMTyper
 from openllm.common import INTERACTIVE, REPO_DIR, VERBOSE_LEVEL, RepoInfo, load_config, output, save_config
 
 UPDATE_INTERVAL = datetime.timedelta(days=3)
+TEST_REPO = os.getenv('OPENLLM_TEST_REPO', None)  # for testing
+
 
 app = OpenLLMTyper(help='manage repos')
 
 
 @app.command(name='list', help='list available repo')
-def list_repo(verbose: bool = False):
+def cmd_list(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
-    config = load_config()
     pyaml.pprint(
-        [parse_repo_url(repo, name) for name, repo in config.repos.items()], sort_dicts=False, sort_keys=False
+        list_repo(), sort_dicts=False, sort_keys=False
     )
 
 
-@app.command(help='remove given repo')
-def remove(name: str):
+@app.command(name='remove', help='remove given repo')
+def cmd_remove(name: str):
+    if TEST_REPO:
+        return
     config = load_config()
     if name not in config.repos:
         output(f'Repo {name} does not exist', style='red')
@@ -35,6 +41,92 @@ def remove(name: str):
     del config.repos[name]
     save_config(config)
     output(f'Repo {name} removed', style='green')
+
+
+@app.command(name='update', help='update default repo')
+def cmd_update():
+    if TEST_REPO:
+        return
+    repos_in_use = set()
+    for repo in list_repo():
+        repos_in_use.add((repo.server, repo.owner, repo.repo, repo.branch))
+        if repo.path.exists():
+            shutil.rmtree(repo.path, ignore_errors=True)
+        repo.path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            _clone_repo(repo)
+            output('')
+            output(f'Repo `{repo.name}` updated', style='green')
+        except Exception as e:
+            shutil.rmtree(repo.path, ignore_errors=True)
+            output(f'Failed to clone repo {repo.name}', style='red')
+            output(e)
+    for c in REPO_DIR.glob('*/*/*/*'):
+        repo_spec = tuple(c.parts[-4:])
+        if repo_spec not in repos_in_use:
+            shutil.rmtree(c, ignore_errors=True)
+            output(f'Removed unused repo cache {c}')
+    with open(REPO_DIR / 'last_update', 'w') as f:
+        f.write(datetime.datetime.now().isoformat())
+    for repo in list_repo():
+        _complete_alias(repo.name)
+
+
+@app.command(name='add', help='add new repo')
+def cmd_add(name: str, repo: str):
+    if TEST_REPO:
+        return
+    name = name.lower()
+    if not name.isidentifier():
+        output(f'Invalid repo name: {name}, should only contain letters, numbers and underscores', style='red')
+        return
+
+    try:
+        parse_repo_url(repo)
+    except ValueError:
+        output(f'Invalid repo url: {repo}', style='red')
+        return
+
+    config = load_config()
+    if name in config.repos:
+        override = questionary.confirm(f'Repo {name} already exists({config.repos[name]}), override?').ask()
+        if not override:
+            return
+
+    config.repos[name] = repo
+    save_config(config)
+    output(f'Repo {name} added', style='green')
+
+
+@app.command(name='default', help='get default repo path')
+def default():
+    if TEST_REPO:
+        return
+    output((info := parse_repo_url(load_config().repos['default'], 'default')).path)
+    return info.path
+
+
+def list_repo(repo_name: typing.Optional[str]=None) -> typing.List[RepoInfo]:
+    if TEST_REPO:
+        return [
+            RepoInfo(
+                name='default',
+                url='',
+                server='test',
+                owner='test',
+                repo='test',
+                branch='main',
+                path=Path(TEST_REPO),
+            )
+        ]
+    config = load_config()
+    repos = []
+    for _repo_name, repo_url in config.repos.items():
+        if repo_name is not None and _repo_name != repo_name:
+            continue
+        repo = parse_repo_url(repo_url, _repo_name)
+        repos.append(repo)
+    return repos
 
 
 def _complete_alias(repo_name: str):
@@ -61,35 +153,6 @@ def _clone_repo(repo: RepoInfo):
         import dulwich.porcelain
 
         dulwich.porcelain.clone(repo.url, str(repo.path), checkout=True, depth=1, branch=repo.branch)
-
-
-@app.command(help='update default repo')
-def update():
-    config = load_config()
-    repos_in_use = set()
-    for repo_name, repo in config.repos.items():
-        repo = parse_repo_url(repo, repo_name)
-        repos_in_use.add((repo.server, repo.owner, repo.repo, repo.branch))
-        if repo.path.exists():
-            shutil.rmtree(repo.path, ignore_errors=True)
-        repo.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            _clone_repo(repo)
-            output('')
-            output(f'Repo `{repo.name}` updated', style='green')
-        except Exception as e:
-            shutil.rmtree(repo.path, ignore_errors=True)
-            output(f'Failed to clone repo {repo.name}', style='red')
-            output(e)
-    for c in REPO_DIR.glob('*/*/*/*'):
-        repo_spec = tuple(c.parts[-4:])
-        if repo_spec not in repos_in_use:
-            shutil.rmtree(c, ignore_errors=True)
-            output(f'Removed unused repo cache {c}')
-    with open(REPO_DIR / 'last_update', 'w') as f:
-        f.write(datetime.datetime.now().isoformat())
-    for repo_name in config.repos:
-        _complete_alias(repo_name)
 
 
 def ensure_repo_updated():
@@ -180,36 +243,6 @@ def parse_repo_url(repo_url: str, repo_name: typing.Optional[str] = None) -> Rep
         branch=branch,
         path=path,
     )
-
-
-@app.command(help='add new repo')
-def add(name: str, repo: str):
-    name = name.lower()
-    if not name.isidentifier():
-        output(f'Invalid repo name: {name}, should only contain letters, numbers and underscores', style='red')
-        return
-
-    try:
-        parse_repo_url(repo)
-    except ValueError:
-        output(f'Invalid repo url: {repo}', style='red')
-        return
-
-    config = load_config()
-    if name in config.repos:
-        override = questionary.confirm(f'Repo {name} already exists({config.repos[name]}), override?').ask()
-        if not override:
-            return
-
-    config.repos[name] = repo
-    save_config(config)
-    output(f'Repo {name} added', style='green')
-
-
-@app.command(help='get default repo path')
-def default():
-    output((info := parse_repo_url(load_config().repos['default'], 'default')).path)
-    return info.path
 
 
 if __name__ == '__main__':

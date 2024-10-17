@@ -23,6 +23,7 @@ ERROR_STYLE = 'red'
 SUCCESS_STYLE = 'green'
 
 OPENLLM_HOME = pathlib.Path(os.getenv('OPENLLM_HOME', pathlib.Path.home() / '.openllm'))
+
 REPO_DIR = OPENLLM_HOME / 'repos'
 TEMP_DIR = OPENLLM_HOME / 'temp'
 VENV_DIR = OPENLLM_HOME / 'venv'

@@ -7,8 +7,8 @@ import typer
 
 from openllm.accelerator_spec import DeploymentTarget, can_run
 from openllm.analytic import OpenLLMTyper
-from openllm.common import VERBOSE_LEVEL, BentoInfo, load_config, output
-from openllm.repo import ensure_repo_updated, parse_repo_url
+from openllm.common import VERBOSE_LEVEL, BentoInfo, output
+from openllm.repo import ensure_repo_updated, list_repo
 
 app = OpenLLMTyper(help='manage models')
 
@@ -95,11 +95,12 @@ def list_bento(
     if repo_name is None and tag and '/' in tag:
         repo_name, tag = tag.split('/', 1)
 
+    repo_list = list_repo(repo_name)
     if repo_name is not None:
-        config = load_config()
-        if repo_name not in config.repos:
+        repo_map = {repo.name: repo for repo in repo_list}
+        if repo_name not in repo_map:
             output(f'Repo `{repo_name}` not found, did you mean one of these?')
-            for repo_name in config.repos:
+            for repo_name in repo_map:
                 output(f'  {repo_name}')
             raise typer.Exit(1)
 
@@ -112,12 +113,8 @@ def list_bento(
         glob_pattern = f'bentoml/bentos/{tag}/*'
 
     model_list = []
-    config = load_config()
-    for _repo_name, repo_url in config.repos.items():
-        if repo_name is not None and _repo_name != repo_name:
-            continue
-        repo = parse_repo_url(repo_url, _repo_name)
-
+    repo_list = list_repo(repo_name)
+    for repo in repo_list:
         paths = sorted(
             repo.path.glob(glob_pattern),
             key=lambda x: (x.parent.name, _extract_first_number(x.name), len(x.name), x.name),
