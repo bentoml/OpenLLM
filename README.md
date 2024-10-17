@@ -162,6 +162,9 @@ OpenLLM supports LLM cloud deployment via BentoML, the unified model serving fra
 openllm deploy llama3:8b
 ```
 
+> [!NOTE]
+> If you are deploying a gated models, make sure to add `--env HF_TOKEN=$HF_TOKEN`
+
 Once the deployment is complete, you can run model inference on the BentoCloud console:
 
 <img width="800" alt="bentocloud_ui" src="https://github.com/bentoml/OpenLLM/assets/65327072/4f7819d9-73ea-488a-a66c-f724e5d063e6">
