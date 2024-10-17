@@ -24,9 +24,7 @@ app = OpenLLMTyper(help='manage repos')
 def cmd_list(verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
-    pyaml.pprint(
-        list_repo(), sort_dicts=False, sort_keys=False
-    )
+    pyaml.pprint(list_repo(), sort_dicts=False, sort_keys=False)
 
 
 @app.command(name='remove', help='remove given repo')
@@ -106,17 +104,11 @@ def default():
     return info.path
 
 
-def list_repo(repo_name: typing.Optional[str]=None) -> typing.List[RepoInfo]:
+def list_repo(repo_name: typing.Optional[str] = None) -> typing.List[RepoInfo]:
     if TEST_REPO:
         return [
             RepoInfo(
-                name='default',
-                url='',
-                server='test',
-                owner='test',
-                repo='test',
-                branch='main',
-                path=Path(TEST_REPO),
+                name='default', url='', server='test', owner='test', repo='test', branch='main', path=Path(TEST_REPO)
             )
         ]
     config = load_config()
