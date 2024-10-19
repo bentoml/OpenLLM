@@ -19,6 +19,8 @@ pip install openllm  # or pip3 install openllm
 openllm hello
 ```
 
+
+
 ![hello](https://github.com/user-attachments/assets/5af19f23-1b34-4c45-b1e0-a6798b4586d1)
 
 ## Supported models
@@ -45,6 +47,9 @@ For the full model list, see the [OpenLLM models repository](https://github.com/
 ## Start an LLM server
 
 To start an LLM server locally, use the `openllm serve` command and specify the model version.
+
+> [!NOTE]
+> If you are deploying a gated models, make sure to set HF_TOKEN in enviroment variables
 
 ```bash
 openllm serve llama3:8b
