@@ -174,7 +174,7 @@ openllm deploy llama3:8b
 ```
 
 > [!NOTE]
-> If you are deploying a gated models, make sure to set HF_TOKEN in enviroment variables
+> If you are deploying a gated model, make sure to set HF_TOKEN in enviroment variables.
 
 Once the deployment is complete, you can run model inference on the BentoCloud console:
 
