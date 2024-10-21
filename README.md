@@ -52,7 +52,7 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 > OpenLLM does not store model weights. A Hugging Face token (HF_TOKEN) is required for gated models.
 > 1. Create your Hugging Face token [here](https://huggingface.co/settings/tokens).
 > 2. Request access to the gated model, such as [meta-llama/Meta-Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B).
-> 3. Set your token as an environment variable by running:  
+> 3. Set your token as an environment variable by running:
 >    ```bash
 >    export HF_TOKEN=<your token>
 >    ```
