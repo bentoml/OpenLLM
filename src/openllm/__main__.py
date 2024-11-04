@@ -266,7 +266,7 @@ def typer_callback(
         VERBOSE_LEVEL.set(verbose)
     if version:
         output(
-            f"openllm, {importlib.metadata.version('openllm')}\nPython ({platform.python_implementation()}) {platform.python_version()}"
+            f'openllm, {importlib.metadata.version("openllm")}\nPython ({platform.python_implementation()}) {platform.python_version()}'
         )
         sys.exit(0)
     if do_not_track:

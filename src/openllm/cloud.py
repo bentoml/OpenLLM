@@ -45,17 +45,17 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
         if INTERACTIVE.get():
             import questionary
 
-            value = questionary.text(f"{env_info['name']}:", default=default).ask()
+            value = questionary.text(f'{env_info["name"]}:', default=default).ask()
         else:
             if default == '':
-                output(f"Environment variable {env_info['name']} is required but not provided", style='red')
+                output(f'Environment variable {env_info["name"]} is required but not provided', style='red')
                 raise typer.Exit(1)
             else:
                 value = default
 
         if value is None:
             raise typer.Exit(1)
-        cmd += ['--env', f"{env_info['name']}={value}"]
+        cmd += ['--env', f'{env_info["name"]}={value}']
 
     if target:
         cmd += ['--instance-type', target.name]
@@ -75,7 +75,7 @@ def ensure_cloud_context():
     try:
         result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
         context = json.loads(result)
-        output(f"  bentoml already logged in: {context['endpoint']}", style='green', level=20)
+        output(f'  bentoml already logged in: {context["endpoint"]}', style='green', level=20)
     except subprocess.CalledProcessError:
         output('  bentoml not logged in', style='red')
         if not INTERACTIVE.get():

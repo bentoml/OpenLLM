@@ -138,8 +138,8 @@ def list_bento(
             x
             for x in model_list
             if not (
-                f"{x.bento_yaml['name']}:{x.bento_yaml['version']}" in seen
-                or seen.add(f"{x.bento_yaml['name']}:{x.bento_yaml['version']}")
+                f'{x.bento_yaml["name"]}:{x.bento_yaml["version"]}' in seen
+                or seen.add(f'{x.bento_yaml["name"]}:{x.bento_yaml["version"]}')
             )
         ]
     return model_list
