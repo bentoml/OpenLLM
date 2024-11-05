@@ -27,7 +27,7 @@ def _resolve_bento_venv_spec(bento: BentoInfo, runtime_envs: Optional[EnvVars] =
     envs = {k: runtime_envs.get(k, v) for k, v in bento_envs.items()} if runtime_envs else {}
 
     return VenvSpec(
-        python_version=ver, requirements_txt=reqs, name_prefix=f"{bento.tag.replace(':', '_')}-1-", envs=EnvVars(envs)
+        python_version=ver, requirements_txt=reqs, name_prefix=f'{bento.tag.replace(":", "_")}-1-', envs=EnvVars(envs)
     )
 
 

@@ -224,7 +224,7 @@ class BentoInfo(SimpleNamespace):
             resources = self.bento_yaml['services'][0]['config']['resources']
             if resources['gpu'] > 1:
                 acc = ACCELERATOR_SPECS[resources['gpu_type']]
-                return f"{acc.memory_size:.0f}Gx{resources['gpu']}"
+                return f'{acc.memory_size:.0f}Gx{resources["gpu"]}'
             elif resources['gpu'] > 0:
                 acc = ACCELERATOR_SPECS[resources['gpu_type']]
                 return f'{acc.memory_size:.0f}G'
@@ -329,11 +329,11 @@ def run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=False)
             for k, v in env.items():
                 output(f'$ export {k}={shlex.quote(v)}', style='orange')
         if venv:
-            output(f"$ source {venv / 'bin' / 'activate'}", style='orange')
-        output(f"$ {' '.join(cmd)}", style='orange')
+            output(f'$ source {venv / "bin" / "activate"}', style='orange')
+        output(f'$ {" ".join(cmd)}', style='orange')
 
     if venv:
-        py = venv / bin_dir / f"python{sysconfig.get_config_var('EXE')}"
+        py = venv / bin_dir / f'python{sysconfig.get_config_var("EXE")}'
     else:
         py = sys.executable
 
@@ -379,8 +379,8 @@ async def async_run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, s
             for k, v in env.items():
                 output(f'$ export {k}={shlex.quote(v)}', style='orange')
         if venv:
-            output(f"$ source {venv / 'bin' / 'activate'}", style='orange')
-        output(f"$ {' '.join(cmd)}", style='orange')
+            output(f'$ source {venv / "bin" / "activate"}', style='orange')
+        output(f'$ {" ".join(cmd)}', style='orange')
 
     if venv:
         py = venv / 'bin' / 'python'
