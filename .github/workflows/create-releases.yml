@@ -7,9 +7,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # ratchet:actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # ratchet:actions/setup-python@v5
         with:
           python-version-file: .python-version-default
       - name: Build
@@ -39,11 +39,11 @@ jobs:
       - name: dry ls
         run: ls -rthlaR
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@f7600683efdcb7656dec5b29656edb7bc586e597 # ratchet:pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@fb13cb306901256ace3dab689990e13a5550ffaa # ratchet:pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
       - name: Create release
-        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # ratchet:softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@e7a8f85e1c67a31e6ed99a94b41bd0b71bbee6b8 # ratchet:softprops/action-gh-release@v2
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
