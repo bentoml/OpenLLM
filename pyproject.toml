@@ -41,7 +41,7 @@ dependencies = [
   "dulwich",
   "tabulate",
   "uv",
-  "openai==1.54.4",
+  "openai==1.55.0",
 ]
 keywords = [
   "MLOps",
