@@ -13,7 +13,7 @@ def prep_env_vars(bento: BentoInfo):
 
     env_vars = bento.envs
     for env_var in env_vars:
-        if not env_var.get("value"):
+        if not env_var.get('value'):
             continue
         key = env_var['name']
         value = env_var['value']
