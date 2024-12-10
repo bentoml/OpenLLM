@@ -29,9 +29,6 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
 
 | Model            | Parameters | Quantization | Required GPU  | Start a Server                      |
 | ---------------- | ---------- | ------------ | ------------- | ----------------------------------- |
-| Llama 3.1        | 8B         | -            | 24G           | `openllm serve llama3.1:8b`         |
-| Llama 3.1        | 8B         | AWQ 4bit     | 12G           | `openllm serve llama3.1:8b-4bit`    |
-| Llama 3.1        | 70B        | AWQ 4bit     | 80G           | `openllm serve llama3.1:70b-4bit`   |
 | Llama 3.2        | 1B         | -            | 12G           | `openllm serve llama3.2:1b`         |
 | Llama 3.2        | 3B         | -            | 12G           | `openllm serve llama3.2:3b`         |
 | Llama 3.2 Vision | 11B        | -            | 80G           | `openllm serve llama3.2:11b-vision` |
