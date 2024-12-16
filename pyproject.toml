@@ -41,7 +41,7 @@ dependencies = [
   "dulwich",
   "tabulate",
   "uv",
-  "openai==1.55.3",
+  "openai==1.57.4",
 ]
 keywords = [
   "MLOps",
@@ -82,7 +82,7 @@ Twitter = "https://twitter.com/bentomlai"
 src-dir = "src/openllm"
 
 [build-system]
-requires = ["hatchling==1.26.3", "hatch-vcs==0.4.0"]
+requires = ["hatchling==1.27.0", "hatch-vcs==0.4.0"]
 build-backend = 'hatchling.build'
 
 [tool.hatch.version]
