@@ -63,6 +63,9 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
     base_config = resolve_cloud_config()
     if not base_config.exists():
         raise Exception('Cannot find cloud config.')
+    # remove before copy
+    if (bento.repo.path / 'bentoml' / '.yatai.yaml').exists():
+        (bento.repo.path / 'bentoml' / '.yatai.yaml').unlink()
     shutil.copy(base_config, bento.repo.path / 'bentoml' / '.yatai.yaml')
 
     return cmd, env, None
