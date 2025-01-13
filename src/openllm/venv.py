@@ -40,7 +40,9 @@ def _ensure_venv(venv_spec: VenvSpec) -> pathlib.Path:
 
         venv_py = venv / 'Scripts' / 'python.exe' if os.name == 'nt' else venv / 'bin' / 'python'
         try:
-            run_command(['python', '-m', 'uv', 'venv', venv], silent=VERBOSE_LEVEL.get() < 10)
+            run_command(
+                ['python', '-m', 'uv', 'venv', venv, '-p', venv_spec.python_version], silent=VERBOSE_LEVEL.get() < 10
+            )
             run_command(
                 ['python', '-m', 'uv', 'pip', 'install', '-p', str(venv_py), 'bentoml'],
                 silent=VERBOSE_LEVEL.get() < 10,
