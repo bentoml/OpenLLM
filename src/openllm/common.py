@@ -276,10 +276,7 @@ class VenvSpec(SimpleNamespace):
         return '\n'.join(f'{k}={v}' for k, v in sorted(self.envs.items(), key=lambda x: x[0]) if not v)
 
     def __hash__(self):  # type: ignore
-        return md5(
-            self.normalized_requirements_txt,
-            str(hash(self.normalized_envs)),
-        )
+        return md5(self.normalized_requirements_txt, str(hash(self.normalized_envs)))
 
 
 class Accelerator(SimpleNamespace):

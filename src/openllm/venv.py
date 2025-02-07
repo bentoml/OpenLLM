@@ -20,12 +20,15 @@ def _resolve_bento_venv_spec(bento: BentoInfo, runtime_envs: Optional[EnvVars] =
     bentofile = bento.path / 'bento.yaml'
     data = yaml.safe_load(bentofile.read_text())
     bento_env_list = data.get('envs', [])
-    python_version = data.get("image", {})['python_version']
+    python_version = data.get('image', {})['python_version']
     bento_envs = {e['name']: e.get('value') for e in bento_env_list}
     envs = {k: runtime_envs.get(k, v) for k, v in bento_envs.items()} if runtime_envs else {}
 
     return VenvSpec(
-        python_version=python_version, requirements_txt=reqs, name_prefix=f'{bento.tag.replace(":", "_")}-1-', envs=EnvVars(envs)
+        python_version=python_version,
+        requirements_txt=reqs,
+        name_prefix=f'{bento.tag.replace(":", "_")}-1-',
+        envs=EnvVars(envs),
     )
 
 
