@@ -277,7 +277,6 @@ class VenvSpec(SimpleNamespace):
 
     def __hash__(self):  # type: ignore
         return md5(
-            # self.python_version,
             self.normalized_requirements_txt,
             str(hash(self.normalized_envs)),
         )

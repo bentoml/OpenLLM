@@ -12,22 +12,20 @@ from openllm.common import VENV_DIR, VERBOSE_LEVEL, BentoInfo, EnvVars, VenvSpec
 
 @functools.lru_cache
 def _resolve_bento_venv_spec(bento: BentoInfo, runtime_envs: Optional[EnvVars] = None) -> VenvSpec:
-    ver_file = bento.path / 'env' / 'python' / 'version.txt'
-    assert ver_file.exists(), f'cannot find version file in {bento.path}'
-
     lock_file = bento.path / 'env' / 'python' / 'requirements.lock.txt'
     if not lock_file.exists():
         lock_file = bento.path / 'env' / 'python' / 'requirements.txt'
 
-    ver = ver_file.read_text().strip()
     reqs = lock_file.read_text().strip()
     bentofile = bento.path / 'bento.yaml'
-    bento_env_list = yaml.safe_load(bentofile.read_text()).get('envs', [])
+    data = yaml.safe_load(bentofile.read_text())
+    bento_env_list = data.get('envs', [])
+    python_version = data.get("image", {})['python_version']
     bento_envs = {e['name']: e.get('value') for e in bento_env_list}
     envs = {k: runtime_envs.get(k, v) for k, v in bento_envs.items()} if runtime_envs else {}
 
     return VenvSpec(
-        python_version=ver, requirements_txt=reqs, name_prefix=f'{bento.tag.replace(":", "_")}-1-', envs=EnvVars(envs)
+        python_version=python_version, requirements_txt=reqs, name_prefix=f'{bento.tag.replace(":", "_")}-1-', envs=EnvVars(envs)
     )
 
 
