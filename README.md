@@ -6,7 +6,7 @@
 [![X](https://badgen.net/badge/icon/@bentomlai/000000?icon=twitter&label=Follow)](https://twitter.com/bentomlai)
 [![Community](https://badgen.net/badge/icon/Community/562f5d?icon=slack&label=Join)](https://l.bentoml.com/join-slack)
 
-OpenLLM allows developers to run **any open-source LLMs** (Llama 3.3, Qwen2.5, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
+OpenLLM allows developers to run **any open-source LLMs** (DeepSeek R1, Llama 3.3, Qwen2.5 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
 
 Understand the [design philosophy of OpenLLM](https://www.bentoml.com/blog/from-ollama-to-openllm-running-llms-in-the-cloud).
 
@@ -27,6 +27,8 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
 
 | Model            | Parameters | Quantization | Required GPU  | Start a Server                      |
 | ---------------- | ---------- | ------------ | ------------- | ----------------------------------- |
+| DeepSeek R1      | 671B       | -            | 80Gx16        | `openllm serve deepseek-r1:r1`      |
+| DeepSeek R1 Distill Qwen 7B   | 7B       | -            | 24G           | `openllm serve deepseek-r1-distill:qwen2.5-7b-math-867a`      |
 | Llama 3.3        | 70B        | -            | 80Gx2         | `openllm serve llama3.3:70b`        |
 | Llama 3.2        | 3B         | -            | 12G           | `openllm serve llama3.2:3b`         |
 | Llama 3.2 Vision | 11B        | -            | 80G           | `openllm serve llama3.2:11b-vision` |
