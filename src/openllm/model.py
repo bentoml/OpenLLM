@@ -1,29 +1,33 @@
-import re
-import typing
-from typing import Optional
+from __future__ import annotations
 
-import tabulate
-import typer
+import re, typing, json
+
+import tabulate, questionary, typer
 
 from openllm.accelerator_spec import DeploymentTarget, can_run
 from openllm.analytic import OpenLLMTyper
-from openllm.common import VERBOSE_LEVEL, BentoInfo, output
+from openllm.common import VERBOSE_LEVEL, BentoInfo, output as output_
 from openllm.repo import ensure_repo_updated, list_repo
 
 app = OpenLLMTyper(help='manage models')
 
 
 @app.command(help='get model')
-def get(tag: str, repo: Optional[str] = None, verbose: bool = False):
+def get(tag: str, repo: typing.Optional[str] = None, verbose: bool = False):
     if verbose:
         VERBOSE_LEVEL.set(20)
     bento_info = ensure_bento(tag, repo_name=repo)
     if bento_info:
-        output(bento_info)
+        output_(bento_info)
 
 
 @app.command(name='list', help='list available models')
-def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: bool = False):
+def list_model(
+    tag: typing.Optional[str] = None,
+    repo: typing.Optional[str] = None,
+    verbose: bool = False,
+    output: typing.Optional[str] = typer.Option(None, hidden=True),
+):
     if verbose:
         VERBOSE_LEVEL.set(20)
 
@@ -38,6 +42,23 @@ def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: b
         seen.add(value)
         return False
 
+    if output == 'readme':
+        # Parse parameters from bento.tag (e.g. "model:671b-it" -> "671b", 'model:something-long-78b' -> '78b')
+        version_pattern = re.compile(r'(\d+b|-[a-z]+b)')
+        questionary.print(
+            json.dumps({
+                f'{bento.name}': dict(
+                    tag=bento.tag,
+                    version=version_pattern.search(bento.tag).group(1),
+                    pretty_gpu=bento.pretty_gpu,
+                    command=f'openllm serve {bento.tag}',
+                )
+                for bento in bentos
+                if not is_seen(bento.name) and version_pattern.search(bento.tag)
+            })
+        )
+        return
+
     table = tabulate.tabulate(
         [
             [
@@ -51,19 +72,21 @@ def list_model(tag: Optional[str] = None, repo: Optional[str] = None, verbose: b
         ],
         headers=['model', 'version', 'repo', 'required GPU RAM', 'platforms'],
     )
-    output(table)
+    output_(table)
 
 
-def ensure_bento(model: str, target: Optional[DeploymentTarget] = None, repo_name: Optional[str] = None) -> BentoInfo:
+def ensure_bento(
+    model: str, target: typing.Optional[DeploymentTarget] = None, repo_name: typing.Optional[str] = None
+) -> BentoInfo:
     bentos = list_bento(model, repo_name=repo_name)
     if len(bentos) == 0:
-        output(f'No model found for {model}', style='red')
+        output_(f'No model found for {model}', style='red')
         raise typer.Exit(1)
 
     if len(bentos) == 1:
-        output(f'Found model {bentos[0]}', style='green')
+        output_(f'Found model {bentos[0]}', style='green')
         if target is not None and can_run(bentos[0], target) <= 0:
-            output(
+            output_(
                 f'The machine({target.name}) with {target.accelerators_repr} does not appear to have sufficient '
                 f'resources to run model {bentos[0]}\n',
                 style='yellow',
@@ -71,7 +94,7 @@ def ensure_bento(model: str, target: Optional[DeploymentTarget] = None, repo_nam
         return bentos[0]
 
     # multiple models, pick one according to target
-    output(f'Multiple models match {model}, did you mean one of these?', style='red')
+    output_(f'Multiple models match {model}, did you mean one of these?', style='red')
     list_model(model, repo=repo_name)
     raise typer.Exit(1)
 
@@ -99,9 +122,9 @@ def list_bento(
     if repo_name is not None:
         repo_map = {repo.name: repo for repo in repo_list}
         if repo_name not in repo_map:
-            output(f'Repo `{repo_name}` not found, did you mean one of these?')
+            output_(f'Repo `{repo_name}` not found, did you mean one of these?')
             for repo_name in repo_map:
-                output(f'  {repo_name}')
+                output_(f'  {repo_name}')
             raise typer.Exit(1)
 
     if not tag:

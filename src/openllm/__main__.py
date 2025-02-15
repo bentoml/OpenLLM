@@ -230,7 +230,7 @@ def run(
     local_run(bento, port=port, timeout=timeout)
 
 
-@app.command(help='deploy an production-ready OpenAI API compatible chat server to bentocloud ($100 free credit)')
+@app.command(help='deploy production-ready OpenAI API-compatible server to BentoCloud')
 def deploy(
     model: Annotated[str, typer.Argument()] = '',
     instance_type: Optional[str] = None,
