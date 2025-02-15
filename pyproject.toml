@@ -30,7 +30,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "bentoml",
+  "bentoml==1.4.0a2",
   "typer",
   "questionary",
   "pyaml",
@@ -42,6 +42,7 @@ dependencies = [
   "tabulate",
   "uv",
   "openai==1.61.1",
+  "huggingface-hub",
 ]
 keywords = [
   "MLOps",
