@@ -41,7 +41,7 @@ dependencies = [
   "dulwich",
   "tabulate",
   "uv",
-  "openai==1.61.1",
+  "openai==1.63.0",
   "huggingface-hub",
 ]
 keywords = [
