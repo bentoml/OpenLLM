@@ -5,18 +5,6 @@
 #     "uv",
 # ]
 # ///
+import subprocess, sys, pathlib, json, jinja2
 
-import subprocess, sys, pathlib, json
-
-from jinja2 import Environment, FileSystemLoader
-
-wd = pathlib.Path('.').parent
-model_dict = subprocess.run(
-    [sys.executable, '-m', 'uv', 'run', '--with-editable', '.', 'openllm', 'model', 'list', '--output', 'readme'],
-    capture_output=True,
-    text=True,
-    check=True,
-)
-E = Environment(loader=FileSystemLoader('.'))
-with (wd / 'README.md').open('w') as f:
-    f.write(E.get_template('README.md.tpl').render(model_dict=json.loads(model_dict.stdout.strip())))
+with (pathlib.Path('.').parent / 'README.md').open('w') as f: f.write(jinja2.Environment(loader=jinja2.FileSystemLoader('.')).get_template('README.md.tpl').render(model_dict=json.loads(subprocess.run([sys.executable, '-m', 'uv', 'run', '--with-editable', '.', 'openllm', 'model', 'list', '--output', 'readme'], text=True, check=True, capture_output=True).stdout.strip())))

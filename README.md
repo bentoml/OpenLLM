@@ -35,6 +35,12 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <th>Start a Server</th>
   </tr>
   <tr>
+    <td>deepseek</td>
+    <td>671B</td>
+    <td>80Gx16</td>
+    <td><code>openllm serve deepseek:r1-671b-c498</code></td>
+  </tr>
+  <tr>
     <td>deepseek-r1</td>
     <td>671B</td>
     <td>80Gx16</td>
@@ -57,6 +63,12 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <td>2B</td>
     <td>12G</td>
     <td><code>openllm serve gemma2:2b-instruct-747d</code></td>
+  </tr>
+  <tr>
+    <td>hermes-3</td>
+    <td>8B</td>
+    <td>80G</td>
+    <td><code>openllm serve hermes-3:deep-llama3-8b-6648</code></td>
   </tr>
   <tr>
     <td>llama3.1</td>
