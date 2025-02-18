@@ -36,9 +36,9 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   </tr>
   <tr>
     <td>deepseek</td>
-    <td>671B</td>
-    <td>80Gx16</td>
-    <td><code>openllm serve deepseek:r1-671b-eb32</code></td>
+    <td>8B</td>
+    <td>24GB</td>
+    <td><code>openllm serve deepseek:r1-distill-llama3.1-8b-626a</code></td>
   </tr>
   <tr>
     <td>gemma2</td>
@@ -107,8 +107,6 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <td><code>openllm serve qwen2.5-coder:3b-instruct-63b0</code></td>
   </tr>
 </table>
-
-...
 
 For the full model list, see the [OpenLLM models repository](https://github.com/bentoml/openllm-models).
 
@@ -272,3 +270,4 @@ This project uses the following open-source projects:
 - [astral-sh/uv](https://github.com/astral-sh/uv) for blazing fast model requirements installing
 
 We are grateful to the developers and contributors of these projects for their hard work and dedication.
+

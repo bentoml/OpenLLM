@@ -44,7 +44,6 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   {%- endfor %}
 </table>
 
-...
 
 For the full model list, see the [OpenLLM models repository](https://github.com/bentoml/openllm-models).
 
