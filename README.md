@@ -237,7 +237,7 @@ OpenLLM supports LLM cloud deployment via BentoML, the unified model serving fra
 [Sign up for BentoCloud](https://www.bentoml.com/) for free and [log in](https://docs.bentoml.com/en/latest/bentocloud/how-tos/manage-access-token.html). Then, run `openllm deploy` to deploy a model to BentoCloud:
 
 ```bash
-openllm deploy openllm serve llama3.2:1b-instruct-6fa1
+openllm deploy llama3.2:1b-instruct-6fa1
 ```
 
 > [!NOTE]
