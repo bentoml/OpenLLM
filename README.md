@@ -270,4 +270,3 @@ This project uses the following open-source projects:
 - [astral-sh/uv](https://github.com/astral-sh/uv) for blazing fast model requirements installing
 
 We are grateful to the developers and contributors of these projects for their hard work and dedication.
-
