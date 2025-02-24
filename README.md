@@ -125,7 +125,7 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 >    ```
 
 ```bash
-openllm serve openllm serve llama3.2:1b-instruct-6fa1
+openllm serve llama3.2:1b-instruct-6fa1
 ```
 
 The server will be accessible at [http://localhost:3000](http://localhost:3000/), providing OpenAI-compatible APIs for interaction. You can call the endpoints with different frameworks and tools that support OpenAI-compatible APIs. Typically, you may need to specify the following:
@@ -209,7 +209,7 @@ openllm repo update
 To review a model’s information, run:
 
 ```bash
-openllm model get openllm serve llama3.2:1b-instruct-6fa1
+openllm model get llama3.2:1b-instruct-6fa1
 ```
 
 ### Add a model to the default model repository
