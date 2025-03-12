@@ -36,77 +36,90 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   </tr>
   <tr>
     <td>deepseek</td>
-    <td>8B</td>
-    <td>24GB</td>
-    <td><code>openllm serve deepseek:r1-distill-llama3.1-8b-626a</code></td>
+    <td>r1</td>
+    <td>80Gx16</td>
+    <td><code>openllm serve deepseek:r1</code></td>
   </tr>
   <tr>
     <td>gemma2</td>
-    <td>2B</td>
+    <td>2b</td>
     <td>12G</td>
-    <td><code>openllm serve gemma2:2b-instruct-868c</code></td>
+    <td><code>openllm serve gemma2:2b</code></td>
   </tr>
   <tr>
     <td>hermes-3</td>
-    <td>8B</td>
+    <td>deep-llama3-8b-3622</td>
     <td>80G</td>
-    <td><code>openllm serve hermes-3:deep-llama3-8b-1242</code></td>
+    <td><code>openllm serve hermes-3:deep-llama3-8b-3622</code></td>
+  </tr>
+  <tr>
+    <td>jamba1.5</td>
+    <td>mini-5e51</td>
+    <td>80Gx2</td>
+    <td><code>openllm serve jamba1.5:mini-5e51</code></td>
   </tr>
   <tr>
     <td>llama3.1</td>
-    <td>8B</td>
+    <td>8b</td>
     <td>24G</td>
-    <td><code>openllm serve llama3.1:8b-instruct-a995</code></td>
+    <td><code>openllm serve llama3.1:8b</code></td>
   </tr>
   <tr>
     <td>llama3.2</td>
-    <td>1B</td>
+    <td>1b</td>
     <td>24G</td>
-    <td><code>openllm serve llama3.2:1b-instruct-6fa1</code></td>
+    <td><code>openllm serve llama3.2:1b</code></td>
   </tr>
   <tr>
     <td>llama3.3</td>
-    <td>70B</td>
+    <td>70b</td>
     <td>80Gx2</td>
-    <td><code>openllm serve llama3.3:70b-instruct-f791</code></td>
+    <td><code>openllm serve llama3.3:70b</code></td>
   </tr>
   <tr>
     <td>mistral</td>
-    <td>8B</td>
+    <td>8b</td>
     <td>24G</td>
-    <td><code>openllm serve mistral:8b-instruct-f4ed</code></td>
+    <td><code>openllm serve mistral:8b</code></td>
   </tr>
   <tr>
     <td>mistral-large</td>
-    <td>123B</td>
+    <td>123b</td>
     <td>80Gx4</td>
-    <td><code>openllm serve mistral-large:123b-instruct-2407-e1ef</code></td>
+    <td><code>openllm serve mistral-large:123b</code></td>
   </tr>
   <tr>
     <td>phi4</td>
-    <td>14B</td>
+    <td>14b</td>
     <td>80G</td>
-    <td><code>openllm serve phi4:14b-a515</code></td>
+    <td><code>openllm serve phi4:14b</code></td>
   </tr>
   <tr>
     <td>pixtral</td>
-    <td>12B</td>
+    <td>12b-2409</td>
     <td>80G</td>
-    <td><code>openllm serve pixtral:12b-2409-a2e0</code></td>
+    <td><code>openllm serve pixtral:12b-2409</code></td>
   </tr>
   <tr>
     <td>qwen2.5</td>
-    <td>7B</td>
+    <td>7b</td>
     <td>24G</td>
-    <td><code>openllm serve qwen2.5:7b-instruct-dbe1</code></td>
+    <td><code>openllm serve qwen2.5:7b</code></td>
   </tr>
   <tr>
     <td>qwen2.5-coder</td>
-    <td>3B</td>
+    <td>3b</td>
     <td>24G</td>
-    <td><code>openllm serve qwen2.5-coder:3b-instruct-63b0</code></td>
+    <td><code>openllm serve qwen2.5-coder:3b</code></td>
+  </tr>
+  <tr>
+    <td>qwq</td>
+    <td>32b</td>
+    <td>80G</td>
+    <td><code>openllm serve qwq:32b</code></td>
   </tr>
 </table>
+
 
 For the full model list, see the [OpenLLM models repository](https://github.com/bentoml/openllm-models).
 
@@ -125,7 +138,7 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 >    ```
 
 ```bash
-openllm serve llama3.2:1b-instruct-6fa1
+openllm serve llama3.2:1b
 ```
 
 The server will be accessible at [http://localhost:3000](http://localhost:3000/), providing OpenAI-compatible APIs for interaction. You can call the endpoints with different frameworks and tools that support OpenAI-compatible APIs. Typically, you may need to specify the following:
@@ -209,7 +222,7 @@ openllm repo update
 To review a model’s information, run:
 
 ```bash
-openllm model get llama3.2:1b-instruct-6fa1
+openllm model get llama3.2:1b
 ```
 
 ### Add a model to the default model repository
@@ -237,7 +250,7 @@ OpenLLM supports LLM cloud deployment via BentoML, the unified model serving fra
 [Sign up for BentoCloud](https://www.bentoml.com/) for free and [log in](https://docs.bentoml.com/en/latest/bentocloud/how-tos/manage-access-token.html). Then, run `openllm deploy` to deploy a model to BentoCloud:
 
 ```bash
-openllm deploy llama3.2:1b-instruct-6fa1
+openllm deploy llama3.2:1b
 ```
 
 > [!NOTE]

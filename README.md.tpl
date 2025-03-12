@@ -37,7 +37,7 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   {%- for key, value in model_dict|items %}
   <tr>
     <td>{{key}}</td>
-    <td>{{value['version'] | upper}}</td>
+    <td>{{value['version']}}</td>
     <td>{{value['pretty_gpu']}}</td>
     <td><code>{{value['command']}}</code></td>
   </tr>
@@ -62,7 +62,7 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 >    ```
 
 ```bash
-openllm serve {{model_dict.get("llama3.2")["command"]}}
+{{model_dict.get("llama3.2")["command"]}}
 ```
 
 The server will be accessible at [http://localhost:3000](http://localhost:3000/), providing OpenAI-compatible APIs for interaction. You can call the endpoints with different frameworks and tools that support OpenAI-compatible APIs. Typically, you may need to specify the following:
@@ -146,7 +146,7 @@ openllm repo update
 To review a model’s information, run:
 
 ```bash
-openllm model get {{model_dict.get("llama3.2")["command"]}}
+openllm model get {{model_dict.get("llama3.2")["tag"]}}
 ```
 
 ### Add a model to the default model repository
@@ -174,7 +174,7 @@ OpenLLM supports LLM cloud deployment via BentoML, the unified model serving fra
 [Sign up for BentoCloud](https://www.bentoml.com/) for free and [log in](https://docs.bentoml.com/en/latest/bentocloud/how-tos/manage-access-token.html). Then, run `openllm deploy` to deploy a model to BentoCloud:
 
 ```bash
-openllm deploy {{model_dict.get("llama3.2")["command"]}}
+openllm deploy {{model_dict.get("llama3.2")["tag"]}}
 ```
 
 > [!NOTE]

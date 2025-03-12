@@ -36,7 +36,7 @@ def list_model(
 
     seen = set()
 
-    def is_seen(value):
+    def is_seen(value: str):
         if value in seen:
             return True
         seen.add(value)
@@ -44,17 +44,16 @@ def list_model(
 
     if output == 'readme':
         # Parse parameters from bento.tag (e.g. "model:671b-it" -> "671b", 'model:something-long-78b' -> '78b')
-        version_pattern = re.compile(r'(\d+b|-[a-z]+b)')
         questionary.print(
             json.dumps({
                 f'{bento.name}': dict(
                     tag=bento.tag,
-                    version=version_pattern.search(bento.tag).group(1),
+                    version=bento.tag.split(':')[-1],
                     pretty_gpu=bento.pretty_gpu,
                     command=f'openllm serve {bento.tag}',
                 )
                 for bento in bentos
-                if not is_seen(bento.name) and version_pattern.search(bento.tag)
+                if not is_seen(bento.name)
             })
         )
         return
