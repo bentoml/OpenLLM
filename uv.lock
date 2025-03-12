@@ -214,7 +214,7 @@ wheels = [
 
 [[package]]
 name = "bentoml"
-version = "1.4.0a2"
+version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2wsgi" },
@@ -225,11 +225,9 @@ dependencies = [
     { name = "click" },
     { name = "click-option-group" },
     { name = "cloudpickle" },
-    { name = "deepmerge" },
     { name = "fs" },
     { name = "httpx" },
     { name = "httpx-ws" },
-    { name = "inflection" },
     { name = "jinja2" },
     { name = "kantoku" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -260,13 +258,12 @@ dependencies = [
     { name = "starlette" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "tomli-w" },
-    { name = "uv" },
     { name = "uvicorn" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/06/68070bfa30508952ebb27b8ee3f44c61134a9543a7843e3185ae22062de5/bentoml-1.4.0a2.tar.gz", hash = "sha256:8eecac02bd4e2c251a078a41448640cdeab920b5adb496ba81d59ebcc7341cec", size = 967181 }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/f8/1391971b6e5e77729f7b9e34774d50947de2f20c7e3b81192a420dd870ef/bentoml-1.4.3.tar.gz", hash = "sha256:d7ddd66e8129e22ad65c7352b475af4864193f6601723c5bdbc2b0ffe0125772", size = 966801 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/a1/8bbec7cde64fac2fa5543240a390746c94a6b607776d50fbefe39d96836e/bentoml-1.4.0a2-py3-none-any.whl", hash = "sha256:7be75da7782231c4ed23642fe0ba33f05ff0dcfde080385b29001872630a9b6c", size = 1147416 },
+    { url = "https://files.pythonhosted.org/packages/56/cb/5fb7a2bc4b845cd1564eae7999c1fe184ced1903e2d4b387e366566da4e5/bentoml-1.4.3-py3-none-any.whl", hash = "sha256:8148627d10527732272f93ef9744b94705cbb2f7a42e00ea8bb8c94bfe9eba17", size = 1146944 },
 ]
 
 [[package]]
@@ -475,18 +472,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335 },
-]
-
-[[package]]
-name = "deepmerge"
-version = "2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.10'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/3a/b0ba594708f1ad0bc735884b3ad854d3ca3bdc1d741e56e40bbda6263499/deepmerge-2.0.tar.gz", hash = "sha256:5c3d86081fbebd04dd5de03626a0607b809a98fb6ccba5770b62466fe940ff20", size = 19890 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/82/e5d2c1c67d19841e9edc74954c827444ae826978499bde3dfc1d007c8c11/deepmerge-2.0-py3-none-any.whl", hash = "sha256:6de9ce507115cff0bed95ff0ce9ecc31088ef50cbdf09bc90a09349a318b3d00", size = 13475 },
 ]
 
 [[package]]
@@ -776,15 +761,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cd/12/33e59336dca5be0c398a7482335911a33aa0e20776128f038019f1a95f1b/importlib_metadata-8.5.0.tar.gz", hash = "sha256:71522656f0abace1d072b9e5481a48f07c138e00f079c38c8f883823f9c26bd7", size = 55304 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/d9/a1e041c5e7caa9a05c925f4bdbdfb7f006d1f74996af53467bc394c97be7/importlib_metadata-8.5.0-py3-none-any.whl", hash = "sha256:45e54197d28b7a7f1559e60b95e7c567032b602131fbd588f1497f47880aa68b", size = 26514 },
-]
-
-[[package]]
-name = "inflection"
-version = "0.5.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e1/7e/691d061b7329bc8d54edbf0ec22fbfb2afe61facb681f9aaa9bff7a27d04/inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417", size = 15091 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/91/aa6bde563e0085a02a435aa99b49ef75b0a4b062635e606dab23ce18d720/inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2", size = 9454 },
 ]
 
 [[package]]
@@ -1191,7 +1167,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.63.0"
+version = "1.65.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1203,9 +1179,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/32/2049e973a646801df425aecdf88c6504ca878bdb3951fe12076fc30f2977/openai-1.63.0.tar.gz", hash = "sha256:597d7a1b35b113e5a09fcb953bdb1eef44f404a39985f3d7573b3ab09221fd66", size = 356710 }
+sdist = { url = "https://files.pythonhosted.org/packages/56/cf/e02fb2c5a834803e6f29f43fd3dfe010303282d1ea450a5b95e28608860a/openai-1.65.5.tar.gz", hash = "sha256:17d39096bbcaf6c86580244b493a59e16613460147f0ba5ab6e608cdb6628149", size = 359548 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/a0/e1fe4e87218639fc0a0927da5266c2978eaa0e2eb5437479ee64a11535bb/openai-1.63.0-py3-none-any.whl", hash = "sha256:a664dfc78f0a05ca46c3e21f344f840cf6bf7174f13cfa9de214ed28bfca1dda", size = 472282 },
+    { url = "https://files.pythonhosted.org/packages/fc/8f/a178d73277bf2d838617fa20ba4ae6952e26074664aacb53ae4532a69588/openai-1.65.5-py3-none-any.whl", hash = "sha256:5948a504e7b4003d921cfab81273813793a31c25b1d7b605797c01757e0141f1", size = 474468 },
 ]
 
 [[package]]
@@ -1229,11 +1205,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bentoml", specifier = "==1.4.0a2" },
+    { name = "bentoml", specifier = "==1.4.3" },
     { name = "dulwich" },
     { name = "huggingface-hub" },
     { name = "nvidia-ml-py" },
-    { name = "openai", specifier = "==1.63.0" },
+    { name = "openai", specifier = "==1.65.5" },
     { name = "pathlib" },
     { name = "pip-requirements-parser" },
     { name = "psutil" },
