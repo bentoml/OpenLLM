@@ -125,7 +125,7 @@ def _complete_alias(repo_name: str):
     from openllm.model import list_bento
 
     for bento in list_bento(repo_name=repo_name):
-        alias = bento.labels.get('alias', '').strip()
+        alias = bento.labels.get('aliases', '').strip()
         if alias:
             for a in alias.split(','):
                 with open(bento.path.parent / a, 'w') as f:
