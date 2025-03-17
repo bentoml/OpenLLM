@@ -48,15 +48,15 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   </tr>
   <tr>
     <td>hermes-3</td>
-    <td>deep-llama3-8b-3622</td>
+    <td>deep-llama3-8b-91e3</td>
     <td>80G</td>
-    <td><code>openllm serve hermes-3:deep-llama3-8b-3622</code></td>
+    <td><code>openllm serve hermes-3:deep-llama3-8b-91e3</code></td>
   </tr>
   <tr>
     <td>jamba1.5</td>
-    <td>mini-5e51</td>
-    <td>80Gx2</td>
-    <td><code>openllm serve jamba1.5:mini-5e51</code></td>
+    <td>large-8b32</td>
+    <td>80Gx8</td>
+    <td><code>openllm serve jamba1.5:large-8b32</code></td>
   </tr>
   <tr>
     <td>llama3.1</td>
