@@ -30,7 +30,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "bentoml==1.4.3",
+  "bentoml==1.4.5",
   "typer",
   "questionary",
   "pyaml",
@@ -41,7 +41,7 @@ dependencies = [
   "dulwich",
   "tabulate",
   "uv",
-  "openai==1.65.5",
+  "openai==1.66.3",
   "huggingface-hub",
 ]
 keywords = [
