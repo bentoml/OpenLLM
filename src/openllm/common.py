@@ -100,13 +100,19 @@ def save_config(config: Config) -> None:
         json.dump(config.tolist(), f, indent=2)
 
 
+class BentoMetadata(typing.TypedDict):
+    labels: dict[str, str]
+    envs: list[dict[str, str]]
+    services: list[dict[str, typing.Any]]
+    schema: dict[str, typing.Any]
+
 class EnvVars(UserDict[str, str]):
     """
     A dictionary-like object that sorted by key and only keeps the environment variables that have a value.
     """
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, source_type, handler):
+    def __get_pydantic_core_schema__(cls: type[EnvVars], source_type: type[typing.Any], handler: typing.Callable[..., typing.Any]) -> core_schema.DictSchema:
         return core_schema.dict_schema(core_schema.str_schema(), core_schema.str_schema())
 
     def __init__(self, data: typing.Mapping[str, str] | None = None):
@@ -140,6 +146,7 @@ class RepoInfo(pydantic.BaseModel):
                 owner=self.owner,
                 repo=self.repo,
             )
+        return None
 
 
 class BentoInfo(pydantic.BaseModel):
@@ -184,7 +191,7 @@ class BentoInfo(pydantic.BaseModel):
         return self.bento_yaml['envs']
 
     @functools.cached_property
-    def bento_yaml(self) -> dict[str, typing.Any]:
+    def bento_yaml(self) -> BentoMetadata:
         import yaml
 
         bento_file = self.path / 'bento.yaml'
@@ -195,7 +202,7 @@ class BentoInfo(pydantic.BaseModel):
         return self.bento_yaml['labels'].get('platforms', 'linux').split(',')
 
     @functools.cached_property
-    def pretty_yaml(self) -> dict[str, typing.Any]:
+    def pretty_yaml(self) -> BentoMetadata | dict[str, typing.Any]:
         def _pretty_routes(routes):
             return {
                 route['route']: {
@@ -206,7 +213,7 @@ class BentoInfo(pydantic.BaseModel):
             }
 
         if len(self.bento_yaml['services']) == 1:
-            pretty_yaml = {
+            pretty_yaml: dict[str, typing.Any] = {
                 'apis': _pretty_routes(self.bento_yaml['schema']['routes']),
                 'resources': self.bento_yaml['services'][0]['config']['resources'],
                 'envs': self.bento_yaml['envs'],
@@ -239,6 +246,7 @@ class BentoInfo(pydantic.BaseModel):
             return dict(tag=self.tag, repo=self.repo.tolist(), path=str(self.path), model_card=self.pretty_yaml)
         if verbose <= 20:
             return dict(tag=self.tag, repo=self.repo.tolist(), path=str(self.path), bento_yaml=self.bento_yaml)
+        return None
 
 
 class VenvSpec(pydantic.BaseModel):
