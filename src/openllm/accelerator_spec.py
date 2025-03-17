@@ -1,38 +1,24 @@
 from __future__ import annotations
 
-import functools
-import math
-from types import SimpleNamespace
+import functools, math
+from typing_extensions import override
 
-import psutil
+import psutil, pydantic
 
-from openllm.common import BentoInfo, DeploymentTarget, output
-
-
-class Accelerator(SimpleNamespace):
-    model: str
-    memory_size: float
-
-    def __gt__(self, other):
-        return self.memory_size > other.memory_size
-
-    def __eq__(self, other):
-        return self.memory_size == other.memory_size
-
-    def __repr__(self):
-        return f'{self.model}({self.memory_size}GB)'
+from openllm.common import BentoInfo, DeploymentTarget, output, Accelerator
 
 
-class Resource(SimpleNamespace):
+class Resource(pydantic.BaseModel):
+    memory: float = 0.0
     cpu: int = 0
-    memory: float
     gpu: int = 0
     gpu_type: str = ''
 
-    def __hash__(self):  # type: ignore
+    @override
+    def __hash__(self) -> int:
         return hash((self.cpu, self.memory, self.gpu, self.gpu_type))
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any(value is not None for value in self.__dict__.values())
 
 
@@ -64,7 +50,7 @@ ACCELERATOR_SPECS: dict[str, Accelerator] = {key: Accelerator(**value) for key, 
 
 
 @functools.lru_cache
-def get_local_machine_spec():
+def get_local_machine_spec() -> DeploymentTarget:
     if psutil.MACOS:
         return DeploymentTarget(accelerators=[], source='local', platform='macos')
 

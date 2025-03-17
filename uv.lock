@@ -1200,6 +1200,7 @@ dependencies = [
     { name = "questionary" },
     { name = "tabulate" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "uv" },
 ]
 
@@ -1217,6 +1218,7 @@ requires-dist = [
     { name = "questionary" },
     { name = "tabulate" },
     { name = "typer" },
+    { name = "typing-extensions", specifier = ">=4.12.2" },
     { name = "uv" },
 ]
 

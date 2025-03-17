@@ -1,20 +1,18 @@
 from __future__ import annotations
 
 import importlib.metadata, os, platform, random, sys, typing
-from collections import defaultdict
 
 import questionary, typer
+
+from collections import defaultdict
 
 from openllm.accelerator_spec import can_run, get_local_machine_spec
 from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
-from openllm.cloud import deploy as cloud_deploy
-from openllm.cloud import ensure_cloud_context, get_cloud_machine_spec
+from openllm.cloud import deploy as cloud_deploy, ensure_cloud_context, get_cloud_machine_spec
 from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
-from openllm.local import run as local_run
-from openllm.local import serve as local_serve
-from openllm.model import app as model_app
-from openllm.model import ensure_bento, list_bento
+from openllm.local import run as local_run, serve as local_serve
+from openllm.model import app as model_app, ensure_bento, list_bento
 from openllm.repo import app as repo_app
 
 if typing.TYPE_CHECKING:

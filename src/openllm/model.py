@@ -4,7 +4,8 @@ import re, typing, json
 
 import tabulate, questionary, typer
 
-from openllm.accelerator_spec import DeploymentTarget, can_run
+from openllm.accelerator_spec import can_run
+from openllm.common import DeploymentTarget
 from openllm.analytic import OpenLLMTyper
 from openllm.common import VERBOSE_LEVEL, BentoInfo, output as output_
 from openllm.repo import ensure_repo_updated, list_repo

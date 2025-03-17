@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import json
-import os
-import pathlib
-import shutil
-import subprocess
-import typing
+import json, os, pathlib, shutil, subprocess, typing
 
 import typer
 
-from openllm.accelerator_spec import ACCELERATOR_SPECS
 from openllm.analytic import OpenLLMTyper
+from openllm.accelerator_spec import ACCELERATOR_SPECS
 from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, EnvVars, output, run_command
 
 app = OpenLLMTyper()

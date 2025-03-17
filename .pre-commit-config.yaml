@@ -23,7 +23,7 @@ repos:
     rev: "v1.15.0"
     hooks:
       - id: mypy
-        args: [--strict]
+        args: [--strict, --ignore-missing-imports]
         additional_dependencies:
           [pydantic, types-pyyaml, types-tabulate, types-psutil]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
