@@ -61,13 +61,12 @@ def output(content: typing.Any, level: int = 0, style: str | None = None, end: s
         return
 
     if not isinstance(content, str):
-        content = str(content)
-
-    out = io.StringIO()
-    pyaml.pprint(content, dst=out, sort_dicts=False, sort_keys=False)
-    questionary.print(out.getvalue(), style=style, end='' if end is None else end)
-    out.close()
-    questionary.print(content, style=style, end='\n' if end is None else end)
+        out = io.StringIO()
+        pyaml.pprint(content, dst=out, sort_dicts=False, sort_keys=False)
+        questionary.print(out.getvalue(), style=style, end='' if end is None else end)
+        out.close()
+    else:
+        questionary.print(content, style=style, end='\n' if end is None else end)
 
 
 class Config(pydantic.BaseModel):
@@ -363,9 +362,8 @@ def run_command(
         else:
             return subprocess.run(cmd, cwd=cwd, env=env, check=True)
     except Exception as e:
-        if VERBOSE_LEVEL.get() >= 10:
+        if VERBOSE_LEVEL.get() >= 20:
             output(str(e), style='red')
-        output('Command failed', style='red')
         raise typer.Exit(1)
 
 
