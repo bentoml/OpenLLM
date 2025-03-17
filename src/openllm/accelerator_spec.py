@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import functools, math
-from typing_extensions import override
-
 import psutil, pydantic
 
+from typing_extensions import override
 from openllm.common import BentoInfo, DeploymentTarget, output, Accelerator
 
 
@@ -22,31 +21,29 @@ class Resource(pydantic.BaseModel):
         return any(value is not None for value in self.__dict__.values())
 
 
-ACCELERATOR_SPEC_DICT: dict[str, dict] = {
-    'nvidia-gtx-1650': {'model': 'GTX 1650', 'memory_size': 4.0},
-    'nvidia-gtx-1060': {'model': 'GTX 1060', 'memory_size': 6.0},
-    'nvidia-gtx-1080-ti': {'model': 'GTX 1080 Ti', 'memory_size': 11.0},
-    'nvidia-rtx-3060': {'model': 'RTX 3060', 'memory_size': 12.0},
-    'nvidia-rtx-3060-ti': {'model': 'RTX 3060 Ti', 'memory_size': 8.0},
-    'nvidia-rtx-3070-ti': {'model': 'RTX 3070 Ti', 'memory_size': 8.0},
-    'nvidia-rtx-3080': {'model': 'RTX 3080', 'memory_size': 10.0},
-    'nvidia-rtx-3080-ti': {'model': 'RTX 3080 Ti', 'memory_size': 12.0},
-    'nvidia-rtx-3090': {'model': 'RTX 3090', 'memory_size': 24.0},
-    'nvidia-rtx-4070-ti': {'model': 'RTX 4070 Ti', 'memory_size': 12.0},
-    'nvidia-tesla-p4': {'model': 'P4', 'memory_size': 8.0},
-    'nvidia-tesla-p100': {'model': 'P100', 'memory_size': 16.0},
-    'nvidia-tesla-k80': {'model': 'K80', 'memory_size': 12.0},
-    'nvidia-tesla-t4': {'model': 'T4', 'memory_size': 16.0},
-    'nvidia-tesla-v100': {'model': 'V100', 'memory_size': 16.0},
-    'nvidia-l4': {'model': 'L4', 'memory_size': 24.0},
-    'nvidia-tesla-l4': {'model': 'L4', 'memory_size': 24.0},
-    'nvidia-tesla-a10g': {'model': 'A10G', 'memory_size': 24.0},
-    'nvidia-a100-80g': {'model': 'A100', 'memory_size': 80.0},
-    'nvidia-a100-80gb': {'model': 'A100', 'memory_size': 80.0},
-    'nvidia-tesla-a100': {'model': 'A100', 'memory_size': 40.0},
+ACCELERATOR_SPECS: dict[str, Accelerator] = {
+    'nvidia-gtx-1650': Accelerator(model='GTX 1650', memory_size=4.0),
+    'nvidia-gtx-1060': Accelerator(model='GTX 1060', memory_size=6.0),
+    'nvidia-gtx-1080-ti': Accelerator(model='GTX 1080 Ti', memory_size=11.0),
+    'nvidia-rtx-3060': Accelerator(model='RTX 3060', memory_size=12.0),
+    'nvidia-rtx-3060-ti': Accelerator(model='RTX 3060 Ti', memory_size=8.0),
+    'nvidia-rtx-3070-ti': Accelerator(model='RTX 3070 Ti', memory_size=8.0),
+    'nvidia-rtx-3080': Accelerator(model='RTX 3080', memory_size=10.0),
+    'nvidia-rtx-3080-ti': Accelerator(model='RTX 3080 Ti', memory_size=12.0),
+    'nvidia-rtx-3090': Accelerator(model='RTX 3090', memory_size=24.0),
+    'nvidia-rtx-4070-ti': Accelerator(model='RTX 4070 Ti', memory_size=12.0),
+    'nvidia-tesla-p4': Accelerator(model='P4', memory_size=8.0),
+    'nvidia-tesla-p100': Accelerator(model='P100', memory_size=16.0),
+    'nvidia-tesla-k80': Accelerator(model='K80', memory_size=12.0),
+    'nvidia-tesla-t4': Accelerator(model='T4', memory_size=16.0),
+    'nvidia-tesla-v100': Accelerator(model='V100', memory_size=16.0),
+    'nvidia-l4': Accelerator(model='L4', memory_size=24.0),
+    'nvidia-tesla-l4': Accelerator(model='L4', memory_size=24.0),
+    'nvidia-tesla-a10g': Accelerator(model='A10G', memory_size=24.0),
+    'nvidia-a100-80g': Accelerator(model='A100', memory_size=80.0),
+    'nvidia-a100-80gb': Accelerator(model='A100', memory_size=80.0),
+    'nvidia-tesla-a100': Accelerator(model='A100', memory_size=40.0),
 }
-
-ACCELERATOR_SPECS: dict[str, Accelerator] = {key: Accelerator(**value) for key, value in ACCELERATOR_SPEC_DICT.items()}
 
 
 @functools.lru_cache
@@ -100,7 +97,7 @@ def get_local_machine_spec() -> DeploymentTarget:
 
 
 @functools.lru_cache(typed=True)
-def can_run(bento: Resource | BentoInfo, target: DeploymentTarget | None = None) -> float:
+def can_run(bento: BentoInfo, target: DeploymentTarget | None = None) -> float:
     """
     Calculate if the bento can be deployed on the target.
     """

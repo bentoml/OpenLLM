@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import asyncio, time, typing
-
 import httpx, openai
-from openai.types.chat import ChatCompletionAssistantMessageParam, ChatCompletionUserMessageParam
 
+from openai.types.chat import ChatCompletionAssistantMessageParam, ChatCompletionUserMessageParam
 from openllm.common import BentoInfo, EnvVars, async_run_command, output, run_command, stream_command_output
 from openllm.venv import ensure_venv
 

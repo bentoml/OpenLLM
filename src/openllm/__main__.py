@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import importlib.metadata, os, platform, random, sys, typing
-
 import questionary, typer
 
 from collections import defaultdict
-
 from openllm.accelerator_spec import can_run, get_local_machine_spec
 from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
@@ -247,8 +245,7 @@ def deploy(
         VERBOSE_LEVEL.set(20)
     bento = ensure_bento(model, repo_name=repo)
     if instance_type is not None:
-        cloud_deploy(bento, DeploymentTarget(name=instance_type))
-        return
+        return cloud_deploy(bento, DeploymentTarget(accelerators=[], name=instance_type))
     targets = sorted(
         filter(lambda x: can_run(bento, x) > 0, get_cloud_machine_spec()),
         key=lambda x: can_run(bento, x),

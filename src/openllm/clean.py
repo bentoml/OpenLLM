@@ -1,7 +1,6 @@
-import os
-import pathlib
-import shutil
+from __future__ import annotations
 
+import os, pathlib, shutil
 import questionary
 
 from openllm.analytic import OpenLLMTyper
@@ -30,7 +29,7 @@ def _du(path: pathlib.Path) -> int:
 
 
 @app.command(help='Clean up all the cached models from huggingface')
-def model_cache(verbose: bool = False):
+def model_cache(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     used_space = _du(HUGGINGFACE_CACHE)
@@ -44,7 +43,7 @@ def model_cache(verbose: bool = False):
 
 
 @app.command(help='Clean up all the virtual environments created by OpenLLM')
-def venvs(verbose: bool = False):
+def venvs(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
 
@@ -59,7 +58,7 @@ def venvs(verbose: bool = False):
 
 
 @app.command(help='Clean up all the repositories cloned by OpenLLM')
-def repos(verbose: bool = False):
+def repos(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     shutil.rmtree(REPO_DIR, ignore_errors=True)
@@ -67,7 +66,7 @@ def repos(verbose: bool = False):
 
 
 @app.command(help='Reset configurations to default')
-def configs(verbose: bool = False):
+def configs(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     shutil.rmtree(CONFIG_FILE, ignore_errors=True)
@@ -75,7 +74,7 @@ def configs(verbose: bool = False):
 
 
 @app.command(name='all', help='Clean up all above and bring OpenLLM to a fresh start')
-def all_cache(verbose: bool = False):
+def all_cache(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     repos()

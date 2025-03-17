@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json, os, pathlib, shutil, subprocess, typing
-
 import typer
 
 from openllm.analytic import OpenLLMTyper

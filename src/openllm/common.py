@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio, functools, hashlib, io, json, os, pathlib, signal, subprocess, sys, sysconfig, typing
-
-import typer, typer.core, pydantic
+import asyncio, asyncio.subprocess, functools, hashlib, io, json, os, pathlib, signal, subprocess, sys, sysconfig, typing, shlex
+import typer, typer.core, pydantic, questionary, pyaml, yaml
 
 from collections import UserDict
 from contextlib import asynccontextmanager, contextmanager
@@ -57,22 +56,18 @@ VERBOSE_LEVEL = ContextVar(10)
 INTERACTIVE = ContextVar(False)
 
 
-def output(content: str, level: int = 0, style: str | None = None, end: str | None = None) -> None:
-    import questionary
-
+def output(content: typing.Any, level: int = 0, style: str | None = None, end: str | None = None) -> None:
     if level > VERBOSE_LEVEL.get():
         return
 
     if not isinstance(content, str):
-        import pyaml
+        content = str(content)
 
-        out = io.StringIO()
-        pyaml.pprint(content, dst=out, sort_dicts=False, sort_keys=False)
-        questionary.print(out.getvalue(), style=style, end='' if end is None else end)
-        out.close()
-
-    if isinstance(content, str):
-        questionary.print(content, style=style, end='\n' if end is None else end)
+    out = io.StringIO()
+    pyaml.pprint(content, dst=out, sort_dicts=False, sort_keys=False)
+    questionary.print(out.getvalue(), style=style, end='' if end is None else end)
+    out.close()
+    questionary.print(content, style=style, end='\n' if end is None else end)
 
 
 class Config(pydantic.BaseModel):
@@ -101,10 +96,13 @@ def save_config(config: Config) -> None:
 
 
 class BentoMetadata(typing.TypedDict):
+    name: str
+    version: str
     labels: dict[str, str]
     envs: list[dict[str, str]]
     services: list[dict[str, typing.Any]]
     schema: dict[str, typing.Any]
+
 
 class EnvVars(UserDict[str, str]):
     """
@@ -112,7 +110,9 @@ class EnvVars(UserDict[str, str]):
     """
 
     @classmethod
-    def __get_pydantic_core_schema__(cls: type[EnvVars], source_type: type[typing.Any], handler: typing.Callable[..., typing.Any]) -> core_schema.DictSchema:
+    def __get_pydantic_core_schema__(
+        cls: type[EnvVars], source_type: type[typing.Any], handler: typing.Callable[..., typing.Any]
+    ) -> core_schema.DictSchema:
         return core_schema.dict_schema(core_schema.str_schema(), core_schema.str_schema())
 
     def __init__(self, data: typing.Mapping[str, str] | None = None):
@@ -154,14 +154,14 @@ class BentoInfo(pydantic.BaseModel):
     path: pathlib.Path
     alias: str = ''
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.repo.name == 'default':
             return f'{self.tag}'
         else:
             return f'{self.repo.name}/{self.tag}'
 
     @override
-    def __hash__(self):
+    def __hash__(self) -> int:
         return md5(str(self.path))
 
     @property
@@ -192,10 +192,8 @@ class BentoInfo(pydantic.BaseModel):
 
     @functools.cached_property
     def bento_yaml(self) -> BentoMetadata:
-        import yaml
-
-        bento_file = self.path / 'bento.yaml'
-        return yaml.safe_load(bento_file.read_text())
+        bento: BentoMetadata = yaml.safe_load((self.path / 'bento.yaml').read_text())
+        return bento
 
     @functools.cached_property
     def platforms(self) -> list[str]:
@@ -203,7 +201,7 @@ class BentoInfo(pydantic.BaseModel):
 
     @functools.cached_property
     def pretty_yaml(self) -> BentoMetadata | dict[str, typing.Any]:
-        def _pretty_routes(routes):
+        def _pretty_routes(routes: list[dict[str, typing.Any]]) -> dict[str, typing.Any]:
             return {
                 route['route']: {
                     'input': {k: v['type'] for k, v in route['input']['properties'].items()},
@@ -288,13 +286,15 @@ class Accelerator(pydantic.BaseModel):
     model: str
     memory_size: float
 
-    def __gt__(self, other):
+    def __gt__(self, other: Accelerator) -> bool:
         return self.memory_size > other.memory_size
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Accelerator):
+            return NotImplemented
         return self.memory_size == other.memory_size
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.model}({self.memory_size}GB)'
 
 
@@ -327,9 +327,7 @@ def run_command(
     copy_env: bool = True,
     venv: pathlib.Path | None = None,
     silent: bool = False,
-) -> subprocess.CompletedProcess:
-    import shlex
-
+) -> subprocess.CompletedProcess[typing.Any]:
     env = env or EnvVars({})
     cmd = [str(c) for c in cmd]
     bin_dir = 'Scripts' if os.name == 'nt' else 'bin'
@@ -371,23 +369,22 @@ def run_command(
         raise typer.Exit(1)
 
 
-async def stream_command_output(stream: typing.AsyncGenerator[bytes, None], style='gray'):
-    async for line in stream:
-        output(line.decode(), style=style, end='')
+async def stream_command_output(stream: asyncio.streams.StreamReader | None, style: str = 'gray') -> None:
+    if stream:
+        async for line in stream:
+            output(line.decode(), style=style, end='')
 
 
 @asynccontextmanager
 async def async_run_command(
     cmd: list[str],
     cwd: str | None = None,
-    env: dict[str, typing.Any] | None = None,
+    env: EnvVars | None = None,
     copy_env: bool = True,
     venv: pathlib.Path | None = None,
     silent: bool = True,
-):
-    import shlex
-
-    env = env or {}
+) -> typing.AsyncGenerator[asyncio.subprocess.Process]:
+    env = env or EnvVars({})
     cmd = [str(c) for c in cmd]
 
     if not silent:
@@ -407,7 +404,7 @@ async def async_run_command(
         py = pathlib.Path(sys.executable)
 
     if copy_env:
-        env = {**os.environ, **env}
+        env = EnvVars({**os.environ, **env})
 
     if cmd and cmd[0] == 'bentoml':
         cmd = [py.__fspath__(), '-m', 'bentoml'] + cmd[1:]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools, os, re, time, typing, abc
-
 import attr, click, typer, typer.core
 
 DO_NOT_TRACK = 'BENTOML_DO_NOT_TRACK'
