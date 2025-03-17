@@ -1,15 +1,11 @@
-import json
-import os
-import pathlib
-import shutil
-import subprocess
-import typing
+from __future__ import annotations
 
+import json, os, pathlib, shutil, subprocess, typing
 import typer
 
-from openllm.accelerator_spec import ACCELERATOR_SPECS
 from openllm.analytic import OpenLLMTyper
-from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, output, run_command
+from openllm.accelerator_spec import ACCELERATOR_SPECS
+from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, EnvVars, output, run_command
 
 app = OpenLLMTyper()
 
@@ -21,9 +17,9 @@ def resolve_cloud_config() -> pathlib.Path:
     return pathlib.Path.home() / 'bentoml' / '.yatai.yaml'
 
 
-def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None):
+def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None) -> tuple[list[str], EnvVars]:
     cmd = ['bentoml', 'deploy', bento.bentoml_tag]
-    env = {'BENTOML_HOME': f'{bento.repo.path}/bentoml'}
+    env = EnvVars({'BENTOML_HOME': f'{bento.repo.path}/bentoml'})
 
     required_envs = bento.bento_yaml.get('envs', [])
     required_env_names = [env['name'] for env in required_envs if 'name' in env]
@@ -68,10 +64,10 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
         (bento.repo.path / 'bentoml' / '.yatai.yaml').unlink()
     shutil.copy(base_config, bento.repo.path / 'bentoml' / '.yatai.yaml')
 
-    return cmd, env, None
+    return cmd, env
 
 
-def ensure_cloud_context():
+def ensure_cloud_context() -> None:
     import questionary
 
     cmd = ['bentoml', 'cloud', 'current-context']
@@ -138,7 +134,7 @@ def get_cloud_machine_spec() -> list[DeploymentTarget]:
         return []
 
 
-def deploy(bento: BentoInfo, target: DeploymentTarget):
+def deploy(bento: BentoInfo, target: DeploymentTarget) -> None:
     ensure_cloud_context()
-    cmd, env, cwd = _get_deploy_cmd(bento, target)
-    run_command(cmd, env=env, cwd=cwd)
+    cmd, env = _get_deploy_cmd(bento, target)
+    run_command(cmd, env=env, cwd=None)

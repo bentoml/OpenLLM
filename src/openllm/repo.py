@@ -1,14 +1,7 @@
-import datetime
-import re
-import shutil
-import typing
+from __future__ import annotations
 
-from pathlib import Path
-import os
-
-import pyaml
-import questionary
-import typer
+import datetime, subprocess, re, shutil, typing, os, pathlib
+import pyaml, questionary, typer
 
 from openllm.analytic import OpenLLMTyper
 from openllm.common import INTERACTIVE, REPO_DIR, VERBOSE_LEVEL, RepoInfo, load_config, output, save_config
@@ -21,14 +14,14 @@ app = OpenLLMTyper(help='manage repos')
 
 
 @app.command(name='list', help='list available repo')
-def cmd_list(verbose: bool = False):
+def cmd_list(verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     pyaml.pprint(list_repo(), sort_dicts=False, sort_keys=False)
 
 
 @app.command(name='remove', help='remove given repo')
-def cmd_remove(name: str):
+def cmd_remove(name: str) -> None:
     if TEST_REPO:
         return
     config = load_config()
@@ -42,7 +35,7 @@ def cmd_remove(name: str):
 
 
 @app.command(name='update', help='update default repo')
-def cmd_update():
+def cmd_update() -> None:
     if TEST_REPO:
         return
     repos_in_use = set()
@@ -71,7 +64,7 @@ def cmd_update():
 
 
 @app.command(name='add', help='add new repo')
-def cmd_add(name: str, repo: str):
+def cmd_add(name: str, repo: str) -> None:
     if TEST_REPO:
         return
     name = name.lower()
@@ -97,9 +90,9 @@ def cmd_add(name: str, repo: str):
 
 
 @app.command(name='default', help='get default repo path')
-def default():
+def default() -> pathlib.Path | None:
     if TEST_REPO:
-        return
+        return None
     output((info := parse_repo_url(load_config().repos['default'], 'default')).path)
     return info.path
 
@@ -108,7 +101,13 @@ def list_repo(repo_name: typing.Optional[str] = None) -> typing.List[RepoInfo]:
     if TEST_REPO:
         return [
             RepoInfo(
-                name='default', url='', server='test', owner='test', repo='test', branch='main', path=Path(TEST_REPO)
+                name='default',
+                url='',
+                server='test',
+                owner='test',
+                repo='test',
+                branch='main',
+                path=pathlib.Path(TEST_REPO),
             )
         ]
     config = load_config()
@@ -121,7 +120,7 @@ def list_repo(repo_name: typing.Optional[str] = None) -> typing.List[RepoInfo]:
     return repos
 
 
-def _complete_alias(repo_name: str):
+def _complete_alias(repo_name: str) -> None:
     from openllm.model import list_bento
 
     for bento in list_bento(repo_name=repo_name):
@@ -132,12 +131,7 @@ def _complete_alias(repo_name: str):
                     f.write(bento.version)
 
 
-def _clone_repo(repo: RepoInfo):
-    """
-    clone the repo to local, use `git` command if possible, otherwise use dulwich
-    """
-    import subprocess
-
+def _clone_repo(repo: RepoInfo) -> None:
     try:
         subprocess.run(['git', 'clone', '--depth=1', '-b', repo.branch, repo.url, str(repo.path)], check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -147,7 +141,7 @@ def _clone_repo(repo: RepoInfo):
         dulwich.porcelain.clone(repo.url, str(repo.path), checkout=True, depth=1, branch=repo.branch)
 
 
-def ensure_repo_updated():
+def ensure_repo_updated() -> None:
     if TEST_REPO:
         return
     last_update_file = REPO_DIR / 'last_update'

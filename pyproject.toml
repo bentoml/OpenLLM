@@ -43,6 +43,7 @@ dependencies = [
   "uv",
   "openai==1.66.3",
   "huggingface-hub",
+  "typing-extensions>=4.12.2",
 ]
 keywords = [
   "MLOps",

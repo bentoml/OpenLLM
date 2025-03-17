@@ -1,23 +1,14 @@
 from __future__ import annotations
 
-import functools
-import os
-import re
-import time
-import typing
-from abc import ABC
-
-import attr
-import click
-import typer
-import typer.core
+import functools, os, re, time, typing, abc
+import attr, click, typer, typer.core
 
 DO_NOT_TRACK = 'BENTOML_DO_NOT_TRACK'
 
 
-class EventMeta(ABC):
+class EventMeta(abc.ABC):
     @property
-    def event_name(self):
+    def event_name(self) -> str:
         # camel case to snake case
         event_name = re.sub(r'(?<!^)(?=[A-Z])', '_', self.__class__.__name__).lower()
         # remove "_event" suffix
@@ -42,14 +33,14 @@ class OpenllmCliEvent(CliEvent):
 
 
 class OrderedCommands(typer.core.TyperGroup):
-    def list_commands(self, _: click.Context) -> typing.Iterable[str]:  # type: ignore
+    def list_commands(self, ctx: click.Context) -> list[str]:
         return list(self.commands)
 
 
 class OpenLLMTyper(typer.Typer):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        no_args_is_help = kwargs.pop('no_args_is_help', True)
-        context_settings = kwargs.pop('context_settings', {})
+        no_args_is_help: bool = kwargs.pop('no_args_is_help', True)
+        context_settings: dict[str, typing.Any] = kwargs.pop('context_settings', {})
         if 'help_option_names' not in context_settings:
             context_settings['help_option_names'] = ('-h', '--help')
         if 'max_content_width' not in context_settings:

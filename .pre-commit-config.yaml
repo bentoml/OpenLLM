@@ -1,6 +1,5 @@
 ci:
   autoupdate_schedule: weekly
-  skip: [mypy]
   autofix_commit_msg: "ci: auto fixes from pre-commit.ci\n\nFor more information, see https://pre-commit.ci"
   autoupdate_commit_msg: "ci: pre-commit autoupdate [pre-commit.ci]"
   autofix_prs: true
@@ -23,8 +22,9 @@ repos:
     rev: "v1.15.0"
     hooks:
       - id: mypy
-        args: [--strict]
-        additional_dependencies: [pydantic]
+        args: [--strict, --ignore-missing-imports]
+        additional_dependencies:
+          [pydantic, types-pyyaml, types-tabulate, types-psutil, typer]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: "3.2.0"
     hooks:

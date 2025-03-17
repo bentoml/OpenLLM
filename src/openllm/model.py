@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re, typing, json
-
 import tabulate, questionary, typer
 
-from openllm.accelerator_spec import DeploymentTarget, can_run
+from openllm.accelerator_spec import can_run
+from openllm.common import DeploymentTarget
 from openllm.analytic import OpenLLMTyper
 from openllm.common import VERBOSE_LEVEL, BentoInfo, output as output_
 from openllm.repo import ensure_repo_updated, list_repo
@@ -13,7 +13,7 @@ app = OpenLLMTyper(help='manage models')
 
 
 @app.command(help='get model')
-def get(tag: str, repo: typing.Optional[str] = None, verbose: bool = False):
+def get(tag: str, repo: typing.Optional[str] = None, verbose: bool = False) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     bento_info = ensure_bento(tag, repo_name=repo)
@@ -27,7 +27,7 @@ def list_model(
     repo: typing.Optional[str] = None,
     verbose: bool = False,
     output: typing.Optional[str] = typer.Option(None, hidden=True),
-):
+) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
 
@@ -36,7 +36,7 @@ def list_model(
 
     seen = set()
 
-    def is_seen(value: str):
+    def is_seen(value: str) -> bool:
         if value in seen:
             return True
         seen.add(value)
@@ -101,7 +101,7 @@ def ensure_bento(
 NUMBER_RE = re.compile(r'\d+')
 
 
-def _extract_first_number(s: str):
+def _extract_first_number(s: str) -> int:
     match = NUMBER_RE.search(s)
     if match:
         return int(match.group())
@@ -134,7 +134,7 @@ def list_bento(
     else:
         glob_pattern = f'bentoml/bentos/{tag}/*'
 
-    model_list = []
+    model_list: list[BentoInfo] = []
     repo_list = list_repo(repo_name)
     for repo in repo_list:
         paths = sorted(
@@ -155,13 +155,14 @@ def list_bento(
                 model_list.append(model)
 
     if not include_alias:
-        seen = set()
+        seen: set[str] = set()
+        # we are calling side-effect in seen here.
         model_list = [
             x
             for x in model_list
             if not (
                 f'{x.bento_yaml["name"]}:{x.bento_yaml["version"]}' in seen
-                or seen.add(f'{x.bento_yaml["name"]}:{x.bento_yaml["version"]}')
+                or seen.add(f'{x.bento_yaml["name"]}:{x.bento_yaml["version"]}')  # type: ignore
             )
         ]
     return model_list

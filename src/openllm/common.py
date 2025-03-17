@@ -1,23 +1,14 @@
 from __future__ import annotations
 
-import asyncio
-import functools
-import hashlib
-import io
-import json
-import os
-import pathlib
-import signal
-import subprocess
-import sys
-import sysconfig
-import typing
+import asyncio, asyncio.subprocess, functools, hashlib, io, json, os, pathlib, signal, subprocess, sys, sysconfig, typing, shlex
+import typer, typer.core, pydantic, questionary, pyaml, yaml
+
 from collections import UserDict
 from contextlib import asynccontextmanager, contextmanager
-from types import SimpleNamespace
+from typing_extensions import override
 
-import typer
-import typer.core
+from pydantic_core import core_schema
+
 
 ERROR_STYLE = 'red'
 SUCCESS_STYLE = 'green'
@@ -49,11 +40,11 @@ class ContextVar(typing.Generic[T]):
             return self._stack[-1]
         return self._default
 
-    def set(self, value: T):
+    def set(self, value: T) -> None:
         self._stack.append(value)
 
     @contextmanager
-    def patch(self, value: T):
+    def patch(self, value: T) -> typing.Iterator[None]:
         self._stack.append(value)
         try:
             yield
@@ -65,29 +56,26 @@ VERBOSE_LEVEL = ContextVar(10)
 INTERACTIVE = ContextVar(False)
 
 
-def output(content, level=0, style=None, end=None):
-    import questionary
-
+def output(content: typing.Any, level: int = 0, style: str | None = None, end: str | None = None) -> None:
     if level > VERBOSE_LEVEL.get():
         return
 
     if not isinstance(content, str):
-        import pyaml
-
         out = io.StringIO()
         pyaml.pprint(content, dst=out, sort_dicts=False, sort_keys=False)
         questionary.print(out.getvalue(), style=style, end='' if end is None else end)
         out.close()
-
-    if isinstance(content, str):
+    else:
         questionary.print(content, style=style, end='\n' if end is None else end)
 
 
-class Config(SimpleNamespace):
-    repos: dict[str, str] = {'default': 'https://github.com/bentoml/openllm-models@main'}
+class Config(pydantic.BaseModel):
+    repos: dict[str, str] = pydantic.Field(
+        default_factory=lambda: {'default': 'https://github.com/bentoml/openllm-models@main'}
+    )
     default_repo: str = 'default'
 
-    def tolist(self):
+    def tolist(self) -> dict[str, typing.Any]:
         return dict(repos=self.repos, default_repo=self.default_repo)
 
 
@@ -106,20 +94,35 @@ def save_config(config: Config) -> None:
         json.dump(config.tolist(), f, indent=2)
 
 
+class BentoMetadata(typing.TypedDict):
+    name: str
+    version: str
+    labels: dict[str, str]
+    envs: list[dict[str, str]]
+    services: list[dict[str, typing.Any]]
+    schema: dict[str, typing.Any]
+
+
 class EnvVars(UserDict[str, str]):
     """
     A dictionary-like object that sorted by key and only keeps the environment variables that have a value.
     """
 
-    def __init__(self, data: typing.Optional[typing.Mapping[str, str]] = None):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls: type[EnvVars], source_type: type[typing.Any], handler: typing.Callable[..., typing.Any]
+    ) -> core_schema.DictSchema:
+        return core_schema.dict_schema(core_schema.str_schema(), core_schema.str_schema())
+
+    def __init__(self, data: typing.Mapping[str, str] | None = None):
         super().__init__(data or {})
         self.data = {k: v for k, v in sorted(self.data.items()) if v}
 
-    def __hash__(self):  # type: ignore
+    def __hash__(self) -> int:
         return hash(tuple(sorted(self.data.items())))
 
 
-class RepoInfo(SimpleNamespace):
+class RepoInfo(pydantic.BaseModel):
     name: str
     path: pathlib.Path
     url: str
@@ -128,7 +131,7 @@ class RepoInfo(SimpleNamespace):
     repo: str
     branch: str
 
-    def tolist(self):
+    def tolist(self) -> str | dict[str, typing.Any] | None:
         if VERBOSE_LEVEL.get() <= 0:
             return f'{self.name} ({self.url}@{self.branch})'
         if VERBOSE_LEVEL.get() <= 10:
@@ -142,20 +145,22 @@ class RepoInfo(SimpleNamespace):
                 owner=self.owner,
                 repo=self.repo,
             )
+        return None
 
 
-class BentoInfo(SimpleNamespace):
+class BentoInfo(pydantic.BaseModel):
     repo: RepoInfo
     path: pathlib.Path
     alias: str = ''
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.repo.name == 'default':
             return f'{self.tag}'
         else:
             return f'{self.repo.name}/{self.tag}'
 
-    def __hash__(self):  # type: ignore
+    @override
+    def __hash__(self) -> int:
         return md5(str(self.path))
 
     @property
@@ -185,19 +190,17 @@ class BentoInfo(SimpleNamespace):
         return self.bento_yaml['envs']
 
     @functools.cached_property
-    def bento_yaml(self) -> dict:
-        import yaml
-
-        bento_file = self.path / 'bento.yaml'
-        return yaml.safe_load(bento_file.read_text())
+    def bento_yaml(self) -> BentoMetadata:
+        bento: BentoMetadata = yaml.safe_load((self.path / 'bento.yaml').read_text())
+        return bento
 
     @functools.cached_property
     def platforms(self) -> list[str]:
         return self.bento_yaml['labels'].get('platforms', 'linux').split(',')
 
     @functools.cached_property
-    def pretty_yaml(self) -> dict:
-        def _pretty_routes(routes):
+    def pretty_yaml(self) -> BentoMetadata | dict[str, typing.Any]:
+        def _pretty_routes(routes: list[dict[str, typing.Any]]) -> dict[str, typing.Any]:
             return {
                 route['route']: {
                     'input': {k: v['type'] for k, v in route['input']['properties'].items()},
@@ -207,7 +210,7 @@ class BentoInfo(SimpleNamespace):
             }
 
         if len(self.bento_yaml['services']) == 1:
-            pretty_yaml = {
+            pretty_yaml: dict[str, typing.Any] = {
                 'apis': _pretty_routes(self.bento_yaml['schema']['routes']),
                 'resources': self.bento_yaml['services'][0]['config']['resources'],
                 'envs': self.bento_yaml['envs'],
@@ -232,7 +235,7 @@ class BentoInfo(SimpleNamespace):
             pass
         return ''
 
-    def tolist(self):
+    def tolist(self) -> str | dict[str, typing.Any] | None:
         verbose = VERBOSE_LEVEL.get()
         if verbose <= 0:
             return str(self)
@@ -240,13 +243,14 @@ class BentoInfo(SimpleNamespace):
             return dict(tag=self.tag, repo=self.repo.tolist(), path=str(self.path), model_card=self.pretty_yaml)
         if verbose <= 20:
             return dict(tag=self.tag, repo=self.repo.tolist(), path=str(self.path), bento_yaml=self.bento_yaml)
+        return None
 
 
-class VenvSpec(SimpleNamespace):
+class VenvSpec(pydantic.BaseModel):
     python_version: str
     requirements_txt: str
-    name_prefix = ''
     envs: EnvVars
+    name_prefix: str = ''
 
     @functools.cached_property
     def normalized_requirements_txt(self) -> str:
@@ -270,34 +274,38 @@ class VenvSpec(SimpleNamespace):
 
     @functools.cached_property
     def normalized_envs(self) -> str:
-        """
-        sorted by name
-        """
         return '\n'.join(f'{k}={v}' for k, v in sorted(self.envs.items(), key=lambda x: x[0]) if not v)
 
-    def __hash__(self):  # type: ignore
+    @override
+    def __hash__(self) -> int:
         return md5(self.normalized_requirements_txt, str(hash(self.normalized_envs)))
 
 
-class Accelerator(SimpleNamespace):
+class Accelerator(pydantic.BaseModel):
     model: str
     memory_size: float
 
-    def __gt__(self, other):
+    def __gt__(self, other: Accelerator) -> bool:
         return self.memory_size > other.memory_size
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Accelerator):
+            return NotImplemented
         return self.memory_size == other.memory_size
 
+    def __repr__(self) -> str:
+        return f'{self.model}({self.memory_size}GB)'
 
-class DeploymentTarget(SimpleNamespace):
+
+class DeploymentTarget(pydantic.BaseModel):
+    accelerators: list[Accelerator]
     source: str = 'local'
     name: str = 'local'
     price: str = ''
-    platform = 'linux'
-    accelerators: list[Accelerator]
+    platform: str = 'linux'
 
-    def __hash__(self):  # type: ignore
+    @override
+    def __hash__(self) -> int:
         return hash(self.source)
 
     @property
@@ -311,10 +319,15 @@ class DeploymentTarget(SimpleNamespace):
         return ', '.join((f'{a.model}' for a in self.accelerators))
 
 
-def run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=False) -> subprocess.CompletedProcess:
-    import shlex
-
-    env = env or {}
+def run_command(
+    cmd: list[str],
+    cwd: str | None = None,
+    env: EnvVars | None = None,
+    copy_env: bool = True,
+    venv: pathlib.Path | None = None,
+    silent: bool = False,
+) -> subprocess.CompletedProcess[typing.Any]:
+    env = env or EnvVars({})
     cmd = [str(c) for c in cmd]
     bin_dir = 'Scripts' if os.name == 'nt' else 'bin'
     if not silent:
@@ -331,40 +344,45 @@ def run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=False)
     if venv:
         py = venv / bin_dir / f'python{sysconfig.get_config_var("EXE")}'
     else:
-        py = sys.executable
+        py = pathlib.Path(sys.executable)
 
     if copy_env:
-        env = {**os.environ, **env}
+        env = EnvVars({**os.environ, **env})
 
     if cmd and cmd[0] == 'bentoml':
-        cmd = [py, '-m', 'bentoml'] + cmd[1:]
+        cmd = [py.__fspath__(), '-m', 'bentoml'] + cmd[1:]
     if cmd and cmd[0] == 'python':
-        cmd = [py] + cmd[1:]
+        cmd = [py.__fspath__()] + cmd[1:]
 
     try:
         if silent:
-            return subprocess.run(  # type: ignore
+            return subprocess.run(
                 cmd, cwd=cwd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
             )
         else:
             return subprocess.run(cmd, cwd=cwd, env=env, check=True)
     except Exception as e:
-        if VERBOSE_LEVEL.get() >= 10:
-            output(e, style='red')
-        output('Command failed', style='red')
+        if VERBOSE_LEVEL.get() >= 20:
+            output(str(e), style='red')
         raise typer.Exit(1)
 
 
-async def stream_command_output(stream, style='gray'):
-    async for line in stream:
-        output(line.decode(), style=style, end='')
+async def stream_command_output(stream: asyncio.streams.StreamReader | None, style: str = 'gray') -> None:
+    if stream:
+        async for line in stream:
+            output(line.decode(), style=style, end='')
 
 
 @asynccontextmanager
-async def async_run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=True):
-    import shlex
-
-    env = env or {}
+async def async_run_command(
+    cmd: list[str],
+    cwd: str | None = None,
+    env: EnvVars | None = None,
+    copy_env: bool = True,
+    venv: pathlib.Path | None = None,
+    silent: bool = True,
+) -> typing.AsyncGenerator[asyncio.subprocess.Process]:
+    env = env or EnvVars({})
     cmd = [str(c) for c in cmd]
 
     if not silent:
@@ -381,15 +399,15 @@ async def async_run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, s
     if venv:
         py = venv / 'bin' / 'python'
     else:
-        py = sys.executable
+        py = pathlib.Path(sys.executable)
 
     if copy_env:
-        env = {**os.environ, **env}
+        env = EnvVars({**os.environ, **env})
 
     if cmd and cmd[0] == 'bentoml':
-        cmd = [py, '-m', 'bentoml'] + cmd[1:]
+        cmd = [py.__fspath__(), '-m', 'bentoml'] + cmd[1:]
     if cmd and cmd[0] == 'python':
-        cmd = [py] + cmd[1:]
+        cmd = [py.__fspath__()] + cmd[1:]
 
     proc = None
     try:
