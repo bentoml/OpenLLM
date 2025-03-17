@@ -214,7 +214,7 @@ wheels = [
 
 [[package]]
 name = "bentoml"
-version = "1.4.3"
+version = "1.4.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2wsgi" },
@@ -261,9 +261,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9c/f8/1391971b6e5e77729f7b9e34774d50947de2f20c7e3b81192a420dd870ef/bentoml-1.4.3.tar.gz", hash = "sha256:d7ddd66e8129e22ad65c7352b475af4864193f6601723c5bdbc2b0ffe0125772", size = 966801 }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/df/6e5a260aaf2ee5da3d797374f81bba087fdcb8b521c7cb7441d390e266b6/bentoml-1.4.5.tar.gz", hash = "sha256:372d6d2f93dbcef38eefd568d0a9c99bfd8b5fbb7202983d948de03efa5cc961", size = 967625 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/cb/5fb7a2bc4b845cd1564eae7999c1fe184ced1903e2d4b387e366566da4e5/bentoml-1.4.3-py3-none-any.whl", hash = "sha256:8148627d10527732272f93ef9744b94705cbb2f7a42e00ea8bb8c94bfe9eba17", size = 1146944 },
+    { url = "https://files.pythonhosted.org/packages/23/26/64bfa28ce0b9e29e825a656e4785eb39b5ab4ca7abb6dbe1e25d856ac716/bentoml-1.4.5-py3-none-any.whl", hash = "sha256:31ecdf26e4addcf62c03a356b629925f5c3aca304d73a5cdf60c1bcbf5e19eb2", size = 1147638 },
 ]
 
 [[package]]
@@ -848,16 +848,16 @@ wheels = [
 
 [[package]]
 name = "kantoku"
-version = "0.18.1"
+version = "0.18.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "psutil" },
     { name = "pyzmq" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/c8/cdcfa607db73d3c270ca3b50fc6521e4ab5776ae9159239729882d9c6592/kantoku-0.18.1.tar.gz", hash = "sha256:6d25065f9da68949aa8181c59151a4670230720ac2b054059fcf6daf1f618740", size = 88803 }
+sdist = { url = "https://files.pythonhosted.org/packages/28/45/1370c8f972352c0f2215c064691998b414f93d0b655ce66951b55d0457a2/kantoku-0.18.3.tar.gz", hash = "sha256:751882b2bde074cd8d65f8f9f62606a805b7aa9ea956ba452d13fab0352b5163", size = 88951 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/07/4b66a56638d18a01079a5227057a6864ac3e3dbfe2166e16bb1b7d68db96/kantoku-0.18.1-py3-none-any.whl", hash = "sha256:eec46610e17001a090b9f39f820592e1d2205648f95bdd57df85f0d94ebd1b07", size = 118218 },
+    { url = "https://files.pythonhosted.org/packages/06/06/6433998627f7d39fe97e01c581c337e1837394569078cd80f942d2cea2bb/kantoku-0.18.3-py3-none-any.whl", hash = "sha256:bddf7d385de8ca951d28ac5a2e86f360202cf5840b0a06e5630487ebc981e1ad", size = 118365 },
 ]
 
 [[package]]
@@ -1167,7 +1167,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.65.5"
+version = "1.66.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1179,9 +1179,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/56/cf/e02fb2c5a834803e6f29f43fd3dfe010303282d1ea450a5b95e28608860a/openai-1.65.5.tar.gz", hash = "sha256:17d39096bbcaf6c86580244b493a59e16613460147f0ba5ab6e608cdb6628149", size = 359548 }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/77/5172104ca1df35ed2ed8fb26dbc787f721c39498fc51d666c4db07756a0c/openai-1.66.3.tar.gz", hash = "sha256:8dde3aebe2d081258d4159c4cb27bdc13b5bb3f7ea2201d9bd940b9a89faf0c9", size = 397244 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/8f/a178d73277bf2d838617fa20ba4ae6952e26074664aacb53ae4532a69588/openai-1.65.5-py3-none-any.whl", hash = "sha256:5948a504e7b4003d921cfab81273813793a31c25b1d7b605797c01757e0141f1", size = 474468 },
+    { url = "https://files.pythonhosted.org/packages/78/5a/e20182f7b6171642d759c548daa0ba20a1d3ac10d2bd0a13fd75704a9ac3/openai-1.66.3-py3-none-any.whl", hash = "sha256:a427c920f727711877ab17c11b95f1230b27767ba7a01e5b66102945141ceca9", size = 567400 },
 ]
 
 [[package]]
@@ -1205,11 +1205,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bentoml", specifier = "==1.4.3" },
+    { name = "bentoml", specifier = "==1.4.5" },
     { name = "dulwich" },
     { name = "huggingface-hub" },
     { name = "nvidia-ml-py" },
-    { name = "openai", specifier = "==1.65.5" },
+    { name = "openai", specifier = "==1.66.3" },
     { name = "pathlib" },
     { name = "pip-requirements-parser" },
     { name = "psutil" },
