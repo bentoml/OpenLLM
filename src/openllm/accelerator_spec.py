@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import math
-import typing
 from types import SimpleNamespace
 
 import psutil
@@ -114,8 +113,8 @@ def get_local_machine_spec():
         return DeploymentTarget(accelerators=[], source='local', platform=platform)
 
 
-@functools.lru_cache()
-def can_run(bento: typing.Union[Resource, BentoInfo], target: typing.Optional[DeploymentTarget] = None) -> float:
+@functools.lru_cache(typed=True)
+def can_run(bento: Resource | BentoInfo, target: DeploymentTarget | None = None) -> float:
     """
     Calculate if the bento can be deployed on the target.
     """

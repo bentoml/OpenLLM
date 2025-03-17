@@ -65,7 +65,7 @@ VERBOSE_LEVEL = ContextVar(10)
 INTERACTIVE = ContextVar(False)
 
 
-def output(content, level=0, style=None, end=None):
+def output(content: str, level: int = 0, style: str | None = None, end: str | None = None):
     import questionary
 
     if level > VERBOSE_LEVEL.get():
@@ -115,7 +115,7 @@ class EnvVars(UserDict[str, str]):
         super().__init__(data or {})
         self.data = {k: v for k, v in sorted(self.data.items()) if v}
 
-    def __hash__(self):  # type: ignore
+    def __hash__(self):
         return hash(tuple(sorted(self.data.items())))
 
 
@@ -355,13 +355,13 @@ def run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=False)
         raise typer.Exit(1)
 
 
-async def stream_command_output(stream, style='gray'):
+async def stream_command_output(stream: typing.AsyncGenerator[bytes, None], style='gray'):
     async for line in stream:
         output(line.decode(), style=style, end='')
 
 
 @asynccontextmanager
-async def async_run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, silent=True):
+async def async_run_command(cmd: list[str], cwd:str|None=None, env:dict[str, typing.Any]|None=None, copy_env:bool=True, venv: pathlib.Path | None=None, silent: bool=True):
     import shlex
 
     env = env or {}
@@ -381,15 +381,15 @@ async def async_run_command(cmd, cwd=None, env=None, copy_env=True, venv=None, s
     if venv:
         py = venv / 'bin' / 'python'
     else:
-        py = sys.executable
+        py = pathlib.Path(sys.executable)
 
     if copy_env:
         env = {**os.environ, **env}
 
     if cmd and cmd[0] == 'bentoml':
-        cmd = [py, '-m', 'bentoml'] + cmd[1:]
+        cmd = [py.__fspath__(), '-m', 'bentoml'] + cmd[1:]
     if cmd and cmd[0] == 'python':
-        cmd = [py] + cmd[1:]
+        cmd = [py.__fspath__()] + cmd[1:]
 
     proc = None
     try:
