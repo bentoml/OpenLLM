@@ -1,12 +1,14 @@
 <div align="center">
+
 <h1>🦾 OpenLLM: Self-Hosting LLMs Made Easy</h1>
-</div>
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202-green.svg)](https://github.com/bentoml/OpenLLM/blob/main/LICENSE)
 [![Releases](https://img.shields.io/pypi/v/openllm.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/openllm)
 [![CI](https://results.pre-commit.ci/badge/github/bentoml/OpenLLM/main.svg)](https://results.pre-commit.ci/latest/github/bentoml/OpenLLM/main)
 [![X](https://badgen.net/badge/icon/@bentomlai/000000?icon=twitter&label=Follow)](https://twitter.com/bentomlai)
 [![Community](https://badgen.net/badge/icon/Community/562f5d?icon=slack&label=Join)](https://l.bentoml.com/join-slack)
+
+</div>
 
 OpenLLM allows developers to run **any open-source LLMs** (Llama 3.3, Qwen2.5, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
 
