@@ -26,7 +26,7 @@ repos:
         additional_dependencies:
           [pydantic, types-pyyaml, types-tabulate, types-psutil, typer]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: "3.2.0"
+    rev: "3.2.1"
     hooks:
       - id: editorconfig-checker
         verbose: true
