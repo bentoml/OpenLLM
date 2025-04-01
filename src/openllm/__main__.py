@@ -240,12 +240,13 @@ def deploy(
     instance_type: typing.Optional[str] = None,
     repo: typing.Optional[str] = None,
     verbose: bool = False,
+    env: typing.Optional[list[str]] = typer.Option(None, "--env", help="Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.")
 ) -> None:
     if verbose:
         VERBOSE_LEVEL.set(20)
     bento = ensure_bento(model, repo_name=repo)
     if instance_type is not None:
-        return cloud_deploy(bento, DeploymentTarget(accelerators=[], name=instance_type))
+        return cloud_deploy(bento, DeploymentTarget(accelerators=[], name=instance_type), cli_envs=env)
     targets = sorted(
         filter(lambda x: can_run(bento, x) > 0, get_cloud_machine_spec()),
         key=lambda x: can_run(bento, x),
@@ -256,7 +257,7 @@ def deploy(
         raise typer.Exit(1)
     target = targets[0]
     output(f'Recommended instance type: {target.name}', style='green')
-    cloud_deploy(bento, target)
+    cloud_deploy(bento, target, cli_envs=env)
 
 
 @app.callback(invoke_without_command=True)

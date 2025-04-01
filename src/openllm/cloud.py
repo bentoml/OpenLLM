@@ -17,22 +17,43 @@ def resolve_cloud_config() -> pathlib.Path:
     return pathlib.Path.home() / 'bentoml' / '.yatai.yaml'
 
 
-def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None) -> tuple[list[str], EnvVars]:
+def _get_deploy_cmd(
+    bento: BentoInfo, target: typing.Optional[DeploymentTarget] = None, cli_envs: typing.Optional[list[str]] = None
+) -> tuple[list[str], EnvVars]:
     cmd = ['bentoml', 'deploy', bento.bentoml_tag]
     env = EnvVars({'BENTOML_HOME': f'{bento.repo.path}/bentoml'})
 
+    # Process CLI env vars first to determine overrides
+    explicit_envs: dict[str, str] = {}
+    if cli_envs:
+        for env_var in cli_envs:
+            if '=' in env_var:
+                name, value = env_var.split('=', 1)
+                explicit_envs[name] = value
+            else:
+                name = env_var
+                value = typing.cast(str, os.environ.get(name))
+                if value is None:
+                    output(f'Environment variable \'{name}\' specified via --env but not found in the current environment.', style='red')
+                    raise typer.Exit(1)
+                explicit_envs[name] = value
+
+    # Process envs defined in bento.yaml, skipping those overridden by CLI
     required_envs = bento.bento_yaml.get('envs', [])
-    required_env_names = [env['name'] for env in required_envs if 'name' in env]
+    required_env_names = [env['name'] for env in required_envs if 'name' in env and env['name'] not in explicit_envs]
     if required_env_names:
         output(
-            f'This model requires the following environment variables to run: {required_env_names!r}', style='yellow'
+            f'This model requires the following environment variables to run (unless overridden via --env): {required_env_names!r}',
+            style='yellow',
         )
 
-    for env_info in bento.bento_yaml.get('envs', []):
-        if 'name' not in env_info:
+    for env_info in required_envs:
+        name = typing.cast(str, env_info.get('name'))
+        if not name or name in explicit_envs:
             continue
-        if os.environ.get(env_info['name']):
-            default = os.environ[env_info['name']]
+
+        if os.environ.get(name):
+            default = os.environ[name]
         elif 'value' in env_info:
             default = env_info['value']
         else:
@@ -41,17 +62,21 @@ def _get_deploy_cmd(bento: BentoInfo, target: typing.Optional[DeploymentTarget] 
         if INTERACTIVE.get():
             import questionary
 
-            value = questionary.text(f'{env_info["name"]}:', default=default).ask()
+            value = questionary.text(f'{name}: (from bento.yaml)', default=default).ask()
         else:
             if default == '':
-                output(f'Environment variable {env_info["name"]} is required but not provided', style='red')
+                output(f'Environment variable {name} (from bento.yaml) is required but not provided', style='red')
                 raise typer.Exit(1)
             else:
                 value = default
 
         if value is None:
             raise typer.Exit(1)
-        cmd += ['--env', f'{env_info["name"]}={value}']
+        cmd += ['--env', f'{name}={value}']
+
+    # Add explicitly provided env vars from CLI
+    for name, value in explicit_envs.items():
+        cmd += ['--env', f'{name}={value}']
 
     if target:
         cmd += ['--instance-type', target.name]
@@ -134,7 +159,7 @@ def get_cloud_machine_spec() -> list[DeploymentTarget]:
         return []
 
 
-def deploy(bento: BentoInfo, target: DeploymentTarget) -> None:
+def deploy(bento: BentoInfo, target: DeploymentTarget, cli_envs: typing.Optional[list[str]] = None) -> None:
     ensure_cloud_context()
-    cmd, env = _get_deploy_cmd(bento, target)
+    cmd, env = _get_deploy_cmd(bento, target, cli_envs=cli_envs)
     run_command(cmd, env=env, cwd=None)
