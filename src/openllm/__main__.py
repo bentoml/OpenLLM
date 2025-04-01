@@ -11,7 +11,7 @@ from openllm.cloud import deploy as cloud_deploy, ensure_cloud_context, get_clou
 from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
 from openllm.local import run as local_run, serve as local_serve
 from openllm.model import app as model_app, ensure_bento, list_bento
-from openllm.repo import app as repo_app
+from openllm.repo import app as repo_app, cmd_update
 
 if typing.TYPE_CHECKING:
     from openllm.common import DeploymentTarget
@@ -210,6 +210,7 @@ def serve(
     port: int = 3000,
     verbose: bool = False,
 ) -> None:
+    cmd_update()
     if verbose:
         VERBOSE_LEVEL.set(20)
     target = get_local_machine_spec()
@@ -225,6 +226,7 @@ def run(
     timeout: int = 600,
     verbose: bool = False,
 ) -> None:
+    cmd_update()
     if verbose:
         VERBOSE_LEVEL.set(20)
     target = get_local_machine_spec()
@@ -242,6 +244,7 @@ def deploy(
     verbose: bool = False,
     env: typing.Optional[list[str]] = typer.Option(None, "--env", help="Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.")
 ) -> None:
+    cmd_update()
     if verbose:
         VERBOSE_LEVEL.set(20)
     bento = ensure_bento(model, repo_name=repo)

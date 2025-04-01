@@ -90,7 +90,7 @@ def cmd_add(name: str, repo: str) -> None:
 
 
 @app.command(name='default', help='get default repo path')
-def default() -> pathlib.Path | None:
+def default() -> typing.Optional[pathlib.Path]:
     if TEST_REPO:
         return None
     output((info := parse_repo_url(load_config().repos['default'], 'default')).path)
