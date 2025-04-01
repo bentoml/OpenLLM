@@ -122,6 +122,7 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   </tr>
 </table>
 
+
 For the full model list, see the [OpenLLM models repository](https://github.com/bentoml/openllm-models).
 
 ## Start an LLM server
@@ -251,7 +252,7 @@ OpenLLM supports LLM cloud deployment via BentoML, the unified model serving fra
 [Sign up for BentoCloud](https://www.bentoml.com/) for free and [log in](https://docs.bentoml.com/en/latest/bentocloud/how-tos/manage-access-token.html). Then, run `openllm deploy` to deploy a model to BentoCloud:
 
 ```bash
-openllm deploy llama3.2:1b --env HF_TOKEN
+openllm deploy llama3.2:1b
 ```
 
 > [!NOTE]
