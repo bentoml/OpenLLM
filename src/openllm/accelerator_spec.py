@@ -1,14 +1,25 @@
 from __future__ import annotations
 
-import functools, math
+import functools, math, re, typing
 import psutil, pydantic
 
+from pydantic import BeforeValidator
 from typing_extensions import override
 from openllm.common import BentoInfo, DeploymentTarget, output, Accelerator
 
 
+def parse_memory_string(v: typing.Any) -> typing.Any:
+    """Parse memory strings like "60Gi" into float."""
+    if isinstance(v, str):
+        match = re.match(r"(\d+(\.\d+)?)\s*Gi$", v, re.IGNORECASE)
+        if match:
+            return float(match.group(1))
+    # Pass other types (including numbers or other strings for standard float conversion) through
+    return v
+
+
 class Resource(pydantic.BaseModel):
-    memory: float = 0.0
+    memory: typing.Annotated[float, BeforeValidator(parse_memory_string)] = 0.0
     cpu: int = 0
     gpu: int = 0
     gpu_type: str = ''
