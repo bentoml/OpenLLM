@@ -11,7 +11,7 @@ from openllm.common import BentoInfo, DeploymentTarget, output, Accelerator
 def parse_memory_string(v: typing.Any) -> typing.Any:
     """Parse memory strings like "60Gi" into float."""
     if isinstance(v, str):
-        match = re.match(r"(\d+(\.\d+)?)\s*Gi$", v, re.IGNORECASE)
+        match = re.match(r'(\d+(\.\d+)?)\s*Gi$', v, re.IGNORECASE)
         if match:
             return float(match.group(1))
     # Pass other types (including numbers or other strings for standard float conversion) through

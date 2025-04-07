@@ -34,7 +34,10 @@ def _get_deploy_cmd(
                 name = env_var
                 value = typing.cast(str, os.environ.get(name))
                 if value is None:
-                    output(f'Environment variable \'{name}\' specified via --env but not found in the current environment.', style='red')
+                    output(
+                        f"Environment variable '{name}' specified via --env but not found in the current environment.",
+                        style='red',
+                    )
                     raise typer.Exit(1)
                 explicit_envs[name] = value
 
