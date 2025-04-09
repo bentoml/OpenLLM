@@ -242,7 +242,11 @@ def deploy(
     instance_type: typing.Optional[str] = None,
     repo: typing.Optional[str] = None,
     verbose: bool = False,
-    env: typing.Optional[list[str]] = typer.Option(None, "--env", help="Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.")
+    env: typing.Optional[list[str]] = typer.Option(
+        None,
+        '--env',
+        help='Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.',
+    ),
 ) -> None:
     cmd_update()
     if verbose:
