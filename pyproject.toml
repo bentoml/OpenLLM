@@ -30,7 +30,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "bentoml==1.4.7",
+  "bentoml==1.4.8",
   "typer",
   "questionary",
   "pyaml",
