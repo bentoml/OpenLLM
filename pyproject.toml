@@ -43,6 +43,7 @@ dependencies = [
   "uv",
   "openai==1.70.0",
   "huggingface-hub",
+  "hf-xet",
   "typing-extensions>=4.12.2",
 ]
 keywords = [
@@ -86,6 +87,12 @@ src-dir = "src/openllm"
 [build-system]
 requires = ["hatchling==1.27.0", "hatch-vcs==0.4.0"]
 build-backend = 'hatchling.build'
+
+[dependency-groups]
+tests = [
+    "pexpect>=4.9.0",
+    "pytest>=8.3.5",
+]
 
 [tool.hatch.version]
 source = "vcs"

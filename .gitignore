@@ -163,3 +163,4 @@ cython_debug/
 venv/
 .envrc
 _version.py
+.cursor

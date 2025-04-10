@@ -1,7 +1,7 @@
 extend-include = ["*.ipynb"]
 preview = true
-line-length = 119
-indent-width = 4
+line-length = 100
+indent-width = 2
 
 [format]
 preview = true
@@ -18,21 +18,16 @@ ignore = [
 ]
 select = [
   "F",
-  "G",    # flake8-logging-format
-  "PERF", # perflint
-  "RUF",  # Ruff-specific rules
+  "G",     # flake8-logging-format
+  "PERF",  # perflint
+  "RUF",   # Ruff-specific rules
   "W6",
   "E71",
   "E72",
   "E112",
   "E113",
-  # "E124",
   "E203",
   "E272",
-  # "E303",
-  # "E304",
-  # "E501",
-  # "E502",
   "E702",
   "E703",
   "E731",
