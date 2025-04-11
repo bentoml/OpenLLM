@@ -70,55 +70,55 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <td>llama3.2</td>
     <td>1b</td>
     <td>24G</td>
-    <td><code>openllm serve llama3.2:1b</code></td>
+    <td><code>openllm serve --model llama3.2:1b</code></td>
   </tr>
   <tr>
     <td>llama3.3</td>
     <td>70b</td>
     <td>80Gx2</td>
-    <td><code>openllm serve llama3.3:70b</code></td>
+    <td><code>openllm serve --model llama3.3:70b</code></td>
   </tr>
   <tr>
     <td>mistral</td>
     <td>8b</td>
     <td>24G</td>
-    <td><code>openllm serve mistral:8b</code></td>
+    <td><code>openllm serve --model mistral:8b</code></td>
   </tr>
   <tr>
     <td>mistral-large</td>
     <td>123b</td>
     <td>80Gx4</td>
-    <td><code>openllm serve mistral-large:123b</code></td>
+    <td><code>openllm serve --model mistral-large:123b</code></td>
   </tr>
   <tr>
     <td>phi4</td>
     <td>14b</td>
     <td>80G</td>
-    <td><code>openllm serve phi4:14b</code></td>
+    <td><code>openllm serve --model phi4:14b</code></td>
   </tr>
   <tr>
     <td>pixtral</td>
     <td>12b-2409</td>
     <td>80G</td>
-    <td><code>openllm serve pixtral:12b-2409</code></td>
+    <td><code>openllm serve --model pixtral:12b-2409</code></td>
   </tr>
   <tr>
     <td>qwen2.5</td>
     <td>7b</td>
     <td>24G</td>
-    <td><code>openllm serve qwen2.5:7b</code></td>
+    <td><code>openllm serve --model qwen2.5:7b</code></td>
   </tr>
   <tr>
     <td>qwen2.5-coder</td>
     <td>3b</td>
     <td>24G</td>
-    <td><code>openllm serve qwen2.5-coder:3b</code></td>
+    <td><code>openllm serve --model qwen2.5-coder:3b</code></td>
   </tr>
   <tr>
     <td>qwq</td>
     <td>32b</td>
     <td>80G</td>
-    <td><code>openllm serve qwq:32b</code></td>
+    <td><code>openllm serve --model qwq:32b</code></td>
   </tr>
 </table>
 
@@ -139,7 +139,7 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 >    ```
 
 ```bash
-openllm serve llama3.2:1b
+openllm serve --model llama3.2:1b
 ```
 
 The server will be accessible at [http://localhost:3000](http://localhost:3000/), providing OpenAI-compatible APIs for interaction. You can call the endpoints with different frameworks and tools that support OpenAI-compatible APIs. Typically, you may need to specify the following:
@@ -203,7 +203,7 @@ OpenLLM provides a chat UI at the `/chat` endpoint for the launched LLM server a
 To start a chat conversation in the CLI, use the `openllm run` command and specify the model version.
 
 ```bash
-openllm run llama3:8b
+openllm run --model llama3:8b
 ```
 
 ## Model repository
