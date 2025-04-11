@@ -141,6 +141,10 @@ To start an LLM server locally, use the `openllm serve` command and specify the 
 ```bash
 openllm serve --model llama3.2:1b
 ```
+or start with other specific port like 60000
+```bash
+openllm serve --model llama3.2:1b --port 60000
+```
 
 The server will be accessible at [http://localhost:3000](http://localhost:3000/), providing OpenAI-compatible APIs for interaction. You can call the endpoints with different frameworks and tools that support OpenAI-compatible APIs. Typically, you may need to specify the following:
 
