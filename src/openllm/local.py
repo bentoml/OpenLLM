@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, time, typing
+import asyncio, time, typing, os
 import httpx, openai
 
 from openai.types.chat import ChatCompletionAssistantMessageParam, ChatCompletionUserMessageParam
@@ -19,8 +19,6 @@ if typing.TYPE_CHECKING:
 
 
 def prep_env_vars(bento: BentoInfo) -> None:
-  import os
-
   env_vars = bento.envs
   for env_var in env_vars:
     if not env_var.get('value'):
@@ -30,23 +28,57 @@ def prep_env_vars(bento: BentoInfo) -> None:
     os.environ[key] = value
 
 
-def _get_serve_cmd(bento: BentoInfo, port: int = 3000) -> tuple[list[str], EnvVars]:
+def _get_serve_cmd(
+  bento: BentoInfo, port: int = 3000, cli_args: typing.Optional[list[str]] = None
+) -> tuple[list[str], EnvVars]:
   cmd = ['bentoml', 'serve', bento.bentoml_tag]
   if port != 3000:
     cmd += ['--port', str(port)]
+
+  # Add CLI arguments if provided
+  if cli_args:
+    for arg in cli_args:
+      cmd += ['--arg', arg]
+
   return cmd, EnvVars({'BENTOML_HOME': f'{bento.repo.path}/bentoml'})
 
 
-def serve(bento: BentoInfo, port: int = 3000) -> None:
+def serve(
+  bento: BentoInfo,
+  port: int = 3000,
+  cli_envs: typing.Optional[list[str]] = None,
+  cli_args: typing.Optional[list[str]] = None,
+) -> None:
   prep_env_vars(bento)
-  cmd, env = _get_serve_cmd(bento, port=port)
+  cmd, env = _get_serve_cmd(bento, port=port, cli_args=cli_args)
+
+  # Add CLI environment variables if provided
+  if cli_envs:
+    for env_var in cli_envs:
+      if '=' in env_var:
+        key, value = env_var.split('=', 1)
+        env[key] = value
+      else:
+        env[env_var] = os.environ.get(env_var, '')
+
   venv = ensure_venv(bento, runtime_envs=env)
   output(f'Access the Chat UI at http://localhost:{port}/chat (or with you IP)')
   run_command(cmd, env=env, cwd=None, venv=venv)
 
 
-async def _run_model(bento: BentoInfo, port: int = 3000, timeout: int = 600) -> None:
-  cmd, env = _get_serve_cmd(bento, port)
+async def _run_model(
+  bento: BentoInfo,
+  port: int = 3000,
+  timeout: int = 600,
+  cli_env: typing.Optional[dict[str, typing.Any]] = None,
+  cli_args: typing.Optional[list[str]] = None,
+) -> None:
+  cmd, env = _get_serve_cmd(bento, port, cli_args=cli_args)
+
+  # Merge cli environment variables if provided
+  if cli_env:
+    env.update(cli_env)
+
   venv = ensure_venv(bento, runtime_envs=env)
   async with async_run_command(cmd, env=env, cwd=None, venv=venv, silent=False) as server_proc:
     output(f'Model server started {server_proc.pid}')
@@ -109,9 +141,26 @@ async def _run_model(bento: BentoInfo, port: int = 3000, timeout: int = 600) -> 
       except KeyboardInterrupt:
         break
     output('\nStopping model server...', style='green')
-  output('Stopped model server', style='green')
+    output('Stopped model server', style='green')
 
 
-def run(bento: BentoInfo, port: int = 3000, timeout: int = 600) -> None:
+def run(
+  bento: BentoInfo,
+  port: int = 3000,
+  timeout: int = 600,
+  cli_envs: typing.Optional[list[str]] = None,
+  cli_args: typing.Optional[list[str]] = None,
+) -> None:
   prep_env_vars(bento)
-  asyncio.run(_run_model(bento, port=port, timeout=timeout))
+
+  # Add CLI environment variables to the process
+  env = {}
+  if cli_envs:
+    for env_var in cli_envs:
+      if '=' in env_var:
+        key, value = env_var.split('=', 1)
+        env[key] = value
+      else:
+        env[env_var] = os.environ.get(env_var, '')
+
+  asyncio.run(_run_model(bento, port=port, timeout=timeout, cli_env=env, cli_args=cli_args))

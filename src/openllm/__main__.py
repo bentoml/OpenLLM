@@ -220,13 +220,23 @@ def serve(
   repo: typing.Optional[str] = None,
   port: int = 3000,
   verbose: bool = False,
+  env: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--env',
+    help='Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.',
+  ),
+  arg: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--arg',
+    help='Bento arguments in the form of key=value pairs. Can be specified multiple times.',
+  ),
 ) -> None:
   cmd_update()
   if verbose:
     VERBOSE_LEVEL.set(20)
   target = get_local_machine_spec()
   bento = ensure_bento(model, target=target, repo_name=repo)
-  local_serve(bento, port=port)
+  local_serve(bento, port=port, cli_envs=env, cli_args=arg)
 
 
 @app.command(help='run the model and chat in terminal')
@@ -236,6 +246,16 @@ def run(
   port: typing.Optional[int] = None,
   timeout: int = 600,
   verbose: bool = False,
+  env: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--env',
+    help='Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.',
+  ),
+  arg: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--arg',
+    help='Bento arguments in the form of key=value pairs. Can be specified multiple times.',
+  ),
 ) -> None:
   cmd_update()
   if verbose:
@@ -244,7 +264,7 @@ def run(
   bento = ensure_bento(model, target=target, repo_name=repo)
   if port is None:
     port = random.randint(30000, 40000)
-  local_run(bento, port=port, timeout=timeout)
+  local_run(bento, port=port, timeout=timeout, cli_envs=env, cli_args=arg)
 
 
 @app.command(help='deploy production-ready OpenAI API-compatible server to BentoCloud')
