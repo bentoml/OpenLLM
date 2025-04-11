@@ -216,7 +216,7 @@ def hello(repo: typing.Optional[str] = None) -> None:
 
 @app.command(help='start an OpenAI API compatible chat server and chat in browser')
 def serve(
-  model: typing.Annotated[str, typer.Argument()] = '',
+  model: typing.Annotated[str, typer.Argument()],
   repo: typing.Optional[str] = None,
   port: int = 3000,
   verbose: bool = False,
