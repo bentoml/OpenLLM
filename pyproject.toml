@@ -41,7 +41,7 @@ dependencies = [
   "dulwich",
   "tabulate",
   "uv",
-  "openai==1.70.0",
+  "openai==1.73.0",
   "huggingface-hub",
   "hf-xet",
   "typing-extensions>=4.12.2",
