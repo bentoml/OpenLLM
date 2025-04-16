@@ -73,7 +73,10 @@ def output(
 
 class Config(pydantic.BaseModel):
   repos: dict[str, str] = pydantic.Field(
-    default_factory=lambda: {'default': 'https://github.com/bentoml/openllm-models@main'}
+    default_factory=lambda: {
+      'default': 'https://github.com/bentoml/openllm-models@main',
+      'nightly': 'https://github.com/bentoml/openllm-models@nightly',
+    }
   )
   default_repo: str = 'default'
 

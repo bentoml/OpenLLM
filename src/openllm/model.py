@@ -6,7 +6,7 @@ import tabulate, questionary, typer
 from openllm.accelerator_spec import can_run
 from openllm.common import DeploymentTarget
 from openllm.analytic import OpenLLMTyper
-from openllm.common import VERBOSE_LEVEL, BentoInfo, output as output_
+from openllm.common import VERBOSE_LEVEL, BentoInfo, output as output_, load_config
 from openllm.repo import ensure_repo_updated, list_repo
 
 app = OpenLLMTyper(help='manage models')
@@ -30,6 +30,9 @@ def list_model(
 ) -> None:
   if verbose:
     VERBOSE_LEVEL.set(20)
+
+  if repo is None:
+    repo = load_config().default_repo
 
   bentos = list_bento(tag=tag, repo_name=repo)
   bentos.sort(key=lambda x: x.name)
@@ -79,6 +82,11 @@ def ensure_bento(
   target: typing.Optional[DeploymentTarget] = None,
   repo_name: typing.Optional[str] = None,
 ) -> BentoInfo:
+  if repo_name is None:
+    from openllm.common import load_config
+
+    repo_name = load_config().default_repo
+
   bentos = list_bento(model, repo_name=repo_name)
   if len(bentos) == 0:
     output_(f'No model found for {model}', style='red')

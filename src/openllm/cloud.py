@@ -117,6 +117,15 @@ def _get_deploy_cmd(
   return cmd, env
 
 
+def get_current_context() -> str | None:
+  cmd = ['bentoml', 'cloud', 'current-context']
+  try:
+    result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+    return typing.cast(str, json.loads(result)['name'])
+  except subprocess.CalledProcessError:
+    return None
+
+
 def ensure_cloud_context() -> None:
   import questionary
 
@@ -167,6 +176,10 @@ def get_cloud_machine_spec(context: typing.Optional[str] = None) -> list[Deploym
   cmd = ['bentoml', 'deployment', 'list-instance-types', '-o', 'json']
   if context:
     cmd += ['--context', context]
+
+  if context is None:
+    context = get_current_context()
+
   try:
     result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
     instance_types = json.loads(result)
@@ -185,7 +198,10 @@ def get_cloud_machine_spec(context: typing.Optional[str] = None) -> list[Deploym
       for it in instance_types
     ]
   except (subprocess.CalledProcessError, json.JSONDecodeError):
-    output('Failed to get cloud instance types', style='red')
+    output(
+      f'Failed to get cloud instance types{"" if context is None else f" for context {context}"}',
+      style='red',
+    )
     return []
 
 
