@@ -48,6 +48,8 @@ def _select_bento_name(models: list[BentoInfo], target: DeploymentTarget) -> tup
       questionary.Separator(f'{table[0]}\n   {table[1]}'),
       *[questionary.Choice(line, value=value[:2]) for value, line in zip(table_data, table[2:])],
     ],
+    use_search_filter=True,
+    use_jk_keys=False,
   ).ask()
   if selected is None:
     raise typer.Exit(1)
@@ -81,6 +83,8 @@ def _select_bento_version(
       questionary.Separator(f'{table[0]}\n   {table[1]}'),
       *[questionary.Choice(line, value=value[:2]) for value, line in zip(model_infos, table[2:])],
     ],
+    use_search_filter=True,
+    use_jk_keys=False,
   ).ask()
   if selected is None:
     raise typer.Exit(1)
@@ -114,6 +118,8 @@ def _select_target(bento: BentoInfo, targets: list[DeploymentTarget]) -> Deploym
       questionary.Separator(f'{table[0]}\n   {table[1]}'),
       *[questionary.Choice(f'{line}', value=target) for target, line in zip(targets, table[2:])],
     ],
+    use_search_filter=True,
+    use_jk_keys=False,
   ).ask()
   if selected is None:
     raise typer.Exit(1)
