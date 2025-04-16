@@ -21,6 +21,7 @@ def _get_deploy_cmd(
   bento: BentoInfo,
   target: typing.Optional[DeploymentTarget] = None,
   cli_envs: typing.Optional[list[str]] = None,
+  context: typing.Optional[str] = None,
 ) -> tuple[list[str], EnvVars]:
   cmd = ['bentoml', 'deploy', bento.bentoml_tag]
   env = EnvVars({'BENTOML_HOME': f'{bento.repo.path}/bentoml'})
@@ -45,10 +46,15 @@ def _get_deploy_cmd(
 
   # Process envs defined in bento.yaml, skipping those overridden by CLI
   required_envs = bento.bento_yaml.get('envs', [])
+
+  all_required_env_names = [env['name'] for env in required_envs if 'name' in env]
   required_env_names = [
     env['name']
     for env in required_envs
-    if 'name' in env and env['name'] not in explicit_envs and not env.get('value')
+    if 'name' in env
+    and env['name'] not in explicit_envs
+    and not env.get('value')
+    and env['name'] not in os.environ
   ]
   if required_env_names:
     output(
@@ -85,12 +91,20 @@ def _get_deploy_cmd(
       raise typer.Exit(1)
     cmd += ['--env', f'{name}={value}']
 
+  # Add any required envs from os.environ that haven't been handled yet
+  for name in all_required_env_names:
+    if name in os.environ:
+      cmd += ['--env', f'{name}={os.environ.get(name)}']
+
   # Add explicitly provided env vars from CLI
   for name, value in explicit_envs.items():
     cmd += ['--env', f'{name}={value}']
 
   if target:
     cmd += ['--instance-type', target.name]
+
+  if context:
+    cmd += ['--context', context]
 
   base_config = resolve_cloud_config()
   if not base_config.exists():
@@ -148,9 +162,11 @@ def ensure_cloud_context() -> None:
         raise typer.Exit(1)
 
 
-def get_cloud_machine_spec() -> list[DeploymentTarget]:
+def get_cloud_machine_spec(context: typing.Optional[str] = None) -> list[DeploymentTarget]:
   ensure_cloud_context()
   cmd = ['bentoml', 'deployment', 'list-instance-types', '-o', 'json']
+  if context:
+    cmd += ['--context', context]
   try:
     result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
     instance_types = json.loads(result)
@@ -174,8 +190,11 @@ def get_cloud_machine_spec() -> list[DeploymentTarget]:
 
 
 def deploy(
-  bento: BentoInfo, target: DeploymentTarget, cli_envs: typing.Optional[list[str]] = None
+  bento: BentoInfo,
+  target: DeploymentTarget,
+  cli_envs: typing.Optional[list[str]] = None,
+  context: typing.Optional[str] = None,
 ) -> None:
   ensure_cloud_context()
-  cmd, env = _get_deploy_cmd(bento, target, cli_envs=cli_envs)
+  cmd, env = _get_deploy_cmd(bento, target, cli_envs=cli_envs, context=context)
   run_command(cmd, env=env, cwd=None)
