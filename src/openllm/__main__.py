@@ -7,7 +7,7 @@ from collections import defaultdict
 from openllm.accelerator_spec import can_run, get_local_machine_spec
 from openllm.analytic import DO_NOT_TRACK, OpenLLMTyper
 from openllm.clean import app as clean_app
-from openllm.cloud import deploy as cloud_deploy, ensure_cloud_context, get_cloud_machine_spec
+from openllm.cloud import deploy as cloud_deploy, get_cloud_machine_spec
 from openllm.common import CHECKED, INTERACTIVE, VERBOSE_LEVEL, BentoInfo, output
 from openllm.local import run as local_run, serve as local_serve
 from openllm.model import app as model_app, ensure_bento, list_bento
@@ -120,7 +120,14 @@ def _select_target(bento: BentoInfo, targets: list[DeploymentTarget]) -> Deploym
   return selected
 
 
-def _select_action(bento: BentoInfo, score: float, context: typing.Optional[str] = None) -> None:
+def _select_action(
+  bento: BentoInfo,
+  score: float,
+  context: typing.Optional[str] = None,
+  envs: typing.Optional[list[str]] = None,
+  arg: typing.Optional[list[str]] = None,
+  interactive: bool = False,
+) -> None:
   if score > 0:
     options: list[typing.Any] = [
       questionary.Separator('Available actions'),
@@ -168,22 +175,23 @@ def _select_action(bento: BentoInfo, score: float, context: typing.Optional[str]
   if action == 'run':
     try:
       port = random.randint(30000, 40000)
-      local_run(bento, port=port)
+      local_run(bento, port=port, cli_envs=envs, cli_args=arg)
     finally:
       output('\nUse this command to run the action again:', style='green')
       output(f'  $ openllm run {bento}', style='orange')
   elif action == 'serve':
     try:
-      local_serve(bento)
+      local_serve(bento, cli_envs=envs, cli_args=arg)
     finally:
       output('\nUse this command to run the action again:', style='green')
       output(f'  $ openllm serve {bento}', style='orange')
   elif action == 'deploy':
-    ensure_cloud_context()
     targets = get_cloud_machine_spec(context=context)
     target = _select_target(bento, targets)
     try:
-      cloud_deploy(bento, target, context=context)
+      cloud_deploy(
+        bento, target, cli_envs=envs, context=context, cli_args=arg, interactive=interactive
+      )
     finally:
       output('\nUse this command to run the action again:', style='green')
       output(f'  $ openllm deploy {bento} --instance-type {target.name}', style='orange')
@@ -192,10 +200,15 @@ def _select_action(bento: BentoInfo, score: float, context: typing.Optional[str]
 @app.command(help='get started interactively')
 def hello(
   repo: typing.Optional[str] = None,
-  env: typing.Optional[list[str]] = typer.Option(
+  envs: typing.Optional[list[str]] = typer.Option(
     None,
     '--env',
     help='Environment variables to pass to the deployment command. Format: NAME or NAME=value. Can be specified multiple times.',
+  ),
+  arg: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--arg',
+    help='Bento arguments in the form of key=value pairs. Can be specified multiple times.',
   ),
   context: typing.Optional[str] = typer.Option(
     None, '--context', help='BentoCloud context name to pass to the deployment command.'
@@ -221,7 +234,7 @@ def hello(
 
   bento_name, repo = _select_bento_name(models, target)
   bento, score = _select_bento_version(models, target, bento_name, repo)
-  _select_action(bento, score, context=context)
+  _select_action(bento, score, context=context, envs=envs, arg=arg, interactive=INTERACTIVE.get())
 
 
 @app.command(help='start an OpenAI API compatible chat server and chat in browser')
@@ -291,6 +304,11 @@ def deploy(
   context: typing.Optional[str] = typer.Option(
     None, '--context', help='BentoCloud context name to pass to the deployment command.'
   ),
+  arg: typing.Optional[list[str]] = typer.Option(
+    None,
+    '--arg',
+    help='Bento arguments in the form of key=value pairs. Can be specified multiple times.',
+  ),
 ) -> None:
   cmd_update()
   if verbose:
@@ -298,19 +316,31 @@ def deploy(
   bento = ensure_bento(model, repo_name=repo)
   if instance_type is not None:
     return cloud_deploy(
-      bento, DeploymentTarget(accelerators=[], name=instance_type), cli_envs=env, context=context
+      bento,
+      DeploymentTarget(accelerators=[], name=instance_type),
+      cli_envs=env,
+      context=context,
+      cli_args=arg,
+      interactive=INTERACTIVE.get(),
     )
-  targets = sorted(
-    filter(lambda x: can_run(bento, x) > 0, get_cloud_machine_spec(context=context)),
-    key=lambda x: can_run(bento, x),
-    reverse=True,
+  targets = get_cloud_machine_spec(context=context)
+  runnable_targets = sorted(
+    filter(lambda x: can_run(bento, x) > 0, targets), key=lambda x: can_run(bento, x), reverse=True
   )
-  if not targets:
+  if not runnable_targets:
     output('No available instance type, check your bentocloud account', style='red')
     raise typer.Exit(1)
-  target = targets[0]
-  output(f'Recommended instance type: {target.name}', style='green')
-  cloud_deploy(bento, target, cli_envs=env, context=context)
+
+  # Use questionary to select target when in interactive mode and no instance_type is provided
+  if INTERACTIVE.get() and instance_type is None:
+    target = _select_target(bento, targets)
+  else:
+    target = runnable_targets[0]
+    output(f'Recommended instance type: {target.name}', style='green')
+
+  cloud_deploy(
+    bento, target, cli_envs=env, context=context, cli_args=arg, interactive=INTERACTIVE.get()
+  )
 
 
 @app.callback(invoke_without_command=True)

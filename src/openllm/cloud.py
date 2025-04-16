@@ -5,7 +5,7 @@ import typer
 
 from openllm.analytic import OpenLLMTyper
 from openllm.accelerator_spec import ACCELERATOR_SPECS
-from openllm.common import INTERACTIVE, BentoInfo, DeploymentTarget, EnvVars, output, run_command
+from openllm.common import BentoInfo, DeploymentTarget, EnvVars, output, run_command, INTERACTIVE
 
 app = OpenLLMTyper()
 
@@ -22,8 +22,13 @@ def _get_deploy_cmd(
   target: typing.Optional[DeploymentTarget] = None,
   cli_envs: typing.Optional[list[str]] = None,
   context: typing.Optional[str] = None,
+  cli_args: typing.Optional[list[str]] = None,
 ) -> tuple[list[str], EnvVars]:
   cmd = ['bentoml', 'deploy', bento.bentoml_tag]
+  if cli_args:
+    for arg in cli_args:
+      cmd += ['--arg', arg]
+
   env = EnvVars({'BENTOML_HOME': f'{bento.repo.path}/bentoml'})
 
   # Process CLI env vars first to determine overrides
@@ -64,7 +69,7 @@ def _get_deploy_cmd(
 
   for env_info in required_envs:
     name = typing.cast(str, env_info.get('name'))
-    if not name or name in explicit_envs or env_info.get('value', None) is not None:
+    if not name or name in explicit_envs or env_info.get('value', ''):
       continue
 
     if os.environ.get(name):
@@ -210,7 +215,10 @@ def deploy(
   target: DeploymentTarget,
   cli_envs: typing.Optional[list[str]] = None,
   context: typing.Optional[str] = None,
+  cli_args: typing.Optional[list[str]] = None,
+  interactive: bool = False,
 ) -> None:
+  INTERACTIVE.set(interactive)
   ensure_cloud_context()
-  cmd, env = _get_deploy_cmd(bento, target, cli_envs=cli_envs, context=context)
+  cmd, env = _get_deploy_cmd(bento, target, cli_envs=cli_envs, context=context, cli_args=cli_args)
   run_command(cmd, env=env, cwd=None)
