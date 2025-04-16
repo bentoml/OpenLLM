@@ -38,9 +38,9 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
   </tr>
   <tr>
     <td>deepseek</td>
-    <td>r1</td>
+    <td>r1-671b</td>
     <td>80Gx16</td>
-    <td><code>openllm serve deepseek:r1</code></td>
+    <td><code>openllm serve deepseek:r1-671b</code></td>
   </tr>
   <tr>
     <td>gemma2</td>
@@ -49,16 +49,16 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <td><code>openllm serve gemma2:2b</code></td>
   </tr>
   <tr>
-    <td>hermes-3</td>
-    <td>deep-llama3-8b-91e3</td>
-    <td>80G</td>
-    <td><code>openllm serve hermes-3:deep-llama3-8b-91e3</code></td>
+    <td>gemma3</td>
+    <td>3b</td>
+    <td>12G</td>
+    <td><code>openllm serve gemma3:3b</code></td>
   </tr>
   <tr>
     <td>jamba1.5</td>
-    <td>large-8b32</td>
-    <td>80Gx8</td>
-    <td><code>openllm serve jamba1.5:large-8b32</code></td>
+    <td>mini-ff0a</td>
+    <td>80Gx2</td>
+    <td><code>openllm serve jamba1.5:mini-ff0a</code></td>
   </tr>
   <tr>
     <td>llama3.1</td>
@@ -79,16 +79,22 @@ OpenLLM supports a wide range of state-of-the-art open-source LLMs. You can also
     <td><code>openllm serve llama3.3:70b</code></td>
   </tr>
   <tr>
+    <td>llama4</td>
+    <td>17b16e</td>
+    <td>80Gx8</td>
+    <td><code>openllm serve llama4:17b16e</code></td>
+  </tr>
+  <tr>
     <td>mistral</td>
-    <td>8b</td>
+    <td>8b-2410</td>
     <td>24G</td>
-    <td><code>openllm serve mistral:8b</code></td>
+    <td><code>openllm serve mistral:8b-2410</code></td>
   </tr>
   <tr>
     <td>mistral-large</td>
-    <td>123b</td>
+    <td>123b-2407</td>
     <td>80Gx4</td>
-    <td><code>openllm serve mistral-large:123b</code></td>
+    <td><code>openllm serve mistral-large:123b-2407</code></td>
   </tr>
   <tr>
     <td>phi4</td>
