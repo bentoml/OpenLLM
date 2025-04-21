@@ -34,8 +34,8 @@ dependencies = [
   "typer",
   "questionary",
   "pyaml",
+  "attrs",
   "psutil",
-  "pathlib",
   "pip_requirements_parser",
   "nvidia-ml-py",
   "dulwich",
@@ -89,10 +89,7 @@ requires = ["hatchling==1.27.0", "hatch-vcs==0.4.0"]
 build-backend = 'hatchling.build'
 
 [dependency-groups]
-tests = [
-    "pexpect>=4.9.0",
-    "pytest>=8.3.5",
-]
+tests = ["pexpect>=4.9.0", "pytest>=8.3.5"]
 
 [tool.hatch.version]
 source = "vcs"
