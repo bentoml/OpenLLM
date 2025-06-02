@@ -7,7 +7,7 @@ default_language_version:
   python: python3.11 # NOTE: sync with .python-version-default
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.11.9"
+    rev: "v0.11.12"
     hooks:
       - id: ruff
         alias: r
@@ -19,7 +19,7 @@ repos:
         verbose: true
         types_or: [python, pyi, jupyter]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.15.0"
+    rev: "v1.16.0"
     hooks:
       - id: mypy
         args: [--strict, --ignore-missing-imports]
