@@ -8,6 +8,15 @@
 [![X](https://badgen.net/badge/icon/@bentomlai/000000?icon=twitter&label=Follow)](https://twitter.com/bentomlai)
 [![Community](https://badgen.net/badge/icon/Community/562f5d?icon=slack&label=Join)](https://l.bentoml.com/join-slack)
 
+Readme-i18n: <!-- Keep these links. Translations will automatically update with the README. -->
+[Deutsch](https://www.readme-i18n.com/bentoml/OpenLLM?lang=de) | 
+[Español](https://www.readme-i18n.com/bentoml/OpenLLM?lang=es) | 
+[français](https://www.readme-i18n.com/bentoml/OpenLLM?lang=fr) | 
+[日本語](https://www.readme-i18n.com/bentoml/OpenLLM?lang=ja) | 
+[한국어](https://www.readme-i18n.com/bentoml/OpenLLM?lang=ko) | 
+[Português](https://www.readme-i18n.com/bentoml/OpenLLM?lang=pt) | 
+[Русский](https://www.readme-i18n.com/bentoml/OpenLLM?lang=ru) | 
+[中文](https://www.readme-i18n.com/bentoml/OpenLLM?lang=zh)
 </div>
 
 OpenLLM allows developers to run **any open-source LLMs** (Llama 3.3, Qwen2.5, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
