@@ -31,7 +31,7 @@ jobs:
       contents: write
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # ratchet:actions/download-artifact@v4
         with:
           pattern: python-artefacts-*
           merge-multiple: true
@@ -43,7 +43,7 @@ jobs:
         with:
           print-hash: true
       - name: Create release
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # ratchet:softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # ratchet:softprops/action-gh-release@v2
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
