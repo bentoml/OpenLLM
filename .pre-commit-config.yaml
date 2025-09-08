@@ -7,7 +7,7 @@ default_language_version:
   python: python3.11 # NOTE: sync with .python-version-default
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.11.13"
+    rev: "v0.12.12"
     hooks:
       - id: ruff
         alias: r
@@ -19,14 +19,14 @@ repos:
         verbose: true
         types_or: [python, pyi, jupyter]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.16.0"
+    rev: "v1.17.1"
     hooks:
       - id: mypy
         args: [--strict, --ignore-missing-imports]
         additional_dependencies:
           [pydantic, types-pyyaml, types-tabulate, types-psutil, typer]
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: "3.2.1"
+    rev: "3.4.0"
     hooks:
       - id: editorconfig-checker
         verbose: true
@@ -37,7 +37,7 @@ repos:
       - id: check-hooks-apply
       - id: check-useless-excludes
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         verbose: true
