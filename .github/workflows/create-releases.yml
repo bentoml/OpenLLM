@@ -15,7 +15,7 @@ jobs:
       - name: Build
         run: pipx run build
       - name: Upload artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # ratchet:actions/upload-artifact@v4
         with:
           name: python-artefacts-openllm
           path: dist/*
@@ -31,7 +31,7 @@ jobs:
       contents: write
     steps:
       - name: Download Python artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # ratchet:actions/download-artifact@v4
         with:
           pattern: python-artefacts-*
           merge-multiple: true
@@ -43,7 +43,7 @@ jobs:
         with:
           print-hash: true
       - name: Create release
-        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # ratchet:softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # ratchet:softprops/action-gh-release@v2
         with:
           # Use GH feature to populate the changelog automatically
           generate_release_notes: true
