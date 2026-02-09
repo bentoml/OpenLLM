@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import re, typing, json
+import pathlib, re, typing, json
 import tabulate, questionary, typer
 
 from openllm.accelerator_spec import can_run
@@ -160,6 +160,12 @@ def list_bento(
         with open(path) as f:
           origin_name = f.read().strip()
         origin_path = path.parent / origin_name
+        if '..' in pathlib.PurePosixPath(origin_name).parts:
+          continue
+        try:
+          origin_path.resolve().relative_to(repo.path.resolve())
+        except ValueError:
+          continue
         model = BentoInfo(alias=path.name, repo=repo, path=origin_path)
       else:
         model = None
