@@ -422,8 +422,8 @@ async def async_run_command(
 
   proc = None
   try:
-    proc = await asyncio.create_subprocess_shell(
-      ' '.join(map(str, cmd)),
+    proc = await asyncio.create_subprocess_exec(
+      *cmd,
       stdout=asyncio.subprocess.PIPE,
       stderr=asyncio.subprocess.PIPE,
       cwd=cwd,
@@ -435,7 +435,8 @@ async def async_run_command(
     raise typer.Exit(1)
   finally:
     if proc:
-      proc.send_signal(signal.SIGINT)
+      if proc.returncode is None:
+        proc.send_signal(signal.SIGINT)
       await proc.wait()
 
 
