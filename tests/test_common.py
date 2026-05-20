@@ -13,12 +13,7 @@ async def _communicate(cmd: list[str]) -> tuple[int | None, str, str]:
 
 def test_async_run_command_preserves_shell_metacharacters() -> None:
   returncode, stdout, stderr = asyncio.run(
-    _communicate([
-      'python',
-      '-c',
-      'import sys; print(sys.argv[1])',
-      'literal-$(printf injected)',
-    ])
+    _communicate(['python', '-c', 'import sys; print(sys.argv[1])', 'literal-$(printf injected)'])
   )
 
   assert returncode == 0
