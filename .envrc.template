@@ -1,1 +1,8 @@
 export PAPERSPACE_API_KEY=
+
+# Astraflow (by UCloud) — OpenAI-compatible platform supporting 200+ models
+# Sign up: https://astraflow.ucloud-global.com (global) / https://astraflow.ucloud.cn (China)
+# Use ASTRAFLOW_API_KEY with base_url=https://api-us-ca.umodelverse.ai/v1
+# Use ASTRAFLOW_CN_API_KEY with base_url=https://api.modelverse.cn/v1
+export ASTRAFLOW_API_KEY=
+export ASTRAFLOW_CN_API_KEY=
