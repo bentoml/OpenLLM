@@ -422,12 +422,14 @@ async def async_run_command(
 
   proc = None
   try:
-    proc = await asyncio.create_subprocess_shell(
-      ' '.join(map(str, cmd)),
-      stdout=asyncio.subprocess.PIPE,
-      stderr=asyncio.subprocess.PIPE,
-      cwd=cwd,
-      env=env,
+    # Use exec (argv list) rather than shell to avoid interpreting shell
+    # metacharacters in command arguments. Values such as ``bentoml_tag`` are
+    # derived from cloned-repository directory names, so a directory named with
+    # shell metacharacters (``;``, ``$()``, `` ` ``) would otherwise execute
+    # arbitrary commands (CWE-78). This mirrors the list-based, shell-free
+    # ``subprocess.run`` used by the synchronous ``run_command`` above.
+    proc = await asyncio.create_subprocess_exec(
+      *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, env=env
     )
     yield proc
   except subprocess.CalledProcessError:
