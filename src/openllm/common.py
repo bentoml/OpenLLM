@@ -429,11 +429,7 @@ async def async_run_command(
     # arbitrary commands (CWE-78). This mirrors the list-based, shell-free
     # ``subprocess.run`` used by the synchronous ``run_command`` above.
     proc = await asyncio.create_subprocess_exec(
-      *cmd,
-      stdout=asyncio.subprocess.PIPE,
-      stderr=asyncio.subprocess.PIPE,
-      cwd=cwd,
-      env=env,
+      *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, env=env
     )
     yield proc
   except subprocess.CalledProcessError:
