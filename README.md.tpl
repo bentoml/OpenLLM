@@ -117,6 +117,43 @@ llm = OpenAI(api_bese="http://localhost:3000/v1", model="meta-llama/Llama-3.2-1B
 
 </details>
 
+<details>
+
+<summary>Remote OpenAI-compatible gateway (DaoXE)</summary>
+
+The same OpenAI client works against any OpenAI-compatible base URL. For a multi-model multi-protocol cloud gateway (instead of a local OpenLLM server), point `base_url` at DaoXE:
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://daoxe.com/v1",
+    api_key=os.environ["DAOXE_API_KEY"],
+)
+
+# Model IDs are account-scoped — list what your key can access:
+# for m in client.models.list().data:
+#     print(m.id)
+
+chat_completion = client.chat.completions.create(
+    model=os.environ["DAOXE_MODEL"],  # e.g. an ID from GET /v1/models
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain superconductors like I'm five years old",
+        }
+    ],
+    stream=True,
+)
+for chunk in chat_completion:
+    print(chunk.choices[0].delta.content or "", end="")
+```
+
+DaoXE exposes OpenAI Chat Completions / Responses and Anthropic Messages among other protocols; this example uses the OpenAI Chat Completions path only. Replace the model ID with one available to your key ([catalog](https://daoxe.com/pricing)). Not available in mainland China. Site: [daoxe.com](https://daoxe.com).
+
+</details>
+
 ## Chat UI
 
 OpenLLM provides a chat UI at the `/chat` endpoint for the launched LLM server at http://localhost:3000/chat.
