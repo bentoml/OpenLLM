@@ -167,7 +167,6 @@ def _clone_repo(repo: RepoInfo) -> None:
         ['git', 'clone', '--depth=1', '-b', repo.branch, repo.url, str(repo.path)], check=True
       )
   except (subprocess.CalledProcessError, FileNotFoundError):
-    import dulwich
     import dulwich.porcelain
 
     # Dulwich doesn't have easy output suppression, but we rarely get here
