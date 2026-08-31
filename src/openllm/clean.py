@@ -69,7 +69,7 @@ def repos(verbose: bool = False) -> None:
 def configs(verbose: bool = False) -> None:
   if verbose:
     VERBOSE_LEVEL.set(20)
-  shutil.rmtree(CONFIG_FILE, ignore_errors=True)
+  CONFIG_FILE.unlink(missing_ok=True)
   output('All configurations have been reset', style='green')
 
 
