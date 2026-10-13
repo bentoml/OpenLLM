@@ -10,7 +10,7 @@
 
 </div>
 
-OpenLLM allows developers to run **any open-source LLMs** (Llama 3.3, Qwen2.5, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker, Kubernetes, and [BentoCloud](#deploy-to-bentocloud).
+OpenLLM allows developers to run **any open-source LLMs** (Llama 3.3, Qwen2.5, Phi3 and [more](#supported-models)) or **custom models** as **OpenAI-compatible APIs** with a single command. It features a [built-in chat UI](#chat-ui), state-of-the-art inference backends, and a simplified workflow for creating enterprise-grade cloud deployment with Docker and Kubernetes.
 
 Understand the [design philosophy of OpenLLM](https://www.bentoml.com/blog/from-ollama-to-openllm-running-llms-in-the-cloud).
 
@@ -250,26 +250,9 @@ openllm repo add <repo-name> <repo-url>
 
 **Note**: Currently, OpenLLM only supports adding public repositories.
 
-## Deploy to BentoCloud
-
-OpenLLM supports LLM cloud deployment via BentoML, the unified model serving framework, and BentoCloud, an AI inference platform for enterprise AI teams. BentoCloud provides fully-managed infrastructure optimized for LLM inference with autoscaling, model orchestration, observability, and many more, allowing you to run any AI model in the cloud.
-
-[Sign up for BentoCloud](https://www.bentoml.com/) for free and [log in](https://docs.bentoml.com/en/latest/bentocloud/how-tos/manage-access-token.html). Then, run `openllm deploy` to deploy a model to BentoCloud:
-
-```bash
-openllm deploy llama3.2:1b --env HF_TOKEN
-```
-
-> [!NOTE]
-> If you are deploying a gated model, make sure to set HF_TOKEN in enviroment variables.
-
-Once the deployment is complete, you can run model inference on the BentoCloud console:
-
-<img width="800" alt="bentocloud_ui" src="https://github.com/bentoml/OpenLLM/assets/65327072/4f7819d9-73ea-488a-a66c-f724e5d063e6">
-
 ## Community
 
-OpenLLM is actively maintained by the BentoML team. Feel free to reach out and join us in our pursuit to make LLMs more accessible and easy to use 👉 [Join our Slack community!](https://l.bentoml.com/join-slack)
+Join our [Community Forum 💬](https://forum.modular.com/c/bento/31), where thousands of AI/ML engineers help each other and talk about building AI products.
 
 ## Contributing
 
