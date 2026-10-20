@@ -287,7 +287,9 @@ class VenvSpec(pydantic.BaseModel):
 
   @override
   def __hash__(self) -> int:
-    return md5(self.normalized_requirements_txt, str(hash(self.normalized_envs)))
+    return md5(
+      self.python_version, self.normalized_requirements_txt, str(hash(self.normalized_envs))
+    )
 
 
 class Accelerator(pydantic.BaseModel):
