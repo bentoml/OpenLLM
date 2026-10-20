@@ -49,8 +49,11 @@ def _ensure_venv(venv_spec: VenvSpec) -> pathlib.Path:
         ['python', '-m', 'uv', 'venv', venv.__fspath__(), '-p', venv_spec.python_version],
         silent=VERBOSE_LEVEL.get() < 10,
       )
+      # `uv venv` seeds no setuptools, yet bentoml pulls in packages that still
+      # import pkg_resources at module scope. setuptools dropped pkg_resources
+      # in 81, so pin below that to keep the import working.
       run_command(
-        ['python', '-m', 'uv', 'pip', 'install', '-p', str(venv_py), 'bentoml'],
+        ['python', '-m', 'uv', 'pip', 'install', '-p', str(venv_py), 'bentoml', 'setuptools<81'],
         silent=VERBOSE_LEVEL.get() < 10,
         env=venv_spec.envs,
       )
