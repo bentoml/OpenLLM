@@ -103,7 +103,7 @@ async def _run_model(
             stderr_streamer = asyncio.create_task(
               stream_command_output(server_proc.stderr, style='#BD2D0F')
             )
-        await asyncio.sleep(1)
+      await asyncio.sleep(1)
     else:
       output('Model failed to load', style='red')
       server_proc.terminate()
