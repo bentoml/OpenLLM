@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio, asyncio.subprocess, functools, hashlib, io, json, os, pathlib, signal, subprocess, sys, sysconfig, typing, shlex
-import typer, typer.core, pydantic, questionary, pyaml, yaml
+import typer, pydantic, questionary, pyaml, yaml
 
 from collections import UserDict
 from contextlib import asynccontextmanager, contextmanager
