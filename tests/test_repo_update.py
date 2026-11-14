@@ -10,8 +10,7 @@ import pytest
 from typer.testing import CliRunner
 
 
-@pytest.fixture
-def repo_mod(
+def _load(
   tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[types.ModuleType, types.ModuleType]:
   monkeypatch.setenv('OPENLLM_HOME', str(tmp_path))
@@ -32,11 +31,10 @@ def repo_mod(
   return common, repo
 
 
-@pytest.mark.parametrize('branch', ['main', 'release/1.0', 'a/b/c'])
-def test_update_keeps_clone_of_configured_branch(
-  repo_mod: tuple[types.ModuleType, types.ModuleType], monkeypatch: pytest.MonkeyPatch, branch: str
+def _check_update_keeps_clone(
+  tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, branch: str
 ) -> None:
-  common, repo = repo_mod
+  common, repo = _load(tmp_path, monkeypatch)
   config = common.load_config()
   config.repos = {'mine': f'https://github.com/acme/models@{branch}'}
   common.save_config(config)
@@ -53,10 +51,28 @@ def test_update_keeps_clone_of_configured_branch(
   assert (info.path / 'marker').exists()
 
 
-def test_update_removes_unused_cache(
-  repo_mod: tuple[types.ModuleType, types.ModuleType], monkeypatch: pytest.MonkeyPatch
+def test_update_keeps_clone_of_plain_branch(
+  tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-  common, repo = repo_mod
+  _check_update_keeps_clone(tmp_path, monkeypatch, 'main')
+
+
+def test_update_keeps_clone_of_slash_branch(
+  tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  _check_update_keeps_clone(tmp_path, monkeypatch, 'release/1.0')
+
+
+def test_update_keeps_clone_of_nested_slash_branch(
+  tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  _check_update_keeps_clone(tmp_path, monkeypatch, 'a/b/c')
+
+
+def test_update_removes_unused_cache(
+  tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  common, repo = _load(tmp_path, monkeypatch)
   config = common.load_config()
   config.repos = {'mine': 'https://github.com/acme/models@release/1.0'}
   common.save_config(config)
