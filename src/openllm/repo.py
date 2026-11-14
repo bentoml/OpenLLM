@@ -53,7 +53,7 @@ def cmd_update() -> None:
     if VERBOSE_LEVEL.get() <= 0:
       output(f'updating repo {repo.name}', style='green')
 
-    repos_in_use.add((repo.server, repo.owner, repo.repo, repo.branch))
+    repos_in_use.add(repo.path)
     if repo.path.exists():
       shutil.rmtree(repo.path, ignore_errors=True)
     repo.path.parent.mkdir(parents=True, exist_ok=True)
@@ -68,8 +68,8 @@ def cmd_update() -> None:
         output(f'Failed to clone repo {repo.name}', style='red')
         output(e)
   for c in REPO_DIR.glob('*/*/*/*'):
-    repo_spec = tuple(c.parts[-4:])
-    if repo_spec not in repos_in_use:
+    # a branch such as `release/1.0` is cloned two levels deep, so the 4th level can be its parent dir
+    if not any(p == c or c in p.parents for p in repos_in_use):
       shutil.rmtree(c, ignore_errors=True)
       if VERBOSE_LEVEL.get() > 0:
         output(f'Removed unused repo cache {c}')
