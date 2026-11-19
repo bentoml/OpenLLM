@@ -133,7 +133,12 @@ def can_run(bento: BentoInfo, target: DeploymentTarget | None = None) -> float:
     return 0.5
 
   if resource_spec.gpu > 0:
-    required_gpu = ACCELERATOR_SPECS[resource_spec.gpu_type]
+    required_gpu = ACCELERATOR_SPECS.get(resource_spec.gpu_type)
+    if required_gpu is None:
+      # gpu_type is optional in a bento's resource config and the table only
+      # covers the accelerators known when it was written, so an unset or
+      # unrecognised value says nothing about how much memory is needed.
+      return 0.0
     filtered_accelerators = [
       ac for ac in target.accelerators if ac.memory_size >= required_gpu.memory_size
     ]
