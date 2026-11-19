@@ -1,0 +1,5 @@
+LOAD monk/openllm.yaml
+LOAD monk/openllm-example.yaml
+LOAD monk/openllm-stack.yaml
+
+ENTRY openllm/stack-local

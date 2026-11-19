@@ -1,0 +1,160 @@
+namespace: openllm
+
+base:
+  defines: runnable
+
+  metadata:
+    name: OpenLLM Base
+    description: |
+      Reusable OpenLLM runtime component. The base installs the published OpenLLM
+      Python package into a public Python container and exposes a private HTTP
+      service for composition. It does not include a backing database or queue.
+      For real model serving, inherit this template, set runtime-mode to serve,
+      choose a model from the OpenLLM catalog, and schedule it on suitable GPU
+      capacity. For gated Hugging Face models, inherit and set hf-token from
+      secret("hf-token") after permitting the plain hf-token secret.
+    tags: openllm, llm, openai-compatible, component
+    website: https://github.com/bentoml/OpenLLM
+    source: https://github.com/bentoml/OpenLLM
+    publisher: monk.io
+
+  variables:
+    image:
+      type: string
+      value: python
+      description: Public base image used to run OpenLLM from the published Python package.
+    image-tag:
+      type: string
+      value: 3.11-slim-bookworm
+      description: Public Python image tag. Python 3.11 matches OpenLLM generated Bento environments.
+    openllm-version:
+      type: string
+      value: 0.6.30
+      env: OPENLLM_VERSION
+      description: OpenLLM package version installed at container startup.
+    setuptools-spec:
+      type: string
+      value: setuptools<81
+      env: SETUPTOOLS_SPEC
+      description: Compatibility pin because the current BentoML dependency stack imports pkg_resources.
+    runtime-mode:
+      type: string
+      value: smoke
+      env: OPENLLM_RUNTIME_MODE
+      description: Runtime mode. smoke starts a lightweight OpenAI-compatible health surface; serve runs openllm serve and requires suitable model hardware.
+    model:
+      type: string
+      value: gemma3:1b
+      env: OPENLLM_MODEL
+      description: OpenLLM model alias used by serve mode and reported by smoke mode.
+    host:
+      type: string
+      value: 0.0.0.0
+      env: OPENLLM_HOST
+      description: Address the HTTP process binds inside the container.
+    port:
+      type: int
+      value: 3000
+      env: OPENLLM_PORT
+      description: Internal OpenLLM HTTP port.
+    serve-args:
+      type: string
+      value: ""
+      env: OPENLLM_SERVE_ARGS
+      description: Extra arguments appended to openllm serve in real model-serving mode.
+    hf-token:
+      type: string
+      value: ""
+      env: HF_TOKEN
+      description: Sensitive optional Hugging Face token. Inheriting gated-model deployments should set this to secret("hf-token") after permitting the plain hf-token secret.
+    do-not-track:
+      type: string
+      value: "true"
+      env: BENTOML_DO_NOT_TRACK
+      description: Disables BentoML/OpenLLM usage telemetry in the runtime container.
+    python-unbuffered:
+      type: string
+      value: "1"
+      env: PYTHONUNBUFFERED
+      description: Forces unbuffered Python output so Monk logs show startup progress promptly.
+    pip-cache-dir:
+      type: string
+      value: /var/lib/openllm/pip-cache
+      env: PIP_CACHE_DIR
+      description: Container path for pip cache to speed restarts when the runtime volume is retained.
+    data-volume-name:
+      type: string
+      value: openllm-base
+      description: Monk volume subdirectory used for OpenLLM runtime data and caches.
+
+  containers:
+    server:
+      image: <- $image
+      image-tag: <- $image-tag
+      restart: unless-stopped
+      paths:
+        - <- `${volume-path}/${data-volume-name}:/var/lib/openllm`
+      entrypoint: |
+        /bin/sh -lc 'set -eu
+        python -m pip install --no-cache-dir "$SETUPTOOLS_SPEC" "openllm==$OPENLLM_VERSION"
+        if [ "$OPENLLM_RUNTIME_MODE" = "serve" ]; then
+          export PYTHONPATH="$(python -c '\''import site; print(site.getsitepackages()[0])'\'')${PYTHONPATH:+:$PYTHONPATH}"
+          openllm repo update
+          exec openllm serve "$OPENLLM_MODEL" --port "$OPENLLM_PORT" $OPENLLM_SERVE_ARGS
+        fi
+        exec python /opt/openllm-smoke.py'
+
+  files:
+    smoke-server:
+      container: server
+      path: /opt/openllm-smoke.py
+      raw: false
+      contents: |
+        import importlib.metadata
+        import json
+        import os
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        model = os.environ.get("OPENLLM_MODEL", "gemma3:1b")
+        port = int(os.environ.get("OPENLLM_PORT", "3000"))
+        host = os.environ.get("OPENLLM_HOST", "0.0.0.0")
+        version = importlib.metadata.version("openllm")
+
+        class Handler(BaseHTTPRequestHandler):
+            def _json(self, status, payload):
+                body = json.dumps(payload).encode("utf-8")
+                self.send_response(status)
+                self.send_header("content-type", "application/json")
+                self.send_header("content-length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                if self.path in ("/", "/healthz", "/readyz"):
+                    self._json(200, {"status": "ok", "runtime": "openllm-smoke", "openllm": version, "model": model})
+                    return
+                if self.path == "/v1/models":
+                    self._json(200, {"object": "list", "data": [{"id": model, "object": "model", "owned_by": "openllm"}]})
+                    return
+                self._json(404, {"error": "not found"})
+
+            def log_message(self, fmt, *args):
+                print("%s - %s" % (self.address_string(), fmt % args), flush=True)
+
+        print(f"OpenLLM smoke endpoint {version} listening on {host}:{port}", flush=True)
+        ThreadingHTTPServer((host, port), Handler).serve_forever()
+
+  services:
+    http:
+      container: server
+      port: <- $port
+      protocol: tcp
+      description: Private OpenLLM-compatible HTTP service for Monk connections and inheriting templates.
+
+  checks:
+    readiness:
+      code: |
+        exec("server", "python", "-c", "import os, urllib.request; port=os.environ.get('OPENLLM_PORT','3000'); print(urllib.request.urlopen('http://127.0.0.1:%s/healthz' % port, timeout=5).status)") contains?("200")
+      initialDelay: 20
+      period: 10
+      attempts: 90

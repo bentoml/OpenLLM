@@ -1,0 +1,44 @@
+namespace: openllm
+
+example:
+  defines: runnable
+  inherits: openllm/base
+
+  metadata:
+    name: OpenLLM Component Example
+    description: |
+      Local component example that inherits openllm/base and publishes a
+      non-privileged host port for verification. It uses smoke mode by default
+      so the package can be tested without GPU hardware or model downloads.
+      Switch runtime-mode to serve and choose a model when composing this
+      component into a GPU-backed application.
+    tags: openllm, llm, component, example, local
+
+  variables:
+    runtime-mode:
+      type: string
+      value: smoke
+      env: OPENLLM_RUNTIME_MODE
+      description: Keeps the example locally verifiable without GPU hardware; set to serve for real model serving.
+    model:
+      type: string
+      value: gemma3:1b
+      env: OPENLLM_MODEL
+      description: Model name reported by the example and used if runtime-mode is changed to serve.
+    data-volume-name:
+      type: string
+      value: openllm-example
+      description: Monk volume subdirectory used by the component example.
+    host-port:
+      type: int
+      value: 30180
+      description: Non-privileged local host port published by the component example.
+
+  services:
+    http:
+      container: server
+      port: <- $port
+      protocol: tcp
+      publish: true
+      host-port: <- $host-port
+      description: Published local HTTP service for component verification.
