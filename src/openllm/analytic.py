@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import functools, os, re, time, typing, abc
-import attr, click, typer, typer.core
+import os, re, time, typing, abc
+import attr, typer, typer.core
 
 DO_NOT_TRACK = 'BENTOML_DO_NOT_TRACK'
 
@@ -33,8 +33,42 @@ class OpenllmCliEvent(CliEvent):
 
 
 class OrderedCommands(typer.core.TyperGroup):
-  def list_commands(self, ctx: click.Context) -> list[str]:
+  def list_commands(self, ctx: typer.Context) -> list[str]:
     return list(self.commands)
+
+
+class AnalyticsCommand(typer.core.TyperCommand):
+  def invoke(self, ctx: typer.Context) -> typing.Any:
+    if os.environ.get(DO_NOT_TRACK, 'false').lower() == 'true':
+      return super().invoke(ctx)
+
+    from bentoml._internal.utils.analytics import track
+
+    command_name = ctx.info_name
+    command_group = ctx.parent.info_name if ctx.parent and ctx.parent.parent else 'openllm'
+    start_time = time.time_ns()
+    try:
+      result = super().invoke(ctx)
+    except BaseException as e:
+      track(
+        OpenllmCliEvent(
+          cmd_group=command_group,
+          cmd_name=command_name,
+          duration_in_ms=(time.time_ns() - start_time) / 1e6,
+          error_type=type(e).__name__,
+          return_code=2 if isinstance(e, KeyboardInterrupt) else 1,
+        )
+      )
+      raise
+
+    track(
+      OpenllmCliEvent(
+        cmd_group=command_group,
+        cmd_name=command_name,
+        duration_in_ms=(time.time_ns() - start_time) / 1e6,
+      )
+    )
+    return result
 
 
 class OpenLLMTyper(typer.Typer):
@@ -51,55 +85,9 @@ class OpenLLMTyper(typer.Typer):
       *args, cls=klass, no_args_is_help=no_args_is_help, context_settings=context_settings, **kwargs
     )
 
-  # NOTE: Since OpenLLMTyper only wraps command to add analytics, the default type-hint for @app.command
-  # does not change, hence the below hijacking.
   if typing.TYPE_CHECKING:
     command = typer.Typer.command
   else:
-
     def command(self, *args: typing.Any, **kwargs: typing.Any):
-      def decorator(f):
-        @functools.wraps(f)
-        @click.pass_context
-        def wrapped(ctx: click.Context, *args, **kwargs):
-          from bentoml._internal.utils.analytics import track
-
-          do_not_track = os.environ.get(DO_NOT_TRACK, str(False)).lower() == 'true'
-
-          # so we know that the root program is openllm
-          command_name = ctx.info_name
-          if ctx.parent.parent is not None:
-            # openllm model list
-            command_group = ctx.parent.info_name
-          elif ctx.parent.info_name == ctx.find_root().info_name:
-            # openllm run
-            command_group = 'openllm'
-
-          if do_not_track:
-            return f(*args, **kwargs)
-          start_time = time.time_ns()
-          try:
-            return_value = f(*args, **kwargs)
-            duration_in_ns = time.time_ns() - start_time
-            track(
-              OpenllmCliEvent(
-                cmd_group=command_group, cmd_name=command_name, duration_in_ms=duration_in_ns / 1e6
-              )
-            )
-            return return_value
-          except BaseException as e:
-            duration_in_ns = time.time_ns() - start_time
-            track(
-              OpenllmCliEvent(
-                cmd_group=command_group,
-                cmd_name=command_name,
-                duration_in_ms=duration_in_ns / 1e6,
-                error_type=type(e).__name__,
-                return_code=(2 if isinstance(e, KeyboardInterrupt) else 1),
-              )
-            )
-            raise
-
-        return typer.Typer.command(self, *args, **kwargs)(wrapped)
-
-      return decorator
+      kwargs.setdefault('cls', AnalyticsCommand)
+      return super().command(*args, **kwargs)
